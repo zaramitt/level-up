@@ -114,6 +114,10 @@ partage.
 
 Thème **dark glass**. Ne pas improviser de couleur ni de police.
 
+⚠️ Ce thème est **temporaire** : il sera remplacé après la migration Vite
+(refonte visuelle avec un vrai brief, voir `DECISIONS.md` v19.6). D'ici là, le
+maintenir tel quel — mais ne pas le défendre si Léo demande à en changer.
+
 - Fond : `#0B0E14`, avec halos radiaux bleu / violet
 - Police : **Space Grotesk** uniquement, pas de seconde famille
 - Palette « électrifiée » (voir les variables en tête de `index.html`)
