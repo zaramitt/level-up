@@ -5,6 +5,21 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.6 — août 2026
+
+- **Titres de niveaux : registre autodérision / fun**, jamais militaire ni
+  performance brute. Le niveau 1 doit donner envie d'en sortir en souriant.
+  → « Recrue » écarté pour connotation militaire.
+
+- **Thème dark glass : TEMPORAIRE.** Léo ne le valide pas (UI, couleurs,
+  police). Refonte visuelle prévue après la migration Vite, avec un vrai brief.
+  → D'ici là, maintenu par cohérence, sans investir dessus.
+
+- **Moteur de programmes v1 : hybride à deux voies.** Choix utilisateur :
+  « décris ton objectif » (génération IA existante) ou « choisis un programme
+  spécialisé » (templates faits main). → Nombre et liste des templates : à
+  définir.
+
 ## v19 / v19.5 — août 2026
 
 - **Validation des XP : modèle « confiance + audit »**, pas de validation
@@ -46,8 +61,7 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 Sur le moteur de programmes (discuté, pas arbitré) :
 
-- v1 en **génératif** (objectif × fréquence × niveau × matériel, piochant dans
-  un pool d'exercices tagué) ou en **templates fixes**, ou hybride ?
+- Templates du moteur hybride : combien au lancement, et lesquels ?
 - Quels types de salle couvrir en priorité ?
 - Quels objectifs construire en premier ? (fessiers / bas du corps,
   recomposition, débutant, esthétique équilibrée, force pure, santé-posture,
