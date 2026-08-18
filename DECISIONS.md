@@ -5,6 +5,19 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.7 — août 2026
+
+- **Titres de niveaux : échelle de 12** (« Canapé Lover » → « Icône »), option
+  « niveaux recalibrés » retenue : `MAX_NIVEAU` passe de 40 à 12, coût par
+  niveau `150 + 1170×(n−1)`. → Le niveau 2 reste quasi immédiat (150 XP) pour
+  préserver la boucle de récompense précoce ; « Icône » à 66 000 XP conserve
+  l'horizon de l'ancien niveau 40 ; les XP acquis sont conservés tels quels.
+
+- **Motivation du coach : le « gain » du coach est relationnel** (voir
+  quelqu'un qu'il aime progresser) + le plaisir du jeu (paris, négos).
+  → Rémunération monétaire du coach écartée : transformerait une relation de
+  soin en transaction.
+
 ## v19.6 — août 2026
 
 - **Titres de niveaux : registre autodérision / fun**, jamais militaire ni
@@ -66,6 +79,21 @@ Sur le moteur de programmes (discuté, pas arbitré) :
 - Quels objectifs construire en premier ? (fessiers / bas du corps,
   recomposition, débutant, esthétique équilibrée, force pure, santé-posture,
   préparation sportive)
+
+Sur le rôle du coach (discuté, pas arbitré) :
+
+- Motivation du coach au-delà du lien affectif fort : rôle-joueur
+  (paris/négos), duo symétrique (chacun coache l'autre), ou progression propre
+  du coach (XP/titres de coach) ? À trancher avant ouverture hors duos proches.
+- Rétention du coach passif/tiède, pistes identifiées : pilote automatique (si
+  inactif X jours, l'app suggère récompenses et validations, le coach ne fait
+  que ratifier en 1 tap), sollicitations limitées aux moments émotionnels forts
+  (passage de titre, record, retour de pause, fin de pari), gratitude
+  remontante (le coaché envoie un merci pré-rempli en 1 tap), compteur
+  d'investissement visible côté coach (jours/séances accompagnées), sceau du
+  témoin (« Vu par ton coach » en 1 tap), bascule douce vers le mode autonome
+  si abandon réel. Règle absolue : jamais de culpabilisation du coach.
+  Priorité pressentie : pilote automatique + gratitude remontante.
 
 Autres chantiers identifiés, non planifiés :
 
