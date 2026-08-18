@@ -1544,7 +1544,7 @@ function App() {
   const [reglagesOuvert, setReglagesOuvert] = useState(false);
   const [defiOuvert, setDefiOuvert] = useState(false);
   const [burst, setBurst] = useState(null);
-  const [invite, setInvite] = useState(() => localStorage.getItem("lvlup-invite"));
+  const [victoireOuverte, setVictoireOuverte] = useState(false);
   const partagerInvite = async () => {
     const url = window.location.origin + "/?code=" + encodeURIComponent(code);
     try {
@@ -1557,8 +1557,6 @@ function App() {
         toast("Lien copié — envoie-le !");
       }
     } catch {}
-    localStorage.removeItem("lvlup-invite");
-    setInvite(null);
   };
   const [tourVu, setTourVu] = useState(() => !!localStorage.getItem("lvlup-tour:" + (localStorage.getItem("lvlup-actif") || "")));
   const finirTour = () => {
@@ -1584,11 +1582,14 @@ function App() {
       nom: nom || (role_ === "coach" ? "Coach" : "Moi"),
       role: role_,
       solo: !!extra.solo,
+      coachEnTete: !!extra.coachEnTete,
       code: codeNet
     };
-    if (role_ === "coachee" && !extra.solo) localStorage.setItem("lvlup-invite", p.id);
-    if (!importer && extra.programme) localStorage.setItem(SKEY(p.id), JSON.stringify({
-      programme: extra.programme,
+    if (!importer && (extra.programme || extra.programmePerso)) localStorage.setItem(SKEY(p.id), JSON.stringify({
+      programme: extra.programmePerso ? "perso" : extra.programme,
+      ...(extra.programmePerso ? {
+        programmePerso: extra.programmePerso
+      } : {}),
       style: extra.style || "soins",
       styles: extra.styles || [extra.style || "soins"],
       styleApplique: (extra.styles || [extra.style || "soins"]).join("+"),
@@ -1786,6 +1787,9 @@ function App() {
     }).catch(() => {});
   };
   const gagne = (pts, label) => {
+    // premiers XP du profil : proposer une seule fois le partage de victoire
+    const premiers = !!(stRef.current && stRef.current.xp === 0 && pts > 0 && role !== "coach" && !solo && !stRef.current.coachLie && !stRef.current.invitePremXP);
+    if (premiers) setTimeout(() => setVictoireOuverte(true), 900);
     maj(s => {
       const avant = niveauDe(s.xp);
       s.xp += pts;
@@ -1808,6 +1812,11 @@ function App() {
       if (!r.ok) throw new Error();
       const p = await r.json();
       setPause(p);
+      // le worker signale ici qu'un coach a déjà consulté le Suivi de ce code
+      if (p && p.coachLie && stRef.current && !stRef.current.coachLie) maj(s => {
+        s.coachLie = true;
+        return s;
+      });
       if (p && p.active && role !== "coach") {
         maj(s => {
           if (!(s.pauses || []).some(x => x.debut === p.active.debut)) s.pauses = [...(s.pauses || []), p.active].slice(-10);
@@ -2371,7 +2380,7 @@ function App() {
     role: role,
     solo: solo,
     onFin: finirTour
-  }), invite === pid && role !== "coach" && !solo && /*#__PURE__*/React.createElement("div", {
+  }), victoireOuverte && role !== "coach" && !solo && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
@@ -2414,15 +2423,22 @@ function App() {
       fontWeight: 700,
       fontSize: 20
     }
-  }, "Invite ton coach"), /*#__PURE__*/React.createElement("div", {
+  }, "Tu viens de gagner tes premiers XP !"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12.5,
       color: SUB,
       lineHeight: 1.55,
       margin: "8px 0 18px"
     }
-  }, "Envoie-lui ton lien : il crée son profil en 30 secondes, le code duo est déjà rempli. Sans coach, pas de négos, pas de paris, pas de cagnotte !"), /*#__PURE__*/React.createElement("button", {
-    onClick: partagerInvite,
+  }, "C'est le moment parfait pour inviter ton coach : il crée son profil en 30 secondes, le code duo est déjà rempli."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setVictoireOuverte(false);
+      maj(s => {
+        s.invitePremXP = true;
+        return s;
+      });
+      partagerInvite();
+    },
     style: {
       width: "100%",
       border: "none",
@@ -2439,8 +2455,11 @@ function App() {
     }
   }, "Partager mon lien d'invitation"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      localStorage.removeItem("lvlup-invite");
-      setInvite(null);
+      setVictoireOuverte(false);
+      maj(s => {
+        s.invitePremXP = true;
+        return s;
+      });
     },
     style: {
       background: "none",
@@ -2927,7 +2946,33 @@ function App() {
   })(), role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
     onZoom: setZoom,
     code: code
-  }), role !== "coach" && tab === "jour" && /*#__PURE__*/React.createElement("div", null, enPause && /*#__PURE__*/React.createElement("div", {
+  }), role !== "coach" && tab === "jour" && /*#__PURE__*/React.createElement("div", null, !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
+    onClick: partagerInvite,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      width: "100%",
+      textAlign: "left",
+      background: profil.coachEnTete ? "rgba(124,92,255,.14)" : GLASSBG,
+      border: profil.coachEnTete ? `1.5px solid ${COL.G}` : `1px solid ${LINE}`,
+      borderRadius: 14,
+      padding: "11px 14px",
+      marginBottom: 12,
+      color: INK
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "users",
+    s: 16,
+    c: profil.coachEnTete ? COL.G : SUB
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 12.5,
+      fontWeight: profil.coachEnTete ? 700 : 600,
+      color: profil.coachEnTete ? INK : SUB
+    }
+  }, profil.coachEnTete ? "Ton futur coach t'attend — invite-le quand tu veux" : "Invite ton coach quand tu veux — le duo rend l'aventure plus fun")), enPause && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(61,90,254,.14)",
       border: `1.5px solid ${COL.B}`,
@@ -5770,7 +5815,7 @@ function SuiviCoach({
   const rafraichir = async () => {
     setErreur(false);
     try {
-      const r = await fetch(api(code, "/etat"));
+      const r = await fetch(api(code, "/etat") + "?coach=1");
       if (!r.ok) throw new Error();
       const d = await r.json();
       setEtat(d && d.xp != null ? d : {
@@ -6108,6 +6153,46 @@ function Onboarding({
   const [styles, setStyles] = useState(["soins"]);
   const legacy = !!localStorage.getItem("lvlup-state-v3");
   const [importer, setImporter] = useState(false);
+  const [objLibre, setObjLibre] = useState("");
+  const [progPerso, setProgPerso] = useState(null);
+  const [genEtat, setGenEtat] = useState(null); // null | "encours" | "ok" | "echec" | "nonconfig"
+  // objectif libre ou 5-6 séances/sem : les templates plafonnent à 4, on passe
+  // par la génération IA (le worker accepte jusqu'à 7 séances)
+  const needsIA = objf === "libre" || jrs >= 5;
+  const genererSurMesure = async () => {
+    setGenEtat("encours");
+    const desc = objf === "libre" ? objLibre.trim() : {
+      tonifier: "me tonifier",
+      poids: "perdre du poids",
+      muscler: "me muscler",
+      mieux: "me sentir mieux (énergie, stress)",
+      douce: "reprendre le sport en douceur"
+    }[objf] || "me remettre au sport";
+    const objectifTxt = `${desc} · ${jrs || 3} séances par semaine · ${lieu === "maison" ? "à la maison sans matériel" : "en salle"}`;
+    try {
+      const r = await fetch(api(code, "/generer"), {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          objectif: objectifTxt
+        })
+      });
+      if (r.status === 503) {
+        setGenEtat("nonconfig");
+        return;
+      }
+      if (!r.ok) throw new Error();
+      setProgPerso(await r.json());
+      setGenEtat("ok");
+    } catch {
+      setGenEtat("echec");
+    }
+  };
+  useEffect(() => {
+    if (etape === "final" && needsIA && genEtat === null) genererSurMesure();
+  }, [etape]);
   const suggereAvec = (o, l, j) => {
     const sauvegarde = [objf, lieu, jrs];
     try {
@@ -6118,10 +6203,11 @@ function Onboarding({
   };
   const suggereCalc = (objf, lieu, jrs) => {
     if (lieu === "maison") return "maison";
-    if (objf === "fessiers") return jrs && jrs <= 3 ? "fullbody3" : "fessiers";
-    if (objf === "corps") return "fullbody3";
-    if (objf === "gras") return "pertegras";
-    if (objf === "haut") return "hautducorps";
+    if (objf === "tonifier") return jrs && jrs <= 3 ? "fullbody3" : "fessiers";
+    if (objf === "poids") return "pertegras";
+    if (objf === "muscler") return "hautducorps";
+    if (objf === "mieux") return "fullbody3";
+    if (objf === "libre") return "fessiers"; // repli si la génération IA échoue
     return "douce";
   };
 
@@ -6449,7 +6535,7 @@ function Onboarding({
       titre: "Ton objectif ?",
       val: objf,
       set: setObjf,
-      opts: [["fessiers", "Fessiers & galbe"], ["corps", "Tout le corps"], ["gras", "Perdre du gras"], ["haut", "Haut du corps"], ["douce", "Reprendre en douceur"]]
+      opts: [["tonifier", "Me tonifier"], ["poids", "Perdre du poids"], ["muscler", "Me muscler"], ["mieux", "Me sentir mieux (énergie, stress)"], ["douce", "Reprendre en douceur"], ["libre", "Autre chose ? Décris-le"]]
     }, {
       cle: "lieu",
       titre: "Tu t'entraînes où ?",
@@ -6461,11 +6547,13 @@ function Onboarding({
       titre: "Combien de séances par semaine ?",
       val: jrs,
       set: setJrs,
-      opts: [[2, "2 séances"], [3, "3 séances"], [4, "4 séances"]]
+      opts: [[2, "2 séances"], [3, "3 séances"], [4, "4 séances"], [5, "5 séances"], [6, "6 séances"]]
     }];
     const Q = QS[qIdx];
     const rep = v => {
       Q.set(v);
+      // « Autre chose » ouvre le champ libre : pas d'avance automatique
+      if (Q.cle === "objf" && v === "libre") return;
       setTimeout(() => {
         if (qIdx < 2) setQIdx(qIdx + 1);else {
           setProgSel(suggereAvec(qIdx === 0 ? v : objf, qIdx === 1 ? v : lieu, qIdx === 2 ? v : jrs));
@@ -6515,40 +6603,96 @@ function Onboarding({
         display: "grid",
         gap: 9
       }
-    }, Q.opts.map(([v, l]) => /*#__PURE__*/React.createElement("button", {
-      key: v,
-      onClick: () => rep(v),
+    }, Q.opts.map(([v, l]) => {
+      const habitue = Q.cle === "jrs" && v === 6; // option « pour les habitués », visuellement distincte
+      return /*#__PURE__*/React.createElement("button", {
+        key: v,
+        onClick: () => rep(v),
+        style: {
+          ...GLASS,
+          border: habitue ? `1.5px dashed ${Q.val === v ? COL.D : "rgba(255,176,32,.45)"}` : `1px solid ${Q.val === v ? COL.G : "rgba(255,255,255,.10)"}`,
+          background: Q.val === v ? habitue ? "rgba(255,176,32,.14)" : "rgba(124,92,255,.18)" : GLASSBG,
+          borderRadius: 16,
+          padding: "17px 16px",
+          textAlign: "left",
+          color: INK,
+          fontWeight: 700,
+          fontSize: 15,
+          display: "flex",
+          alignItems: "center",
+          gap: 10
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          flexShrink: 0,
+          border: `2px solid ${Q.val === v ? habitue ? COL.D : COL.G : "rgba(255,255,255,.25)"}`,
+          background: Q.val === v ? habitue ? COL.D : COL.G : "transparent",
+          display: "grid",
+          placeItems: "center"
+        }
+      }, Q.val === v && /*#__PURE__*/React.createElement(Ic, {
+        n: "check",
+        s: 11,
+        c: "#fff",
+        w: 3
+      })), l, habitue && /*#__PURE__*/React.createElement("span", {
+        style: {
+          marginLeft: "auto",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: .6,
+          color: COL.D,
+          background: "rgba(255,176,32,.14)",
+          borderRadius: 999,
+          padding: "3px 8px",
+          flexShrink: 0
+        }
+      }, "POUR LES HABITUÉS"));
+    }), Q.cle === "objf" && objf === "libre" && /*#__PURE__*/React.createElement("div", {
       style: {
         ...GLASS,
-        border: `1px solid ${Q.val === v ? COL.G : "rgba(255,255,255,.10)"}`,
-        background: Q.val === v ? "rgba(124,92,255,.18)" : GLASSBG,
         borderRadius: 16,
-        padding: "17px 16px",
-        textAlign: "left",
-        color: INK,
-        fontWeight: 700,
-        fontSize: 15,
-        display: "flex",
-        alignItems: "center",
-        gap: 10
+        padding: "14px 16px"
       }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("textarea", {
+      value: objLibre,
+      onChange: e => setObjLibre(e.target.value),
+      rows: 3,
+      placeholder: "Ex : me remettre au sport après une blessure au genou, plutôt du renfo doux…",
       style: {
-        width: 20,
-        height: 20,
-        borderRadius: "50%",
-        flexShrink: 0,
-        border: `2px solid ${Q.val === v ? COL.G : "rgba(255,255,255,.25)"}`,
-        background: Q.val === v ? COL.G : "transparent",
-        display: "grid",
-        placeItems: "center"
+        width: "100%",
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 10,
+        padding: "10px 12px",
+        fontSize: 13.5,
+        background: FIELD,
+        outline: "none",
+        resize: "none",
+        fontFamily: "inherit"
       }
-    }, Q.val === v && /*#__PURE__*/React.createElement(Ic, {
-      n: "check",
-      s: 11,
-      c: "#fff",
-      w: 3
-    })), l))), /*#__PURE__*/React.createElement("button", {
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10.5,
+        color: SUB,
+        margin: "6px 0 8px"
+      }
+    }, "Ton programme sera composé sur mesure à partir de ta description."), /*#__PURE__*/React.createElement("button", {
+      onClick: () => objLibre.trim().length >= 8 && setQIdx(1),
+      disabled: objLibre.trim().length < 8,
+      style: {
+        width: "100%",
+        background: objLibre.trim().length >= 8 ? COL.G : "rgba(255,255,255,.08)",
+        color: objLibre.trim().length >= 8 ? "#fff" : "#5A6274",
+        border: "none",
+        borderRadius: 10,
+        padding: "11px",
+        fontWeight: 800,
+        fontSize: 13.5
+      }
+    }, objLibre.trim().length >= 8 ? "Continuer" : "Décris un peu plus (8 caractères min)"))), /*#__PURE__*/React.createElement("button", {
       onClick: () => qIdx > 0 ? setQIdx(qIdx - 1) : setEtape("mode"),
       style: {
         background: "none",
@@ -6565,6 +6709,87 @@ function Onboarding({
 
   /* ---- écran final : programme suggéré + prénom (+ code duo) ---- */
   const p = PROGRAMMES[progSel] || PROGRAMMES.fessiers;
+  const pAff = progPerso || p;
+  const enGen = needsIA && genEtat === "encours";
+  const genKO = needsIA && (genEtat === "echec" || genEtat === "nonconfig");
+  const creer = intention => {
+    onCreer(nom, "coachee", mode === "duo" ? code : codeAlea(), importer, {
+      solo: mode === "solo",
+      ...(progPerso ? {
+        programmePerso: progPerso
+      } : {
+        programme: progSel
+      }),
+      style: styles[0],
+      styles,
+      coachEnTete: !!intention
+    });
+  };
+
+  /* ---- écran graine d'invitation (duo) : intention seule, aucun envoi ---- */
+  if (etape === "invitation") return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: "78vh",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 64,
+      height: 64,
+      borderRadius: 20,
+      margin: "0 auto 16px",
+      background: "linear-gradient(140deg, #3D5AFE, #7C5CFF)",
+      display: "grid",
+      placeItems: "center",
+      boxShadow: "0 14px 34px rgba(61,90,254,.4)"
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "users",
+    s: 30,
+    c: "#fff"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 700,
+      fontSize: 22,
+      textAlign: "center",
+      lineHeight: 1.2
+    }
+  }, "Quelqu'un tient à toi ?"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13.5,
+      color: SUB,
+      textAlign: "center",
+      lineHeight: 1.55,
+      margin: "10px 0 24px"
+    }
+  }, "Un coach rend l'aventure bien plus fun. Rien à envoyer maintenant — tu l'inviteras quand tu voudras."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => creer(true),
+    style: {
+      width: "100%",
+      background: COL.G,
+      color: "#fff",
+      border: "none",
+      borderRadius: 14,
+      padding: "15px",
+      fontWeight: 800,
+      fontSize: 15,
+      marginBottom: 10
+    }
+  }, "J'ai quelqu'un en tête"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => creer(false),
+    style: {
+      width: "100%",
+      ...GLASS,
+      color: INK,
+      borderRadius: 14,
+      padding: "15px",
+      fontWeight: 700,
+      fontSize: 14
+    }
+  }, "Je verrai plus tard")));
   return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setQIdx(2);
@@ -6599,28 +6824,63 @@ function Onboarding({
       alignItems: "center",
       gap: 12
     }
-  }, /*#__PURE__*/React.createElement(Ic, {
-    n: ICONE_PROG[progSel] || "star",
+  }, enGen ? /*#__PURE__*/React.createElement(Orbe, {
     s: 28,
     c: COL.G
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }) : /*#__PURE__*/React.createElement(Ic, {
+    n: progPerso ? "zap" : ICONE_PROG[progSel] || "star",
+    s: 28,
+    c: COL.G
+  }), enGen ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 800,
       fontSize: 16
     }
-  }, p.nom), /*#__PURE__*/React.createElement("div", {
+  }, "Programme sur mesure en cours…"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       color: SUB
     }
-  }, p.desc), /*#__PURE__*/React.createElement("div", {
+  }, "Je compose tes séances à partir de ta demande.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 800,
+      fontSize: 16
+    }
+  }, pAff.nom), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: SUB
+    }
+  }, pAff.desc), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: COL.G,
       fontWeight: 700,
       marginTop: 2
     }
-  }, Object.keys(p.seances).length, " séance(s)/sem")))), /*#__PURE__*/React.createElement("div", {
+  }, Object.keys(pAff.seances).length, " séance(s)/sem")))), genKO && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "rgba(255,176,32,.10)",
+      border: `1px solid ${COL.D}55`,
+      borderRadius: 12,
+      padding: "10px 12px",
+      marginBottom: 10,
+      fontSize: 11.5,
+      color: SUB,
+      lineHeight: 1.5
+    }
+  }, genEtat === "nonconfig" ? "La génération sur mesure n'est pas encore activée — on démarre avec le programme le plus proche. " : "La génération sur mesure n'a pas répondu — on démarre avec le programme le plus proche. ", /*#__PURE__*/React.createElement("button", {
+    onClick: genererSurMesure,
+    style: {
+      background: "none",
+      border: "none",
+      color: COL.D,
+      fontWeight: 700,
+      fontSize: 11.5,
+      textDecoration: "underline",
+      padding: 0
+    }
+  }, "Réessayer")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10.5,
       color: SUB,
@@ -6737,23 +6997,28 @@ function Onboarding({
     checked: importer,
     onChange: e => setImporter(e.target.checked)
   }), "Importer mes anciennes données"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => onCreer(nom, "coachee", mode === "duo" ? code : codeAlea(), importer, {
-      solo: mode === "solo",
-      programme: progSel,
-      style: styles[0],
-      styles
-    }),
+    onClick: () => {
+      if (enGen) return;
+      if (mode === "duo") {
+        if (code.toLowerCase().replace(/[^a-z0-9-]/g, "").length < 8) {
+          alert("Code duo trop court : 8 caractères minimum, pour qu'on ne puisse pas le deviner.");
+          return;
+        }
+        setEtape("invitation");
+      } else creer(false);
+    },
+    disabled: enGen,
     style: {
       width: "100%",
-      background: COL.G,
-      color: "#fff",
+      background: enGen ? "rgba(255,255,255,.08)" : COL.G,
+      color: enGen ? "#5A6274" : "#fff",
       border: "none",
       borderRadius: 12,
       padding: "14px",
       fontWeight: 800,
       fontSize: 15
     }
-  }, mode === "solo" ? "Démarrer en solo" : "Démarrer")));
+  }, enGen ? "Un instant…" : mode === "solo" ? "Démarrer en solo" : "Démarrer")));
 }
 
 /* ============================ RÉGLAGES ============================ */
@@ -7483,7 +7748,7 @@ function Paris({
       setListe(l);
       if (role === "coach") {
         try {
-          const re = await fetch(api(code, "/etat"));
+          const re = await fetch(api(code, "/etat") + "?coach=1");
           if (re.ok) setEtatDistant(await re.json());
         } catch {}
       }

@@ -5,6 +5,29 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.8 — août 2026
+
+- **Invitation coach : graine dans l'onboarding** (intention sans action),
+  **bandeau permanent adaptatif** sur l'accueil, **rappel en modale aux
+  premiers XP**. → Ni formalité d'entrée, ni absente pendant la période
+  critique des premiers jours. Le bandeau ne disparaît qu'une fois un coach
+  connecté — détection : le Suivi coach s'identifie (`GET /etat?coach=1`), le
+  worker mémorise `coachlie`, le coaché le reçoit via `GET /pause`.
+
+- **Objectifs : 5 + carte texte libre** (voie IA du moteur hybride).
+  → Multiplication des objectifs écartée au profit de la carte libre. Mapping
+  1:1 vers les templates (tonifier→Fessiers & galbe avec bascule Full body si
+  ≤3 séances, poids→Perte de gras, muscler→Haut du corps, mieux→Full body,
+  douceur→Remise douce) : chaque réponse a son programme, aucun template
+  orphelin.
+
+- **Fréquence : 2 à 5 + option 6 « habitués »**. Pas de 7 (repos non
+  négociable). Modifiable dans les réglages (via « changer de programme »).
+  → Les templates plafonnant à 4 séances, 5-6 et l'objectif libre basculent
+  sur la génération IA (le worker accepte jusqu'à 7), avec repli sur le
+  template le plus proche si la génération échoue. Statut : à confirmer après
+  test terrain par Léo.
+
 ## v19.7 — août 2026
 
 - **Titres de niveaux : échelle de 12** (« Canapé Lover » → « Icône »), option

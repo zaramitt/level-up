@@ -9,13 +9,9 @@ traiter un item.
 - Bouton « c'est parti » partiellement caché par le bas de l'écran
 - Profils existants invisibilisés à l'ouverture
 - Boutons retour pas esthétiques
-- Objectifs proposés sympas mais insuffisants (en nombre/variété)
-- Limitation à 2/3/4 séances par semaine : insatisfaisante
 - Écran récap du programme inutile (il vient d'être choisi) — épurer
 - Styles de récompenses : plus que 3 choix souhaités
 - Impossible de revenir en arrière après validation (plusieurs écrans)
-- Invitation du coach arrive trop tôt : la déplacer plus tard dans le
-  parcours, après que l'utilisateur a fait le tour de l'app
 
 ## Écran Séance
 
