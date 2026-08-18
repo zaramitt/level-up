@@ -4642,6 +4642,160 @@ function SerieInputs({
     }
   })))));
 }
+/* ---------- mise en avant (spotlight) : carte agrandie centrée, fond flouté ---------- */
+function Spotlight({
+  onFermer,
+  children
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onFermer,
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 88,
+      background: "rgba(4,6,10,.55)",
+      backdropFilter: "blur(14px)",
+      WebkitBackdropFilter: "blur(14px)",
+      display: "grid",
+      placeItems: "center",
+      padding: 16,
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      width: "100%",
+      maxWidth: 400,
+      background: "#10141D",
+      border: "1px solid rgba(255,255,255,.14)",
+      borderRadius: 24,
+      padding: "20px 18px",
+      boxShadow: "0 24px 80px rgba(0,0,0,.55)",
+      position: "relative",
+      animation: "pop .18s"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onFermer,
+    style: {
+      position: "absolute",
+      top: 8,
+      right: 10,
+      background: "none",
+      border: "none",
+      color: SUB,
+      fontSize: 17,
+      padding: 8,
+      lineHeight: 1
+    }
+  }, "✕"), children));
+}
+
+/* ---------- bouton à maintenir 2,5 s avec décompte (moments à enjeu) ----------
+   Mêmes précautions iOS que le Stepper (v19.6) : composant au niveau module
+   (jamais démonté par un re-rendu parent), timer dans une ref nettoyée au
+   démontage, capture du pointeur, touch-action none, pas de menu contextuel. */
+const MAINTIEN_MS = 2500;
+function BoutonMaintenir({
+  label,
+  enCours,
+  couleur = COL.A,
+  disabled,
+  onEngage
+}) {
+  const [prog, setProg] = useState(0);
+  const rafRef = useRef(null);
+  const t0 = useRef(null);
+  const faitRef = useRef(false);
+  const stop = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    t0.current = null;
+    faitRef.current = false;
+    setProg(0);
+  };
+  useEffect(() => stop, []);
+  const tick = () => {
+    if (t0.current == null) return;
+    const p = Math.min(1, (performance.now() - t0.current) / MAINTIEN_MS);
+    setProg(p);
+    if (p >= 1) {
+      // décompte tenu jusqu'au bout : l'engagement part au relâchement —
+      // engager doigt posé fermerait la carte sous le doigt et le relâchement
+      // « cliquerait » ce qui se trouve dessous (clic fantôme)
+      faitRef.current = true;
+      try {
+        navigator.vibrate && navigator.vibrate(60);
+      } catch {}
+      rafRef.current = null;
+    } else rafRef.current = requestAnimationFrame(tick);
+  };
+  const debut = e => {
+    if (disabled) return;
+    try {
+      e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    faitRef.current = false;
+    t0.current = performance.now();
+    rafRef.current = requestAnimationFrame(tick);
+  };
+  const fin = () => {
+    const ok = faitRef.current;
+    stop();
+    if (ok) onEngage();
+  };
+  const tenu = prog > 0;
+  const fait = prog >= 1;
+  const resteS = Math.ceil((1 - prog) * MAINTIEN_MS / 1000);
+  return /*#__PURE__*/React.createElement("button", {
+    onPointerDown: debut,
+    onPointerUp: fin,
+    onPointerLeave: stop,
+    onPointerCancel: stop,
+    onContextMenu: e => e.preventDefault(),
+    disabled: disabled,
+    style: {
+      position: "relative",
+      overflow: "hidden",
+      width: "100%",
+      border: "none",
+      borderRadius: 14,
+      padding: "15px",
+      fontWeight: 800,
+      fontSize: 14.5,
+      color: disabled ? "#5A6274" : "#fff",
+      background: disabled ? "rgba(255,255,255,.08)" : `${couleur}55`,
+      touchAction: "none",
+      userSelect: "none",
+      WebkitUserSelect: "none",
+      WebkitTouchCallout: "none"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      width: `${prog * 100}%`,
+      background: couleur,
+      transition: tenu ? "none" : "width .25s"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: "relative"
+    }
+  }, fait ? "Relâche : c'est parti !" : tenu ? `Tiens bon… ${resteS}` : enCours || label));
+}
+
+/* base « encore ~N séances » : moyenne des estimations XP des cartes du
+   carrousel du programme courant (repli 150 XP sans programme) */
+const xpParSeanceMoyenne = () => {
+  const l = Object.values(SEANCES || {});
+  if (!l.length) return 150;
+  const tot = l.reduce((a, S) => a + S.exos.length * XP.exo + XP.bonusSeance + (S.gainage ? GAINAGE.length * XP.gainageItem + XP.bonusGainage : 0), 0);
+  return Math.max(1, Math.round(tot / l.length));
+};
+const seancesRestantes = (niveauCible, xp) => {
+  const cible = SEUILS[Math.min(Math.max(niveauCible, 1), MAX_NIVEAU) - 1];
+  return Math.max(0, Math.ceil(Math.max(0, cible - xp) / xpParSeanceMoyenne()));
+};
 function Recompenses({
   st,
   maj,
@@ -4655,6 +4809,7 @@ function Recompenses({
   const [label, setLabel] = useState("");
   const [lvl, setLvl] = useState("");
   const [kiff, setKiff] = useState("");
+  const [recOuverte, setRecOuverte] = useState(null); // index de la grande récompense en mise en avant
   const ajouter = () => {
     const n = parseInt(lvl);
     if (!label.trim() || !n || n < 1) return;
@@ -4711,7 +4866,8 @@ function Recompenses({
     code: code
   }), /*#__PURE__*/React.createElement(Pot, {
     code: code,
-    toast: toast
+    toast: toast,
+    role: role
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
@@ -4735,7 +4891,8 @@ function Recompenses({
     code: code
   }), !solo && /*#__PURE__*/React.createElement(Pot, {
     code: code,
-    toast: toast
+    toast: toast,
+    role: role
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
@@ -4748,6 +4905,7 @@ function Recompenses({
     return /*#__PURE__*/React.createElement("div", {
       key: i,
       className: "carte-seance",
+      onClick: () => setRecOuverte(i),
       style: {
         position: "relative",
         flex: "0 0 62%",
@@ -4756,6 +4914,7 @@ function Recompenses({
         padding: "16px 15px",
         overflow: "hidden",
         textAlign: "left",
+        cursor: "pointer",
         background: r.pris ? "rgba(255,255,255,.03)" : ok ? `linear-gradient(155deg, ${COL.D}D9 0%, ${COL.D}44 75%)` : GLASSBG,
         border: ok && !r.pris ? "none" : `1px solid ${LINE}`,
         boxShadow: ok && !r.pris ? `0 14px 34px ${COL.D}30` : "none",
@@ -4810,7 +4969,10 @@ function Recompenses({
         gap: 8
       }
     }, ok && !r.pris && /*#__PURE__*/React.createElement("button", {
-      onClick: () => prendre(i),
+      onClick: e => {
+        e.stopPropagation();
+        prendre(i);
+      },
       style: {
         background: "#F2F5F9",
         color: "#0B0E14",
@@ -4821,7 +4983,10 @@ function Recompenses({
         fontSize: 11.5
       }
     }, "Je la prends"), !ok && /*#__PURE__*/React.createElement("button", {
-      onClick: () => retirer(i),
+      onClick: e => {
+        e.stopPropagation();
+        retirer(i);
+      },
       style: {
         background: "none",
         border: "none",
@@ -4830,7 +4995,109 @@ function Recompenses({
         padding: 0
       }
     }, "✕"))));
-  })), /*#__PURE__*/React.createElement(Carte, {
+  })), recOuverte != null && st.recompenses[recOuverte] && (() => {
+    const r = st.recompenses[recOuverte];
+    const ok = niveau >= r.niveau;
+    const cible = SEUILS[Math.min(Math.max(r.niveau, 1), MAX_NIVEAU) - 1];
+    const manquants = Math.max(0, cible - st.xp);
+    const prct = Math.min(1, cible > 0 ? st.xp / cible : 1);
+    const nSeances = seancesRestantes(r.niveau, st.xp);
+    return /*#__PURE__*/React.createElement(Spotlight, {
+      onFermer: () => setRecOuverte(null)
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        fontSize: 10,
+        fontWeight: 800,
+        letterSpacing: .8,
+        color: ok && !r.pris ? COL.D : SUB
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      n: "gift",
+      s: 13,
+      w: 2.2,
+      c: COL.D
+    }), r.pris ? "RÉCLAMÉE" : ok ? "DÉBLOQUÉE" : `NIVEAU ${r.niveau} — ${TITRES[Math.min(r.niveau, TITRES.length) - 1]}`), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontFamily: DISPLAY,
+        fontWeight: 700,
+        fontSize: 21,
+        lineHeight: 1.25,
+        margin: "10px 0 14px",
+        textDecoration: r.pris ? "line-through" : "none"
+      }
+    }, r.label), r.pris ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: SUB
+      }
+    }, "Déjà savourée 😌") : ok ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: COL.C,
+        fontWeight: 700,
+        marginBottom: 14
+      }
+    }, "C'est gagné — elle t'attend !"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        prendre(recOuverte);
+        setRecOuverte(null);
+      },
+      style: {
+        width: "100%",
+        background: COL.D,
+        color: "#1A1206",
+        border: "none",
+        borderRadius: 14,
+        padding: "14px",
+        fontWeight: 800,
+        fontSize: 14.5
+      }
+    }, "Je la prends 🎁")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        fontSize: 12,
+        color: SUB,
+        fontWeight: 600,
+        marginBottom: 5
+      }
+    }, /*#__PURE__*/React.createElement("span", null, st.xp, " XP"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: COL.D,
+        fontWeight: 800
+      }
+    }, "encore ", manquants, " XP")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: 9,
+        background: "rgba(255,255,255,.10)",
+        borderRadius: 5,
+        overflow: "hidden",
+        marginBottom: 10
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: "100%",
+        width: `${Math.round(prct * 100)}%`,
+        background: `linear-gradient(90deg, ${COL.G}, ${COL.D})`,
+        borderRadius: 5
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: INK,
+        fontWeight: 700
+      }
+    }, "≈ encore ~", nSeances, " séance", nSeances > 1 ? "s" : "", " complète", nSeances > 1 ? "s" : ""), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10.5,
+        color: SUB,
+        marginTop: 3
+      }
+    }, "Estimation sur la moyenne d'XP des séances de ton programme — cardio, habitudes et défis accélèrent le compte.")));
+  })(), /*#__PURE__*/React.createElement(Carte, {
     style: {
       marginBottom: 16
     }
@@ -4883,7 +5150,21 @@ function Recompenses({
       padding: "10px 18px",
       fontWeight: 700
     }
-  }, "Ajouter"))), /*#__PURE__*/React.createElement(Idees, {
+  }, "Ajouter")), parseInt(lvl) > 0 && parseInt(lvl) <= MAX_NIVEAU && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: COL.G,
+      fontWeight: 700,
+      marginTop: 7
+    }
+  }, "Niveau ", parseInt(lvl), " ≈ encore ~", seancesRestantes(parseInt(lvl), st.xp), " séance(s) complète(s) d'ici là"), parseInt(lvl) > MAX_NIVEAU && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: COL.A,
+      fontWeight: 700,
+      marginTop: 7
+    }
+  }, "Le niveau max est ", MAX_NIVEAU, " (Icône)")), /*#__PURE__*/React.createElement(Idees, {
     code: code,
     style: st.styles || [st.style || "soins"],
     contexte: "grandes récompenses par paliers de niveau",
@@ -7244,7 +7525,7 @@ function Reglages({
   }), !profil.solo && /*#__PURE__*/React.createElement(Ligne, {
     k: "pot",
     titre: "Cagnotte des manquements",
-    desc: "Jour raté : 2 € puis 3 € puis 5 € (escalade mensuelle, plafond 30 €/mois) — pour financer vos sorties à deux"
+    desc: "Jour raté : 2 € puis 3 € puis 5 € (escalade mensuelle, plafond mensuel réglable, 30 € par défaut) — pour financer vos sorties à deux"
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -7780,21 +8061,22 @@ function Paris({
     }
     setBusy(false);
   };
+  const [lancerOuvert, setLancerOuvert] = useState(false);
   const proposer = () => {
     const d = parseInt(duree),
       c = parseInt(cible);
     const t = TYPES_PARI.find(x => x.id === type);
     if (!d || d < 3 || d > 21) {
       toast("Durée : entre 3 et 21 jours");
-      return;
+      return false;
     }
     if (t.aCible && (!c || c < 1)) {
       toast("Indique un objectif chiffré");
-      return;
+      return false;
     }
     if (!miseCoachee.trim() || !miseCoach.trim()) {
       toast("Il faut les deux mises !");
-      return;
+      return false;
     }
     act({
       action: "proposer",
@@ -7810,7 +8092,13 @@ function Paris({
     setMiseCoachee("");
     setMiseCoach("");
     toast("⚔️ Pari proposé — à l'autre d'accepter");
+    return true;
   };
+  const pariPret = (() => {
+    const d = parseInt(duree);
+    const t = TYPES_PARI.find(x => x.id === type);
+    return !busy && d >= 3 && d <= 21 && (!t.aCible || parseInt(cible) >= 1) && !!miseCoachee.trim() && !!miseCoach.trim();
+  })();
 
   // résolution automatique + XP de victoire côté coaché·e
   useEffect(() => {
@@ -7879,16 +8167,52 @@ function Paris({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
       fontWeight: 700,
-      fontSize: 13,
-      marginBottom: 8
+      fontSize: 13
+    }
+  }, "Un défi, deux enjeux"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10.5,
+      color: SUB,
+      marginTop: 2
+    }
+  }, "Gagner rapporte aussi +", XP.pari, " XP. Le pari démarre quand l'autre accepte.")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setLancerOuvert(true),
+    style: {
+      background: tintCss(COL.A),
+      color: COL.A,
+      border: `1.5px solid ${COL.A}`,
+      borderRadius: 999,
+      padding: "10px 15px",
+      fontWeight: 800,
+      fontSize: 12.5,
+      flexShrink: 0
+    }
+  }, "Lancer un pari 🎲"))), lancerOuvert && /*#__PURE__*/React.createElement(Spotlight, {
+    onFermer: () => setLancerOuvert(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 700,
+      fontSize: 19,
+      marginBottom: 12
     }
   }, "Lancer un pari 🎲"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
       gap: 6,
-      marginBottom: 8
+      marginBottom: 10
     }
   }, TYPES_PARI.map(t => /*#__PURE__*/React.createElement("button", {
     key: t.id,
@@ -7950,42 +8274,39 @@ function Paris({
       outline: "none",
       marginBottom: 8
     }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("input", {
+  }), /*#__PURE__*/React.createElement("textarea", {
     value: miseCoach,
     onChange: e => setMiseCoach(e.target.value),
-    placeholder: "🎁 Mise du coach si gagné (ex : resto au choix)",
+    rows: 2,
+    placeholder: "🎁 Mise du coach si gagné (ex : resto au choix, une soirée thème, un massage…)",
     style: {
-      flex: 1,
+      width: "100%",
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
       fontSize: 13,
       background: FIELD,
-      outline: "none"
+      outline: "none",
+      resize: "none",
+      fontFamily: "inherit",
+      marginBottom: 12
     }
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: proposer,
-    disabled: busy,
-    style: {
-      background: "#F2F5F9",
-      color: "#0B0E14",
-      border: "none",
-      borderRadius: 10,
-      padding: "10px 16px",
-      fontWeight: 700
+  }), /*#__PURE__*/React.createElement(BoutonMaintenir, {
+    label: "Maintiens pour t'engager ⚔️",
+    enCours: busy ? "…" : null,
+    couleur: COL.A,
+    disabled: !pariPret,
+    onEngage: () => {
+      if (proposer()) setLancerOuvert(false);
     }
-  }, busy ? "…" : "Parier")), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10.5,
       color: SUB,
+      textAlign: "center",
       marginTop: 7
     }
-  }, "Gagner un pari rapporte aussi +", XP.pari, " XP. Le pari démarre quand l'autre accepte.")), liste.map(p => {
+  }, pariPret ? "Maintiens le bouton 2-3 s — relâcher avant la fin annule sans engager." : "Remplis la durée et les deux mises pour t'engager.")), liste.map(p => {
     const v = p.statut === "actif" ? evalPari(p, histo, jours, pausesP) : null;
     const attendMoi = p.statut === "propose" && p.auteur !== role;
     const coul = p.statut === "gagne" ? COL.C : p.statut === "perdu" ? COL.A : p.statut === "actif" ? COL.D : LINE;
@@ -8327,14 +8648,17 @@ function ChoixProgramme({
 /* ============================ LA CAGNOTTE 🍯 ============================ */
 function Pot({
   code,
-  toast
+  toast,
+  role
 }) {
   const [pot, setPot] = useState(null);
   const [m, setM] = useState("");
   const [note, setNote] = useState("");
-  const [conf, setConf] = useState(false);
   const [plus, setPlus] = useState(false);
-  const prochain = !pot ? 2 : pot.moisEuros >= 30 ? 0 : pot.nbMois === 0 ? 2 : pot.nbMois === 1 ? 3 : 5;
+  const [ouvert, setOuvert] = useState(false);
+  const [plafInput, setPlafInput] = useState("");
+  const plafond = pot && pot.plafond || 30;
+  const prochain = !pot ? 2 : pot.moisEuros >= plafond ? 0 : pot.nbMois === 0 ? 2 : pot.nbMois === 1 ? 3 : 5;
   const charger = async () => {
     try {
       const r = await fetch(api(code, "/pot"));
@@ -8386,7 +8710,12 @@ function Pot({
       fontWeight: 500,
       fontSize: 11
     }
-  }, "— les manquements financent vos activités à deux")), /*#__PURE__*/React.createElement(Carte, null, /*#__PURE__*/React.createElement("div", {
+  }, "— les manquements financent vos activités à deux")), /*#__PURE__*/React.createElement("div", {
+    onClick: () => setOuvert(true),
+    style: {
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement(Carte, null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -8412,13 +8741,52 @@ function Pot({
     style: {
       color: COL.A
     }
-  }, "+", prochain, " €") : /*#__PURE__*/React.createElement("b", null, "rien (plafond du mois atteint)"), " ", "(escalade 2 → 3 → 5 €, plafond 30 €/mois). Jokers et pauses ne comptent jamais.")), pot && (pot.histo || []).length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "+", prochain, " €") : /*#__PURE__*/React.createElement("b", null, "rien (plafond du mois atteint)"), " ", `(escalade 2 → 3 → 5 €, plafond ${plafond} €/mois). Jokers et pauses ne comptent jamais.`)), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 10,
-      borderTop: `1px solid ${LINE}`,
-      paddingTop: 8
+      fontSize: 10.5,
+      color: COL.C,
+      fontWeight: 700,
+      marginTop: 8
     }
-  }, pot.histo.slice(0, 5).map((h, i) => /*#__PURE__*/React.createElement("div", {
+  }, "Toucher pour ouvrir — dépense, ajout manuel", role === "coach" ? ", plafond" : "", " et historique"))), ouvert && /*#__PURE__*/React.createElement(Spotlight, {
+    onFermer: () => setOuvert(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      fontSize: 10,
+      fontWeight: 800,
+      letterSpacing: .8,
+      color: SUB
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "euro",
+    s: 13,
+    c: COL.C
+  }), "LA CAGNOTTE"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 700,
+      fontSize: 34,
+      margin: "8px 0 2px"
+    }
+  }, pot ? pot.total || 0 : "…", " €"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: SUB,
+      lineHeight: 1.5,
+      marginBottom: 10
+    }
+  }, `Ce mois : ${pot ? pot.moisEuros || 0 : 0} € / plafond ${plafond} € · prochain manquement ${prochain > 0 ? "+" + prochain + " €" : "gratuit (plafond atteint)"}`), pot && (pot.histo || []).length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: `1px solid ${LINE}`,
+      paddingTop: 8,
+      marginBottom: 10,
+      maxHeight: 170,
+      overflowY: "auto"
+    }
+  }, pot.histo.slice(0, 8).map((h, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       display: "flex",
@@ -8444,14 +8812,14 @@ function Pot({
       color: SUB,
       fontSize: 11,
       textDecoration: "underline",
-      marginTop: 8,
-      padding: 0
+      padding: 0,
+      marginBottom: 10
     }
   }, "＋ ajout manuel (pari perdu, gage converti…)") : /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 8,
-      marginTop: 10
+      marginBottom: 10
     }
   }, /*#__PURE__*/React.createElement("input", {
     value: m,
@@ -8502,31 +8870,78 @@ function Pot({
       padding: "9px 14px",
       fontWeight: 700
     }
-  }, "+")), pot && (pot.total || 0) > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "+")), role === "coach" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      fontSize: 11.5,
+      color: SUB
+    }
+  }, "Plafond mensuel (c'est toi qui finances)"), /*#__PURE__*/React.createElement("input", {
+    value: plafInput,
+    onChange: e => setPlafInput(e.target.value),
+    inputMode: "numeric",
+    placeholder: String(plafond),
+    style: {
+      width: 64,
+      border: `1.5px solid ${LINE}`,
+      borderRadius: 10,
+      padding: "9px 10px",
+      fontSize: 13,
+      background: FIELD,
+      outline: "none",
+      textAlign: "center"
+    }
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      if (conf) {
+      const v = parseInt(plafInput);
+      if (v >= 5 && v <= 200) {
         act({
-          action: "vider"
+          action: "plafond",
+          montant: v
         });
-        setConf(false);
-        toast("🎉 Bonne sortie !");
-      } else {
-        setConf(true);
-        setTimeout(() => setConf(false), 3000);
-      }
+        setPlafInput("");
+        toast(`Plafond fixé à ${v} €/mois`);
+      } else toast("Plafond entre 5 et 200 €");
     },
     style: {
-      width: "100%",
-      marginTop: 8,
-      background: conf ? COL.C : GLASSBG,
-      color: conf ? "#fff" : COL.C,
-      border: `1.5px solid ${COL.C}`,
+      background: GLASSBG,
+      color: INK,
+      border: `1.5px solid ${LINE}`,
       borderRadius: 10,
-      padding: "10px",
-      fontWeight: 800,
-      fontSize: 12.5
+      padding: "9px 12px",
+      fontWeight: 700,
+      fontSize: 12
     }
-  }, conf ? "Confirmer : on l'a dépensée ! ✓" : "On l'a dépensée — remettre à zéro")));
+  }, "OK")), pot && (pot.total || 0) > 0 ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BoutonMaintenir, {
+    label: "Maintiens : on l'a dépensée ! 🎉",
+    couleur: COL.C,
+    onEngage: () => {
+      act({
+        action: "vider"
+      });
+      setOuvert(false);
+      toast("🎉 Bonne sortie !");
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10.5,
+      color: SUB,
+      textAlign: "center",
+      marginTop: 7
+    }
+  }, "Maintiens 2-3 s pour remettre à zéro — relâcher avant la fin annule.")) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: SUB
+    }
+  }, "Cagnotte vide — c'est plutôt bon signe 😄")));
 }
 
 /* ============================ ZONE DANGER ============================ */
@@ -8803,7 +9218,7 @@ function Tour({
   }, {
     e: "euro",
     t: "La cagnotte",
-    x: "Ses jours ratés la remplissent automatiquement (2→3→5 €, plafond 30 €/mois). Elle finance vos sorties à deux."
+    x: "Ses jours ratés la remplissent automatiquement (2→3→5 €, plafond mensuel réglable). Elle finance vos sorties à deux."
   }] : solo ? [{
     e: "camera",
     t: "La photo fait foi",
@@ -9006,7 +9421,7 @@ function ReglesJeu({
     x: `Jour sans aucun passage : −${DECAY} XP. Cocher Repos ou une seule habitude suffit à couvrir la journée.`
   }), /*#__PURE__*/React.createElement(B, {
     t: "La cagnotte (duo)",
-    x: "Chaque jour raté ajoute automatiquement 2 €, puis 3 €, puis 5 € (escalade du mois, plafond 30 €/mois, remise à zéro mensuelle). Elle finance vos activités à deux."
+    x: "Chaque jour raté ajoute automatiquement 2 €, puis 3 €, puis 5 € (escalade du mois, plafond mensuel réglable — 30 € par défaut, remise à zéro mensuelle). Elle finance vos activités à deux."
   }), /*#__PURE__*/React.createElement(B, {
     t: "Les jokers",
     x: "2 par mois, non cumulables. Un tap = journée couverte, aucun malus, aucune cagnotte. Aucune justification demandée."

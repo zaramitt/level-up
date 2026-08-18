@@ -5,6 +5,15 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.10 — août 2026
+
+- **Moments à enjeu (pari, cagnotte, grande récompense) : mise en avant avec
+  flou + engagement par maintien 2-3 s avec décompte.** → Le suspens fait
+  partie du jeu ; l'engagement doit être un geste délibéré, pas un tap
+  accidentel. Base du « encore ~N séances » : moyenne des estimations XP des
+  cartes du carrousel du programme courant (repli 150 XP). Plafond mensuel de
+  la cagnotte réglable par le coach (5-200 €, 30 € par défaut).
+
 ## v19.8 — août 2026
 
 - **Invitation coach : graine dans l'onboarding** (intention sans action),
