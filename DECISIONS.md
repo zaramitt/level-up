@@ -104,6 +104,10 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ## Questions ouvertes — à trancher
 
+- Calibrage des niveaux des récompenses par défaut : quel horizon pour un
+  mini-kiff, une récompense moyenne, une grande récompense ? À trancher avec
+  Léo.
+
 Sur le moteur de programmes (discuté, pas arbitré) :
 
 - Templates du moteur hybride : combien au lancement, et lesquels ?
