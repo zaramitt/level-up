@@ -22,6 +22,9 @@
     background-attachment: fixed;
   }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  /* touch-action:manipulation — iOS Safari attend sinon un éventuel double-tap
+     (zoom) sur les zones de texte dense et avale le premier tap */
+  button { touch-action: manipulation; }
   input, button, textarea { font-family:inherit; }
   input, textarea { color:#F2F5F9 !important; font-size:16px !important; }
   input::placeholder, textarea::placeholder { color:#5A6274; }
@@ -3025,7 +3028,7 @@ function App() {
         border: "none",
         textAlign: "left",
         borderRadius: 22,
-        padding: "18px 16px",
+        padding: "18px 16px 46px",
         minHeight: 150,
         overflow: "hidden",
         background: `linear-gradient(155deg, ${S.couleur}E6 0%, ${S.couleur}55 70%, rgba(11,14,20,.4) 100%)`,
@@ -3798,7 +3801,7 @@ function App() {
   })), timer && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
-      bottom: 64,
+      bottom: 84,
       left: "50%",
       transform: "translateX(-50%)",
       width: "calc(100% - 24px)",
@@ -6910,7 +6913,7 @@ function Reglages({
       width: 20,
       height: 20,
       borderRadius: "50%",
-      background: GLASSBG,
+      background: "#fff",
       transition: "left .15s"
     }
   })));
@@ -7015,7 +7018,7 @@ function Reglages({
       width: 20,
       height: 20,
       borderRadius: "50%",
-      background: GLASSBG,
+      background: "#fff",
       transition: "left .15s"
     }
   }))), rappelsOn && /*#__PURE__*/React.createElement("div", {
@@ -7081,7 +7084,7 @@ function Reglages({
       width: 20,
       height: 20,
       borderRadius: "50%",
-      background: GLASSBG,
+      background: "#fff",
       transition: "left .15s"
     }
   }))), rappelsOn && /*#__PURE__*/React.createElement("button", {
@@ -8929,6 +8932,36 @@ function Orbe({
 }
 
 /* ============================ STEPPER TACTILE ============================ */
+const StepperBouton = ({
+  d,
+  ch,
+  compact,
+  debut,
+  stop
+}) => /*#__PURE__*/React.createElement("button", {
+  onPointerDown: () => debut(d),
+  onPointerUp: stop,
+  onPointerLeave: stop,
+  onPointerCancel: stop,
+  onContextMenu: e => e.preventDefault(),
+  style: {
+    width: compact ? 30 : 40,
+    height: compact ? 30 : 40,
+    borderRadius: compact ? 9 : 12,
+    border: "1px solid rgba(255,255,255,.14)",
+    flexShrink: 0,
+    background: "linear-gradient(150deg, rgba(255,255,255,.13), rgba(255,255,255,.03))",
+    color: "#F2F5F9",
+    fontSize: compact ? 15 : 18,
+    fontWeight: 600,
+    lineHeight: 1,
+    display: "grid",
+    placeItems: "center",
+    touchAction: "none",
+    userSelect: "none",
+    WebkitUserSelect: "none"
+  }
+}, ch);
 function Stepper({
   valeur,
   onChange,
@@ -8940,14 +8973,16 @@ function Stepper({
   compact
 }) {
   const tRef = useRef(null);
+  // vRef : valeur courante lue par l'intervalle d'appui long — la fermeture du
+  // setInterval fige `valeur` au rendu du pointerdown, sans ref chaque tick
+  // réécrirait la même valeur au lieu de continuer à monter
+  const vRef = useRef(valeur);
+  vRef.current = valeur;
   const bouge = d => {
-    const v = Math.round(((parseFloat(valeur) || 0) + d * pas) * 100) / 100;
+    const v = Math.round(((parseFloat(vRef.current) || 0) + d * pas) * 100) / 100;
     if (v < min || v > max) return;
+    vRef.current = v;
     onChange(v);
-  };
-  const debut = d => {
-    bouge(d);
-    tRef.current = setInterval(() => bouge(d), 160);
   };
   const stop = () => {
     if (tRef.current) {
@@ -8955,33 +8990,12 @@ function Stepper({
       tRef.current = null;
     }
   };
-  const B = ({
-    d,
-    ch
-  }) => /*#__PURE__*/React.createElement("button", {
-    onPointerDown: () => debut(d),
-    onPointerUp: stop,
-    onPointerLeave: stop,
-    onPointerCancel: stop,
-    onContextMenu: e => e.preventDefault(),
-    style: {
-      width: compact ? 30 : 40,
-      height: compact ? 30 : 40,
-      borderRadius: compact ? 9 : 12,
-      border: "1px solid rgba(255,255,255,.14)",
-      flexShrink: 0,
-      background: "linear-gradient(150deg, rgba(255,255,255,.13), rgba(255,255,255,.03))",
-      color: "#F2F5F9",
-      fontSize: compact ? 15 : 18,
-      fontWeight: 600,
-      lineHeight: 1,
-      display: "grid",
-      placeItems: "center",
-      touchAction: "none",
-      userSelect: "none",
-      WebkitUserSelect: "none"
-    }
-  }, ch);
+  const debut = d => {
+    stop();
+    bouge(d);
+    tRef.current = setInterval(() => bouge(d), 160);
+  };
+  useEffect(() => stop, []);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -8992,9 +9006,12 @@ function Stepper({
       borderRadius: compact ? 11 : 14,
       padding: compact ? 3 : 5
     }
-  }, /*#__PURE__*/React.createElement(B, {
+  }, /*#__PURE__*/React.createElement(StepperBouton, {
     d: -1,
-    ch: "−"
+    ch: "−",
+    compact: compact,
+    debut: debut,
+    stop: stop
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
@@ -9016,9 +9033,12 @@ function Stepper({
       color: SUB,
       fontWeight: 500
     }
-  }, " ", unite))), /*#__PURE__*/React.createElement(B, {
+  }, " ", unite))), /*#__PURE__*/React.createElement(StepperBouton, {
     d: 1,
-    ch: "＋"
+    ch: "＋",
+    compact: compact,
+    debut: debut,
+    stop: stop
   }));
 }
 
