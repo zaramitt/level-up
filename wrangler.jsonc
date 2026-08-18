@@ -1,0 +1,14 @@
+{
+  "name": "level-up",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-01",
+  "kv_namespaces": [
+    {
+      "binding": "NEGOS",
+      "id": "b01ca4e9f02549828073664575d5eaf8"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 18 * * *", "0 6 * * *"]
+  }
+}

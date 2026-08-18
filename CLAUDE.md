@@ -20,6 +20,9 @@ Déploiement : **Cloudflare Worker** (pas Pages).
 
 - `worker.js` — serveur : routes API, stockage, crons, appels IA
 - `index.html` — front : React, JSX **précompilé** (plus de babel-standalone)
+- `wrangler.jsonc` — configuration de déploiement (Workers Builds) : nom, point
+  d'entrée, liaison KV et crons ; le secret `ANTHROPIC_API_KEY` vit côté
+  Cloudflare, pas dans ce fichier
 
 Configuration Cloudflare :
 
