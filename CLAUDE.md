@@ -148,3 +148,7 @@ maintenir tel quel — mais ne pas le défendre si Léo demande à en changer.
 
 Lire `DECISIONS.md`. Plusieurs pistes évidentes ont déjà été écartées pour de
 bonnes raisons.
+
+`BACKLOG.md` liste tout ce qui est identifié mais pas encore traité (retour
+complet de Léo sur la v19.5) — le consulter avant de proposer un chantier, et
+y piocher les items d'une session dédiée.
