@@ -71,3 +71,10 @@ traiter un item.
 - Bouton réglages flottant, toujours accessible
 - Quitter les réglages : swipe gauche→droite ou bouton retour flottant
   (aujourd'hui il faut défiler tout en bas)
+
+## Idées produit (non planifiées)
+
+- Rigueur/discipline comme dimension célébrée en soi : visibilité de la
+  constance, badge/titre de régularité, lien avec le concept de « healing
+  streak » (la reprise comme métrique). Demande initiale : copine de Léo,
+  août 2026.
