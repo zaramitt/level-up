@@ -37,15 +37,6 @@ traiter un item.
 - « Je propose » : interminable — en faire une carte avec quelques idées +
   bouton « en voir plus » ; après sélection, ne pas devoir défiler tout en
   bas ; la case « 18 » seule est incompréhensible (préciser « niveau 18 »)
-- Pari : case « mise du coach si gagné » trop petite, texte doit pouvoir
-  défiler ; au tap sur « lancer un pari », mise en avant de la carte avec
-  arrière-plan flouté ; bouton de pari à MAINTENIR 2-3 s avec décompte pour le
-  suspens
-- Cagnotte : même traitement (mise en avant + maintien) + plafond mensuel
-  réglable manuellement
-- Grandes récompenses : les placer tout en haut ; au tap, mise en avant avec
-  XP manquants + barre de progression ; à la création, traduire le niveau
-  saisi en nombre de séances complètes
 - Coffres mystères : liste trop longue — bouton « en voir plus » progressif
 - Mini-kiffs : validation par le coach ? (risque de triche : « MacBook Pro »
   en mini-kiff)
