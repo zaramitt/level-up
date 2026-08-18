@@ -30,11 +30,6 @@ traiter un item.
 
 ## Onglet Récompenses (refonte globale — trop d'infos, manque de clarté)
 
-- **PRIORITÉ HAUTE — Recalibrage des niveaux des récompenses par défaut.**
-  Avec le barème v19.7, une récompense niveau 5 = ~48 séances (~3 mois), et
-  les listes de styles vont jusqu'au niveau 20 — donc largement hors
-  d'atteinte. La barre de progression rend ce mauvais calibrage visible et
-  démotivant. À traiter avant toute nouvelle testeuse.
 - Grandes récompenses : les placer tout en haut de l'onglet (tombé entre les
   passes 1 et 2)
 - Table des négos : pastille « en ligne partagé avec le coach » + émoji
