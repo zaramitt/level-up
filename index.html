@@ -936,7 +936,7 @@ const DEFIS = [{
   n: 1,
   txt: "Apprends une variante en vidéo et fais-la en vraie séance. Photo à l'appui."
 }];
-const TITRES = ["Recrue", "Curieuse", "Apprentie", "Régulière", "Sérieuse", "Solide", "Déterminée", "Machine", "Guerrière", "Athlète", "Experte", "Boss des hip thrusts", "Force de la nature", "Reine de la fonte", "Légende de la salle", "Immortelle", "Sensei", "Grande Sensei", "Mythe", "Icône"];
+const TITRES = ["Canapé Lover", "Motivé·e du lundi", "Courbaturé·e", "Habitué·e de la salle", "Sérieux·se là", "Transpirant·e confirmé·e", "Accro assumé·e", "Force tranquille", "Découpé·e au laser", "Machine", "Légende locale", "Icône"];
 
 /* ============================ XP & NIVEAUX ============================ */
 const XP = {
@@ -950,11 +950,14 @@ const XP = {
   pari: 100
 };
 const DECAY = 25; // XP perdus par jour sans aucun passage
-const MAX_NIVEAU = 40;
-// Paliers progressifs : passer du niveau n au n+1 coûte 150 + 80×(n-1) XP
+const MAX_NIVEAU = 12;
+// Paliers progressifs : passer du niveau n au n+1 coûte 150 + 1170×(n-1) XP.
+// Recalibrage v19.7 (12 niveaux au lieu de 40) : niveau 2 toujours quasi
+// immédiat (150 XP), « Icône » à 66 000 XP — même horizon que l'ancien
+// niveau 40 (65 130 XP). Les XP acquis sont conservés tels quels.
 const SEUILS = (() => {
   const s = [0];
-  for (let n = 1; n < MAX_NIVEAU; n++) s.push(s[n - 1] + 150 + 80 * (n - 1));
+  for (let n = 1; n < MAX_NIVEAU; n++) s.push(s[n - 1] + 150 + 1170 * (n - 1));
   return s; // SEUILS[k] = XP total pour atteindre le niveau k+1
 })();
 const niveauDe = xp => {
@@ -1367,9 +1370,9 @@ const BADGES = [{
   test: s => niveauDe(s.xp) >= 10
 }, {
   id: "lvl15",
-  nom: "Niveau 15",
+  nom: "Niveau 12",
   emoji: "💫",
-  test: s => niveauDe(s.xp) >= 15
+  test: s => niveauDe(s.xp) >= 12
 }];
 const DEFAUT = {
   xp: 0,
@@ -2314,8 +2317,7 @@ function App() {
       fontFamily: FONT,
       color: INK,
       maxWidth: 520,
-      margin: "0 auto",
-      paddingBottom: 130
+      margin: "0 auto"
     }
   }, /*#__PURE__*/React.createElement("style", null, `
         * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -2971,45 +2973,7 @@ function App() {
       fontSize: 11,
       color: SUB
     }
-  }, "ne la casse pas")), st.xp === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "rgba(44,229,167,.12)",
-      border: `1.5px solid ${COL.C}`,
-      borderRadius: 14,
-      padding: "12px 14px",
-      marginBottom: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 800,
-      fontSize: 13.5,
-      display: "flex",
-      alignItems: "center",
-      gap: 7
-    }
-  }, /*#__PURE__*/React.createElement(Ic, {
-    n: "zap",
-    s: 14,
-    c: COL.C
-  }), "Gagne tes premiers XP en 10 secondes"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: SUB,
-      marginTop: 2
-    }
-  }, "Coche une habitude vraie d'aujourd'hui — le reste suivra."), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setTab("hab"),
-    style: {
-      marginTop: 8,
-      background: COL.C,
-      color: "#fff",
-      border: "none",
-      borderRadius: 999,
-      padding: "9px 16px",
-      fontWeight: 800,
-      fontSize: 12.5
-    }
-  }, "Voir mes habitudes")), !J.seance ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "ne la casse pas")), !J.seance ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       fontSize: 13.5,
@@ -3399,6 +3363,45 @@ function App() {
       padding: "10px 18px",
       fontWeight: 700
     }
+  }, "Voir mes habitudes")), st.xp === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "rgba(44,229,167,.12)",
+      border: `1.5px solid ${COL.C}`,
+      borderRadius: 14,
+      padding: "12px 14px",
+      marginTop: 14,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 800,
+      fontSize: 13.5,
+      display: "flex",
+      alignItems: "center",
+      gap: 7
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "zap",
+    s: 14,
+    c: COL.C
+  }), "Gagne tes premiers XP en 10 secondes"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: SUB,
+      marginTop: 2
+    }
+  }, "Coche une habitude vraie d'aujourd'hui — le reste suivra."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTab("hab"),
+    style: {
+      marginTop: 8,
+      background: COL.C,
+      color: "#fff",
+      border: "none",
+      borderRadius: 999,
+      padding: "9px 16px",
+      fontWeight: 800,
+      fontSize: 12.5
+    }
   }, "Voir mes habitudes")), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
@@ -3546,6 +3549,102 @@ function App() {
       margin: "6px 4px 8px",
       color: SUB
     }
+  }, "Ton carnet — dernières charges notées"), Object.keys(st.charges).length === 0 ? /*#__PURE__*/React.createElement(Carte, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: SUB
+    }
+  }, "Rien encore ! Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais.")) : /*#__PURE__*/React.createElement(Carte, {
+    style: {
+      padding: "6px 16px"
+    }
+  }, Object.entries(st.charges).map(([exId, liste], idx) => {
+    const der = liste[liste.length - 1];
+    const vals = liste.map(e => maxCharge(e)).filter(v => v > 0);
+    const maxV = Math.max(...vals),
+      minV = Math.min(...vals);
+    const pr = maxCharge(der) >= maxV && vals.length > 1;
+    const up = vals.length > 1 && vals[vals.length - 1] > vals[0];
+    const W = 74,
+      H = 26;
+    const pts = vals.length > 1 ? vals.map((v, i) => {
+      const x = i / (vals.length - 1) * W;
+      const y = H - (v - minV) / (maxV - minV || 1) * (H - 6) - 3;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ") : null;
+    return /*#__PURE__*/React.createElement("div", {
+      key: exId,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "11px 0",
+        borderBottom: `1px solid rgba(255,255,255,.07)`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontWeight: 600,
+        fontSize: 13,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, nomDe(exId), pr && /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginLeft: 6,
+        fontSize: 8.5,
+        fontWeight: 800,
+        color: "#1A1206",
+        background: COL.D,
+        borderRadius: 4,
+        padding: "1.5px 5px",
+        verticalAlign: "middle"
+      }
+    }, "PR")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: SUB,
+        marginTop: 1
+      }
+    }, liste.length, " note", liste.length > 1 ? "s" : "", " · dernier : ", der.date.split("-").reverse().slice(0, 2).join("/"))), pts && /*#__PURE__*/React.createElement("svg", {
+      width: W,
+      height: H,
+      style: {
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement("polyline", {
+      points: pts,
+      fill: "none",
+      stroke: up ? COL.C : "#5A6274",
+      strokeWidth: "1.8",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: W,
+      cy: H - (vals[vals.length - 1] - minV) / (maxV - minV || 1) * (H - 6) - 3,
+      r: "2.6",
+      fill: up ? COL.C : "#8A93A6"
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontFamily: DISPLAY,
+        fontWeight: 700,
+        fontSize: 15,
+        minWidth: 52,
+        textAlign: "right"
+      }
+    }, fmtCharge(der)));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 13.5,
+      margin: "18px 4px 8px",
+      color: SUB
+    }
   }, "Tes badges"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
@@ -3638,102 +3737,6 @@ function App() {
       }
     }, m.date.split("-").reverse().slice(0, 2).join("/"))));
   }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      fontSize: 13.5,
-      margin: "18px 4px 8px",
-      color: SUB
-    }
-  }, "Ton carnet — dernières charges notées"), Object.keys(st.charges).length === 0 ? /*#__PURE__*/React.createElement(Carte, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      color: SUB
-    }
-  }, "Rien encore ! Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais.")) : /*#__PURE__*/React.createElement(Carte, {
-    style: {
-      padding: "6px 16px"
-    }
-  }, Object.entries(st.charges).map(([exId, liste], idx) => {
-    const der = liste[liste.length - 1];
-    const vals = liste.map(e => maxCharge(e)).filter(v => v > 0);
-    const maxV = Math.max(...vals),
-      minV = Math.min(...vals);
-    const pr = maxCharge(der) >= maxV && vals.length > 1;
-    const up = vals.length > 1 && vals[vals.length - 1] > vals[0];
-    const W = 74,
-      H = 26;
-    const pts = vals.length > 1 ? vals.map((v, i) => {
-      const x = i / (vals.length - 1) * W;
-      const y = H - (v - minV) / (maxV - minV || 1) * (H - 6) - 3;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ") : null;
-    return /*#__PURE__*/React.createElement("div", {
-      key: exId,
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "11px 0",
-        borderBottom: `1px solid rgba(255,255,255,.07)`
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        minWidth: 0
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontWeight: 600,
-        fontSize: 13,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      }
-    }, nomDe(exId), pr && /*#__PURE__*/React.createElement("span", {
-      style: {
-        marginLeft: 6,
-        fontSize: 8.5,
-        fontWeight: 800,
-        color: "#1A1206",
-        background: COL.D,
-        borderRadius: 4,
-        padding: "1.5px 5px",
-        verticalAlign: "middle"
-      }
-    }, "PR")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: SUB,
-        marginTop: 1
-      }
-    }, liste.length, " note", liste.length > 1 ? "s" : "", " · dernier : ", der.date.split("-").reverse().slice(0, 2).join("/"))), pts && /*#__PURE__*/React.createElement("svg", {
-      width: W,
-      height: H,
-      style: {
-        flexShrink: 0
-      }
-    }, /*#__PURE__*/React.createElement("polyline", {
-      points: pts,
-      fill: "none",
-      stroke: up ? COL.C : "#5A6274",
-      strokeWidth: "1.8",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }), /*#__PURE__*/React.createElement("circle", {
-      cx: W,
-      cy: H - (vals[vals.length - 1] - minV) / (maxV - minV || 1) * (H - 6) - 3,
-      r: "2.6",
-      fill: up ? COL.C : "#8A93A6"
-    })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: DISPLAY,
-        fontWeight: 700,
-        fontSize: 15,
-        minWidth: 52,
-        textAlign: "right"
-      }
-    }, fmtCharge(der)));
-  })), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       fontSize: 13.5,
@@ -4159,6 +4162,7 @@ function SeanceView({
         alignItems: "center",
         gap: 4,
         verticalAlign: "middle",
+        margin: "0 6px",
         color: INK,
         background: "rgba(255,255,255,.08)",
         border: `1px solid ${LINE}`,
@@ -4413,6 +4417,7 @@ function SeanceView({
         alignItems: "center",
         gap: 4,
         verticalAlign: "middle",
+        margin: "0 6px",
         color: INK,
         background: "rgba(255,255,255,.08)",
         border: `1px solid ${LINE}`,
@@ -4686,20 +4691,6 @@ function Recompenses({
   }), !solo && /*#__PURE__*/React.createElement(Pot, {
     code: code,
     toast: toast
-  }), /*#__PURE__*/React.createElement(Idees, {
-    code: code,
-    style: st.styles || [st.style || "soins"],
-    contexte: "grandes récompenses par paliers de niveau",
-    toast: toast,
-    onAjout: it => maj(s => {
-      s.recompenses.push({
-        niveau: it.niveau,
-        label: it.label,
-        pris: false
-      });
-      s.recompenses.sort((a, b) => a.niveau - b.niveau);
-      return s;
-    })
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
@@ -4847,11 +4838,25 @@ function Recompenses({
       padding: "10px 18px",
       fontWeight: 700
     }
-  }, "Ajouter"))), /*#__PURE__*/React.createElement("div", {
+  }, "Ajouter"))), /*#__PURE__*/React.createElement(Idees, {
+    code: code,
+    style: st.styles || [st.style || "soins"],
+    contexte: "grandes récompenses par paliers de niveau",
+    toast: toast,
+    onAjout: it => maj(s => {
+      s.recompenses.push({
+        niveau: it.niveau,
+        label: it.label,
+        pris: false
+      });
+      s.recompenses.sort((a, b) => a.niveau - b.niveau);
+      return s;
+    })
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       fontSize: 13.5,
-      margin: "6px 4px 8px",
+      margin: "18px 4px 8px",
       color: SUB
     }
   }, "Le coffre mystère 🎁 — 1 séance validée sur 4 en fait tomber un, au hasard"), /*#__PURE__*/React.createElement(Carte, {
