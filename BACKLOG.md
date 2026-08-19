@@ -4,15 +4,6 @@ Source : retour complet de Léo sur v19.5. Rien ici n'est perdu ; chaque
 chantier sera traité dans une session dédiée. Vérifier `DECISIONS.md` avant de
 traiter un item.
 
-## Onboarding (refonte à venir — Léo insatisfait de l'ensemble)
-
-- Bouton « c'est parti » partiellement caché par le bas de l'écran
-- Profils existants invisibilisés à l'ouverture
-- Boutons retour pas esthétiques
-- Écran récap du programme inutile (il vient d'être choisi) — épurer
-- Styles de récompenses : plus que 3 choix souhaités
-- Impossible de revenir en arrière après validation (plusieurs écrans)
-
 ## Écran Séance
 
 - « Ta base » : transformer l'encart permanent en popup
@@ -48,6 +39,10 @@ traiter un item.
 - Coffres mystères : liste trop longue — bouton « en voir plus » progressif
 - Mini-kiffs : validation par le coach ? (risque de triche : « MacBook Pro »
   en mini-kiff)
+- **PRIORITÉ BASSE — Récompenses jumelles** quand deux styles proches sont
+  combinés (déduplication sur le libellé exact uniquement). Ex : « Mon
+  dessert/bubble tea préféré offert » + « Ton dessert préféré offert ».
+  Piste : déduplication sémantique ou par tag de catégorie.
 
 ## Écran Choix de programme (atteint depuis l'onboarding et « changer de programme »)
 
