@@ -30,6 +30,12 @@ traiter un item.
 
 ## Onglet Récompenses (refonte globale — trop d'infos, manque de clarté)
 
+- **PRIORITÉ MOYENNE — Rythme de déblocage en paquets** : creux de ~17 séances
+  avant N4 et ~25 avant N5, puis 4 récompenses d'un coup (8 si deux styles
+  combinés). Conséquence mécanique des 4 niveaux utilisables (option a,
+  v19.11). Le creux entre le 1er et le 2e mois tombe dans la fenêtre de
+  décrochage habituelle. Pistes à explorer : étaler les déblocages d'un même
+  palier, ou densifier le coffre mystère pendant les creux.
 - Grandes récompenses : les placer tout en haut de l'onglet (tombé entre les
   passes 1 et 2)
 - Table des négos : pastille « en ligne partagé avec le coach » + émoji
