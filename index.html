@@ -109,7 +109,8 @@ const P_IC = {
   sun: ["M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z", "M12 1v3", "M12 20v3", "M2 12h3", "M19 12h3", "M4.5 4.5l2 2", "M17.5 17.5l2 2", "M19.5 4.5l-2 2", "M6.5 17.5l-2 2"],
   zap: ["M13 2 3 14h9l-1 8 10-12h-9l1-8z"],
   heart: ["M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"],
-  bell: ["M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 0 1-3.46 0"]
+  bell: ["M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 0 1-3.46 0"],
+  chevron: ["M15 18l-6-6 6-6"]
 };
 const Ic = ({
   n,
@@ -985,6 +986,30 @@ const STYLES = {
     emoji: "🏆",
     ic: "flame",
     desc: "matos de sport, récup, objectifs"
+  },
+  gourmandises: {
+    nom: "Gourmandises",
+    emoji: "🍰",
+    ic: "choco",
+    desc: "desserts, pâtisseries, bonnes tables"
+  },
+  sorties: {
+    nom: "Sorties & aventures",
+    emoji: "🎪",
+    ic: "steps",
+    desc: "concerts, escapades, sensations"
+  },
+  cocooning: {
+    nom: "Cocooning",
+    emoji: "🕯️",
+    ic: "home",
+    desc: "confort, repos, soirées douces"
+  },
+  shopping: {
+    nom: "Shopping",
+    emoji: "🛍️",
+    ic: "star",
+    desc: "vêtements, accessoires, wishlist"
   }
 };
 const RECOMPENSES_STYLE = {
@@ -1122,12 +1147,196 @@ const RECOMPENSES_STYLE = {
     niveau: 5,
     label: "Stage ou week-end 100 % sport (rando, surf…)",
     pris: false
+  }],
+  gourmandises: [{
+    niveau: 2,
+    label: "Ton dessert préféré offert",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "La pâtisserie de la boulangerie qui a la cote",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "Une boîte de chocolats que TU choisis",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Brunch sucré du week-end, sa tournée",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Coffret de thés ou cafés de spécialité",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Un atelier pâtisserie à deux",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Ton plat préféré livré, au choix",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Resto gastronomique, menu dégustation",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Machine à café ou à gaufres",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Box gourmande, abonnement 3 mois",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Week-end gourmand : marchés et bonnes tables",
+    pris: false
+  }],
+  sorties: [{
+    niveau: 2,
+    label: "Un café en terrasse, sa tournée",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "Séance ciné, pop-corn compris",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "Balade et pique-nique préparé par l'autre",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Place de concert ou de spectacle",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Escape game ou laser game à deux",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Journée accrobranche ou karting",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Entrée pour un parc d'attractions",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Baptême de parapente, plongée ou montgolfière",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Week-end rando avec nuit en refuge",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Festival : place et transport compris",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Escapade surprise de deux jours",
+    pris: false
+  }],
+  cocooning: [{
+    niveau: 2,
+    label: "Grasse matinée officiellement validée",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "Une bougie ou un plaid tout doux",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "Soirée film clé en main — je choisis",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Coffret de soins pour le bain",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Pyjama ou peignoir moelleux",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Abonnement streaming offert 6 mois",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Une journée entière sans obligations",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Entrée spa ou hammam",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Fauteuil ou lampe pour le coin lecture",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Parure de lit haut de gamme",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Une nuit en hôtel, petit-déjeuner compris",
+    pris: false
+  }],
+  shopping: [{
+    niveau: 2,
+    label: "Un accessoire repéré depuis longtemps",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "T-shirt ou casquette de mon choix",
+    pris: false,
+  }, {
+    niveau: 3,
+    label: "Carte cadeau de ma boutique préférée",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Une tenue complète choisie ensemble",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Les sneakers de la wishlist",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Un sac ou un accessoire de créateur",
+    pris: false,
+  }, {
+    niveau: 4,
+    label: "Casque ou écouteurs neufs",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Le manteau ou la veste de la saison",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "La montre repérée depuis des mois",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "Session shopping, budget fixé d'avance",
+    pris: false,
+  }, {
+    niveau: 5,
+    label: "L'objet tout en haut de ma wishlist",
+    pris: false
   }]
 };
 const KIFFS_STYLE = {
   cool: ["Je choisis le prochain resto", "Tu me dois une story à ma gloire", "T'es mon porteur de sac à la prochaine séance", "Un kebab offert cette semaine", "Tu likes et commentes mes 10 derniers posts", "Je choisis la musique de la prochaine séance", "Une partie de ce que JE veux à la prochaine occasion", "Tu m'appelles « champion·ne » toute la journée"],
   soins: ["Je choisis le film de notre prochaine soirée", "Un chocolat chaud ou un thé offert", "Une grasse matinée officiellement validée", "Un compliment écrit de 10 lignes minimum", "Le prochain dîner ensemble est géré par l'autre", "Une playlist créée rien que pour moi", "Mon snack préféré offert sans prévenir", "Je choisis l'activité de notre prochain moment"],
-  perf: ["Smoothie post-séance offert", "Nouvelle playlist d'entraînement dédiée", "Je choisis l'horaire de la prochaine séance", "Une photo de progression imprimée", "L'autre prépare mon sac de sport", "Mon repas post-séance préparé", "Séance étirements guidée (vidéo choisie par l'autre)", "Un trophée ridicule fait main"]
+  perf: ["Smoothie post-séance offert", "Nouvelle playlist d'entraînement dédiée", "Je choisis l'horaire de la prochaine séance", "Une photo de progression imprimée", "L'autre prépare mon sac de sport", "Mon repas post-séance préparé", "Séance étirements guidée (vidéo choisie par l'autre)", "Un trophée ridicule fait main"],
+  gourmandises: ["Ton carré de chocolat préféré, planqué exprès", "Un smoothie préparé pendant ta douche", "Le dessert du soir, double part", "Une viennoiserie livrée au petit-déj", "Ta boisson chaude servie sans la demander", "Un cookie maison rien que pour toi", "Le paquet de bonbons de ton enfance", "Tu choisis le menu du dîner, sans débat"],
+  sorties: ["On sort marcher où tu veux, ce soir", "Tu choisis la prochaine sortie, sans veto", "Un détour par ton spot préféré", "Une photo souvenir imprimée le soir même", "Le trajet en musique, playlist à toi", "Un goûter improvisé au parc", "Tu choisis le prochain film au ciné", "Une soirée jeux, tu ne ramènes rien"],
+  cocooning: ["Le canapé et la télécommande, soirée entière", "Une grasse mat' sans culpabilité", "Ton thé préféré servi sans demander", "Une heure de calme total, garantie", "Le lit fait et les draps changés", "Une bouillotte prête avant que tu la demandes", "Tu choisis l'ambiance : lumière, musique, plaid", "Un réveil sans réveil, demain matin"],
+  shopping: ["Un petit truc de ta wishlist, sous 15 €", "Tu gardes la carte pour un achat surprise", "Des chaussettes qui claquent", "Un accessoire repéré la semaine dernière", "Le porte-clés le plus ridicule qu'on trouve", "Tu choisis ce qu'on rapporte de la prochaine virée", "Une carte cadeau de 20 € à claquer", "Le livre ou le magazine que tu lorgnais"]
 };
 const PRESETS_STYLE = {
   cool: [{
@@ -1230,6 +1439,130 @@ const PRESETS_STYLE = {
     niveau: 5
   }, {
     label: "Stage 100 % sport",
+    niveau: 5
+  }],
+  gourmandises: [{
+    label: "Ton dessert préféré",
+    niveau: 2,
+  }, {
+    label: "Pâtisserie au choix",
+    niveau: 3,
+  }, {
+    label: "Boîte de chocolats",
+    niveau: 3,
+  }, {
+    label: "Brunch du week-end",
+    niveau: 4,
+  }, {
+    label: "Coffret thés ou cafés",
+    niveau: 4,
+  }, {
+    label: "Atelier pâtisserie à deux",
+    niveau: 4,
+  }, {
+    label: "Ton plat préféré livré",
+    niveau: 4,
+  }, {
+    label: "Resto gastronomique",
+    niveau: 5,
+  }, {
+    label: "Machine à café",
+    niveau: 5,
+  }, {
+    label: "Box gourmande 3 mois",
+    niveau: 5
+  }],
+  sorties: [{
+    label: "Café en terrasse",
+    niveau: 2,
+  }, {
+    label: "Séance ciné",
+    niveau: 3,
+  }, {
+    label: "Balade et pique-nique",
+    niveau: 3,
+  }, {
+    label: "Place de concert",
+    niveau: 4,
+  }, {
+    label: "Escape game",
+    niveau: 4,
+  }, {
+    label: "Accrobranche ou karting",
+    niveau: 4,
+  }, {
+    label: "Parc d'attractions",
+    niveau: 4,
+  }, {
+    label: "Baptême parapente ou plongée",
+    niveau: 5,
+  }, {
+    label: "Week-end rando",
+    niveau: 5,
+  }, {
+    label: "Festival, place et transport",
+    niveau: 5
+  }],
+  cocooning: [{
+    label: "Grasse matinée validée",
+    niveau: 2,
+  }, {
+    label: "Bougie ou plaid",
+    niveau: 3,
+  }, {
+    label: "Soirée film clé en main",
+    niveau: 3,
+  }, {
+    label: "Coffret soins bain",
+    niveau: 4,
+  }, {
+    label: "Pyjama moelleux",
+    niveau: 4,
+  }, {
+    label: "Streaming offert 6 mois",
+    niveau: 4,
+  }, {
+    label: "Journée sans obligations",
+    niveau: 4,
+  }, {
+    label: "Entrée spa ou hammam",
+    niveau: 5,
+  }, {
+    label: "Parure de lit",
+    niveau: 5,
+  }, {
+    label: "Nuit en hôtel",
+    niveau: 5
+  }],
+  shopping: [{
+    label: "Accessoire repéré",
+    niveau: 2,
+  }, {
+    label: "T-shirt de mon choix",
+    niveau: 3,
+  }, {
+    label: "Carte cadeau boutique",
+    niveau: 3,
+  }, {
+    label: "Tenue complète",
+    niveau: 4,
+  }, {
+    label: "Sneakers de la wishlist",
+    niveau: 4,
+  }, {
+    label: "Sac ou accessoire",
+    niveau: 4,
+  }, {
+    label: "Casque ou écouteurs",
+    niveau: 4,
+  }, {
+    label: "Manteau de la saison",
+    niveau: 5,
+  }, {
+    label: "Montre repérée",
+    niveau: 5,
+  }, {
+    label: "Session shopping, budget fixé",
     niveau: 5
   }]
 };
@@ -6399,23 +6732,63 @@ const Chip = ({
     color: actif ? COL.G : INK
   }
 }, children);
+const BoutonRetour = ({
+  onTap
+}) => /*#__PURE__*/React.createElement("button", {
+  onClick: onTap,
+  "aria-label": "Revenir à l'écran précédent",
+  style: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    ...GLASS,
+    borderRadius: 999,
+    padding: "9px 15px 9px 10px",
+    color: INK,
+    fontWeight: 700,
+    fontSize: 13,
+    marginBottom: 12
+  }
+}, /*#__PURE__*/React.createElement(Ic, {
+  n: "chevron",
+  s: 18,
+  w: 2.6
+}), "Retour");
 const Cadre = ({
-  children
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    minHeight: "100vh",
-    background: PAPER,
-    fontFamily: FONT,
-    padding: "32px 20px 56px",
-    overflowY: "auto"
-  }
-}, /*#__PURE__*/React.createElement("style", null, `* { box-sizing:border-box; } input, button, textarea { font-family:inherit; max-width:100%; }`), /*#__PURE__*/React.createElement("div", {
-  style: {
-    maxWidth: 380,
-    width: "100%",
-    margin: "0 auto"
-  }
-}, children));
+  children,
+  onRetour
+}) => {
+  // swipe gauche→droite = retour, sur tout l'onboarding (le geste iOS natif)
+  const tx = useRef(0);
+  const ty = useRef(0);
+  return /*#__PURE__*/React.createElement("div", {
+    onTouchStart: e => {
+      tx.current = e.touches[0].clientX;
+      ty.current = e.touches[0].clientY;
+    },
+    onTouchEnd: e => {
+      if (!onRetour) return;
+      const dx = e.changedTouches[0].clientX - tx.current;
+      const dy = Math.abs(e.changedTouches[0].clientY - ty.current);
+      if (dx > 55 && dy < 45) onRetour();
+    },
+    style: {
+      minHeight: "100vh",
+      background: PAPER,
+      fontFamily: FONT,
+      padding: "18px 20px 32px",
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("style", null, `* { box-sizing:border-box; } input, button, textarea { font-family:inherit; max-width:100%; }`), /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 380,
+      width: "100%",
+      margin: "0 auto"
+    }
+  }, onRetour && /*#__PURE__*/React.createElement(BoutonRetour, {
+    onTap: onRetour
+  }), children));
+};
 function Onboarding({
   profils,
   onCreer,
@@ -6491,18 +6864,28 @@ function Onboarding({
     if (objf === "libre") return "fessiers"; // repli si la génération IA échoue
     return "douce";
   };
+  // retour arrière depuis n'importe quel écran ; l'état est conservé donc les
+  // choix déjà faits restent pré-remplis
+  const retour = () => {
+    if (etape === "mode") setEtape("promesse");else if (etape === "coach") setEtape("mode");else if (etape === "questions") {
+      if (qIdx > 0) setQIdx(qIdx - 1);else setEtape("mode");
+    } else if (etape === "final") {
+      setQIdx(2);
+      setEtape("questions");
+    } else if (etape === "prenom") setEtape("final");else if (etape === "invitation") setEtape("prenom");
+  };
 
   /* ---- écran 1 : la promesse ---- */
   if (etape === "promesse") return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
-      paddingTop: 26
+      paddingTop: 2
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
       inset: "-30px -20px auto",
-      height: 300,
+      height: 250,
       zIndex: 0,
       background: "radial-gradient(420px 240px at 50% 0%, rgba(61,90,254,.30), transparent 70%)"
     }
@@ -6534,7 +6917,7 @@ function Onboarding({
       fontSize: 42,
       lineHeight: 1,
       textAlign: "center",
-      marginTop: 22,
+      marginTop: 14,
       letterSpacing: -1
     }
   }, "LEVEL", " ", /*#__PURE__*/React.createElement("span", {
@@ -6546,12 +6929,12 @@ function Onboarding({
     }
   }, "UP!")), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: 500,
       color: SUB,
       textAlign: "center",
-      marginTop: 12,
-      lineHeight: 1.45
+      marginTop: 7,
+      lineHeight: 1.4
     }
   }, "Chaque effort compte.", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", {
     style: {
@@ -6561,34 +6944,35 @@ function Onboarding({
     style: {
       ...GLASS,
       borderRadius: 16,
-      padding: "13px 15px",
-      marginTop: 16,
-      fontSize: 13,
-      lineHeight: 1.6,
+      padding: "11px 13px",
+      marginTop: 11,
+      fontSize: 12.5,
+      lineHeight: 1.5,
       color: INK,
       textAlign: "center"
     }
   }, "Quelqu'un qui tient à toi devient ", /*#__PURE__*/React.createElement("b", null, "ton coach"), ". Tu prouves tes séances", /*#__PURE__*/React.createElement("b", null, " en photo"), ", tes efforts te font ", /*#__PURE__*/React.createElement("b", null, "monter de niveau"), " — et chaque niveau débloque une ", /*#__PURE__*/React.createElement("b", null, "vraie récompense"), " qu'il ou elle t'offre."), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 26,
+      marginTop: 12,
       display: "grid",
-      gap: 9
+      gridTemplateColumns: "1fr 1fr",
+      gap: 7
     }
-  }, [["zap", "Chaque exercice validé rapporte des XP"], ["camera", "La photo est la preuve — pas de triche possible"], ["gift", "Des récompenses offertes par ton coach — partenaire, pote, famille…"], ["flame", "La régularité est le vrai boss"]].map(([ic, t], i) => /*#__PURE__*/React.createElement("div", {
+  }, [["zap", "Chaque exercice rapporte des XP"], ["camera", "La photo fait preuve"], ["gift", "Des récompenses offertes par ton coach"], ["flame", "La régularité est le vrai boss"]].map(([ic, t], i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       ...GLASS,
-      borderRadius: 16,
-      padding: "12px 14px",
+      borderRadius: 14,
+      padding: "9px 10px",
       display: "flex",
       alignItems: "center",
-      gap: 12
+      gap: 8
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 32,
-      height: 32,
-      borderRadius: 10,
+      width: 26,
+      height: 26,
+      borderRadius: 9,
       flexShrink: 0,
       background: "rgba(61,90,254,.18)",
       display: "grid",
@@ -6596,23 +6980,24 @@ function Onboarding({
     }
   }, /*#__PURE__*/React.createElement(Ic, {
     n: ic,
-    s: 15,
+    s: 13,
     c: "#7C9BFF"
   })), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 13,
-      fontWeight: 500
+      fontSize: 11,
+      fontWeight: 500,
+      lineHeight: 1.25
     }
   }, t)))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setEtape("mode"),
     style: {
       width: "100%",
-      marginTop: 24,
+      marginTop: 13,
       border: "none",
       background: "linear-gradient(90deg,#3D5AFE,#7C5CFF)",
       color: "#fff",
       borderRadius: 16,
-      padding: "17px",
+      padding: "15px",
       fontWeight: 700,
       fontSize: 16,
       fontFamily: DISPLAY,
@@ -6628,7 +7013,7 @@ function Onboarding({
     w: 2.4
   })))), profils.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 26
+      marginTop: 14
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6648,8 +7033,8 @@ function Onboarding({
       gap: 10,
       ...GLASS,
       borderRadius: 14,
-      padding: "13px 14px",
-      marginBottom: 6,
+      padding: "10px 12px",
+      marginBottom: 5,
       textAlign: "left",
       color: INK
     }
@@ -6674,20 +7059,42 @@ function Onboarding({
       fontSize: 9.5,
       color: "#3A4152",
       textAlign: "center",
-      marginTop: 16
+      marginTop: 10
     }
-  }, "v19.5"));
+  }, "v19.12"));
 
   /* ---- écran 2 : le mode ---- */
-  if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("div", {
+  if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
+    onRetour: retour
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: "calc(100vh - 112px)",
+      display: "flex",
+      flexDirection: "column"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
-      fontSize: 20,
+      fontSize: 22,
       textAlign: "center",
-      marginTop: 16,
-      marginBottom: 16
+      marginTop: 6
     }
-  }, "TU JOUES COMMENT ?"), [["duo", "users", "En duo", "quelqu'un me coache : il vérifie mes preuves, on négocie mes récompenses, on parie"], ["solo", "zap", "En solo", "je me coache moi-même : XP, série, défis et récompenses auto-définies"], ["coach", "activity", "Je supervise quelqu'un", "pas besoin d'être un vrai coach : partenaire, pote, parent… tu vérifies les preuves et tu offres les récompenses"]].map(([m, e, t, d]) => /*#__PURE__*/React.createElement("button", {
+  }, "TU JOUES COMMENT ?"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: SUB,
+      textAlign: "center",
+      margin: "7px 0 16px",
+      lineHeight: 1.45
+    }
+  }, "Tu pourras changer d'avis plus tard — rien n'est définitif."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      gap: 11
+    }
+  }, [["duo", "users", "En duo", "quelqu'un me coache : il vérifie mes preuves, on négocie mes récompenses, on parie"], ["solo", "zap", "En solo", "je me coache moi-même : XP, série, défis et récompenses auto-définies"], ["coach", "activity", "Je supervise quelqu'un", "pas besoin d'être un vrai coach : partenaire, pote, parent… tu vérifies les preuves et tu offres les récompenses"]].map(([m, e, t, d]) => /*#__PURE__*/React.createElement("button", {
     key: m,
     onClick: () => {
       setMode(m);
@@ -6695,20 +7102,20 @@ function Onboarding({
     },
     className: "carte-mode",
     style: {
+      flex: 1,
       display: "flex",
       width: "100%",
       alignItems: "center",
-      gap: 12,
+      gap: 13,
       textAlign: "left",
       background: GLASSBG,
       border: `1.5px solid ${LINE}`,
-      borderRadius: 14,
-      padding: "15px 14px",
-      marginBottom: 10
+      borderRadius: 16,
+      padding: "16px 15px"
     }
   }, /*#__PURE__*/React.createElement(Ic, {
     n: e,
-    s: 24,
+    s: 26,
     c: COL.G
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6717,28 +7124,21 @@ function Onboarding({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 800,
-      fontSize: 15
+      fontSize: 16
     }
   }, t), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 11.5,
+      fontSize: 12,
       color: SUB,
-      marginTop: 1
+      marginTop: 3,
+      lineHeight: 1.4
     }
-  }, d)))));
+  }, d)))))));
 
   /* ---- écran coach : nom + code ---- */
-  if (etape === "coach") return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setEtape("mode"),
-    style: {
-      background: "none",
-      border: "none",
-      color: SUB,
-      fontSize: 12,
-      textDecoration: "underline",
-      padding: 0
-    }
-  }, "← retour"), /*#__PURE__*/React.createElement("div", {
+  if (etape === "coach") return /*#__PURE__*/React.createElement(Cadre, {
+    onRetour: retour
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
       fontSize: 20,
@@ -6842,7 +7242,9 @@ function Onboarding({
         }
       }, 240);
     };
-    return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("div", {
+    return /*#__PURE__*/React.createElement(Cadre, {
+      onRetour: retour
+    }, /*#__PURE__*/React.createElement("div", {
       style: {
         minHeight: "78vh",
         display: "flex",
@@ -6973,24 +7375,10 @@ function Onboarding({
         fontWeight: 800,
         fontSize: 13.5
       }
-    }, objLibre.trim().length >= 8 ? "Continuer" : "Décris un peu plus (8 caractères min)"))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => qIdx > 0 ? setQIdx(qIdx - 1) : setEtape("mode"),
-      style: {
-        background: "none",
-        border: "none",
-        color: SUB,
-        fontSize: 12,
-        marginTop: 18,
-        textDecoration: "underline",
-        padding: 0,
-        textAlign: "left"
-      }
-    }, qIdx > 0 ? "← question précédente" : "← changer de mode")));
+    }, objLibre.trim().length >= 8 ? "Continuer" : "Décris un peu plus (8 caractères min)")))));
   }
 
   /* ---- écran final : programme suggéré + prénom (+ code duo) ---- */
-  const p = PROGRAMMES[progSel] || PROGRAMMES.fessiers;
-  const pAff = progPerso || p;
   const enGen = needsIA && genEtat === "encours";
   const genKO = needsIA && (genEtat === "echec" || genEtat === "nonconfig");
   const creer = intention => {
@@ -7008,7 +7396,9 @@ function Onboarding({
   };
 
   /* ---- écran graine d'invitation (duo) : intention seule, aucun envoi ---- */
-  if (etape === "invitation") return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("div", {
+  if (etape === "invitation") return /*#__PURE__*/React.createElement(Cadre, {
+    onRetour: retour
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "78vh",
       display: "flex",
@@ -7071,150 +7461,25 @@ function Onboarding({
       fontSize: 14
     }
   }, "Je verrai plus tard")));
-  return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setQIdx(2);
-      setEtape("questions");
-    },
-    style: {
-      background: "none",
-      border: "none",
-      color: SUB,
-      fontSize: 12,
-      textDecoration: "underline",
-      padding: 0
-    }
-  }, "← retour"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: DISPLAY,
-      fontSize: 20,
-      textAlign: "center",
-      margin: "10px 0 16px"
-    }
-  }, "PARFAIT POUR TOI"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "rgba(124,92,255,.13)",
-      border: `1px solid ${COL.G}66`,
-      borderRadius: 16,
-      padding: "16px",
-      marginBottom: 8
-    }
+  /* ---- écran prénom : dernier pas avant la création ---- */
+  if (etape === "prenom") return /*#__PURE__*/React.createElement(Cadre, {
+    onRetour: retour
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12
+      fontFamily: DISPLAY,
+      fontSize: 22,
+      textAlign: "center",
+      marginTop: 6
     }
-  }, enGen ? /*#__PURE__*/React.createElement(Orbe, {
-    s: 28,
-    c: COL.G
-  }) : /*#__PURE__*/React.createElement(Ic, {
-    n: progPerso ? "zap" : ICONE_PROG[progSel] || "star",
-    s: 28,
-    c: COL.G
-  }), enGen ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "ON T'APPELLE COMMENT ?"), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontWeight: 800,
-      fontSize: 16
-    }
-  }, "Programme sur mesure en cours…"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11.5,
-      color: SUB
-    }
-  }, "Je compose tes séances à partir de ta demande.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 800,
-      fontSize: 16
-    }
-  }, pAff.nom), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11.5,
-      color: SUB
-    }
-  }, pAff.desc), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: COL.G,
-      fontWeight: 700,
-      marginTop: 2
-    }
-  }, Object.keys(pAff.seances).length, " séance(s)/sem")))), genKO && /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "rgba(255,176,32,.10)",
-      border: `1px solid ${COL.D}55`,
-      borderRadius: 12,
-      padding: "10px 12px",
-      marginBottom: 10,
-      fontSize: 11.5,
+      fontSize: 12.5,
       color: SUB,
-      lineHeight: 1.5
+      textAlign: "center",
+      margin: "7px 0 18px",
+      lineHeight: 1.45
     }
-  }, genEtat === "nonconfig" ? "La génération sur mesure n'est pas encore activée — on démarre avec le programme le plus proche. " : "La génération sur mesure n'a pas répondu — on démarre avec le programme le plus proche. ", /*#__PURE__*/React.createElement("button", {
-    onClick: genererSurMesure,
-    style: {
-      background: "none",
-      border: "none",
-      color: COL.D,
-      fontWeight: 700,
-      fontSize: 11.5,
-      textDecoration: "underline",
-      padding: 0
-    }
-  }, "Réessayer")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10.5,
-      color: SUB,
-      margin: "-2px 0 16px"
-    }
-  }, "Tu pourras changer de programme à tout moment dans les réglages."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 800,
-      color: SUB,
-      marginBottom: 6
-    }
-  }, "QUEL STYLE DE RÉCOMPENSES ENTRE VOUS ?"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 7,
-      marginBottom: 4
-    }
-  }, Object.entries(STYLES).map(([id, s]) => /*#__PURE__*/React.createElement(Chip, {
-    key: id,
-    actif: styles.includes(id),
-    onTap: () => setStyles(prev => prev.includes(id) ? prev.length > 1 ? prev.filter(x => x !== id) : prev : prev.length >= 2 ? [prev[1], id] : [...prev, id])
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 6
-    }
-  }, /*#__PURE__*/React.createElement(Ic, {
-    n: s.ic,
-    s: 13
-  }), s.nom)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10.5,
-      color: SUB,
-      margin: "6px 0 4px"
-    }
-  }, "Tu peux en combiner deux — ça ne définit rien, ça pré-remplit juste (modifiable après)."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...GLASS,
-      borderRadius: 12,
-      padding: "9px 12px",
-      marginBottom: 14,
-      fontSize: 11,
-      color: SUB,
-      lineHeight: 1.6
-    }
-  }, /*#__PURE__*/React.createElement("b", {
-    style: {
-      color: INK
-    }
-  }, "Par exemple :"), " ", styles.flatMap(sid => RECOMPENSES_STYLE[sid].slice(0, 3).map(r => r.label)).slice(0, 5).join(" · ")), /*#__PURE__*/React.createElement("div", {
+  }, "Un prénom, un pseudo, un surnom ridicule — comme tu veux."), /*#__PURE__*/React.createElement("div", {
     style: {
       background: GLASSBG,
       border: `1px solid ${LINE}`,
@@ -7229,8 +7494,8 @@ function Onboarding({
       width: "100%",
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
-      padding: "11px 12px",
-      fontSize: 14,
+      padding: "12px 12px",
+      fontSize: 15,
       background: FIELD,
       outline: "none",
       marginBottom: 10
@@ -7277,7 +7542,41 @@ function Onboarding({
     type: "checkbox",
     checked: importer,
     onChange: e => setImporter(e.target.checked)
-  }), "Importer mes anciennes données"), /*#__PURE__*/React.createElement("button", {
+  }), "Importer mes anciennes données"), enGen && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 9,
+      fontSize: 11.5,
+      color: SUB,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement(Orbe, {
+    s: 16,
+    c: COL.G
+  }), "Ton programme sur mesure est en cours de composition…"), genKO && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "rgba(255,176,32,.10)",
+      border: `1px solid ${COL.D}55`,
+      borderRadius: 12,
+      padding: "10px 12px",
+      marginBottom: 10,
+      fontSize: 11.5,
+      color: SUB,
+      lineHeight: 1.5
+    }
+  }, genEtat === "nonconfig" ? "La génération sur mesure n'est pas encore activée — on démarre avec le programme le plus proche. " : "La génération sur mesure n'a pas répondu — on démarre avec le programme le plus proche. ", /*#__PURE__*/React.createElement("button", {
+    onClick: genererSurMesure,
+    style: {
+      background: "none",
+      border: "none",
+      color: COL.D,
+      fontWeight: 700,
+      fontSize: 11.5,
+      textDecoration: "underline",
+      padding: 0
+    }
+  }, "Réessayer")), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       if (enGen) return;
       if (mode === "duo") {
@@ -7295,11 +7594,85 @@ function Onboarding({
       color: enGen ? "#5A6274" : "#fff",
       border: "none",
       borderRadius: 12,
-      padding: "14px",
+      padding: "15px",
       fontWeight: 800,
       fontSize: 15
     }
   }, enGen ? "Un instant…" : mode === "solo" ? "Démarrer en solo" : "Démarrer")));
+
+  /* ---- écran styles : entièrement dédié au choix des récompenses ---- */
+  return /*#__PURE__*/React.createElement(Cadre, {
+    onRetour: retour
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontSize: 22,
+      textAlign: "center",
+      marginTop: 6
+    }
+  }, "TES RÉCOMPENSES"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: SUB,
+      textAlign: "center",
+      margin: "7px 0 18px",
+      lineHeight: 1.45
+    }
+  }, mode === "solo" ? "Le style de ce que tu t'offriras en montant de niveau." : "Le style de ce que ton coach pourra t'offrir en montant de niveau."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: 8,
+      marginBottom: 6
+    }
+  }, Object.entries(STYLES).map(([id, s]) => /*#__PURE__*/React.createElement(Chip, {
+    key: id,
+    actif: styles.includes(id),
+    onTap: () => setStyles(prev => prev.includes(id) ? prev.length > 1 ? prev.filter(x => x !== id) : prev : prev.length >= 2 ? [prev[1], id] : [...prev, id])
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: s.ic,
+    s: 13
+  }), s.nom)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10.5,
+      color: SUB,
+      textAlign: "center",
+      margin: "8px 0 12px"
+    }
+  }, "Tu peux en combiner deux — ça ne définit rien, ça pré-remplit juste (modifiable après)."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...GLASS,
+      borderRadius: 14,
+      padding: "12px 14px",
+      marginBottom: 16,
+      fontSize: 11.5,
+      color: SUB,
+      lineHeight: 1.65
+    }
+  }, /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: INK
+    }
+  }, "Par exemple :"), " ", styles.flatMap(sid => (RECOMPENSES_STYLE[sid] || []).slice(0, 3).map(r => r.label)).slice(0, 5).join(" · ")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEtape("prenom"),
+    style: {
+      width: "100%",
+      background: COL.G,
+      color: "#fff",
+      border: "none",
+      borderRadius: 12,
+      padding: "15px",
+      fontWeight: 800,
+      fontSize: 15
+    }
+  }, "Suivant"));
 }
 
 /* ============================ RÉGLAGES ============================ */
@@ -7839,6 +8212,7 @@ function Reglages({
   }, "STYLE DES RÉCOMPENSES"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
+      flexWrap: "wrap",
       gap: 6,
       marginBottom: 6
     }
@@ -7854,11 +8228,11 @@ function Reglages({
         return s;
       }),
       style: {
-        flex: 1,
+        flex: "1 1 30%",
         background: on ? tintCss(COL.G) : GLASSBG,
         border: `1.5px solid ${on ? COL.G : LINE}`,
         borderRadius: 10,
-        padding: "9px 4px",
+        padding: "9px 6px",
         fontWeight: 700,
         fontSize: 11.5,
         color: on ? COL.G : INK
