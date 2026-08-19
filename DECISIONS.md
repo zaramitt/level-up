@@ -5,6 +5,33 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.11 — août 2026
+
+- **Horizons des récompenses, exprimés en séances** : mini-kif 2-4, moyenne
+  8-12, grande 30-45. → Choix de l'unité « séances » plutôt que « durée » :
+  c'est l'unité déjà affichée dans l'app, et elle récompense l'assiduité
+  plutôt que le simple écoulement du temps.
+
+- **Répartition retenue : 4 niveaux de récompenses** (N2 première victoire
+  ~2 séances, N3 moyenne ~10, N4 grande ~27, N5 très grande ~52). → Hiérarchie
+  à deux étages conservée dans les grandes récompenses. Paliers XP
+  volontairement non touchés : ne pas changer le niveau affiché des profils
+  existants deux fois en trois semaines.
+
+- **Mini-kifs : aucune modification nécessaire.** → Horizon déjà tenu
+  mécaniquement par le coffre mystère (1 séance validée sur 4, médiane
+  3 séances). Mini-kifs volontairement généreux (2-4 séances) : la boucle
+  courte est ce qui prouve à une débutante que le système récompense
+  réellement. Garde-fou contre l'abus = validation via les négos.
+
+- **Constat v19.11 : 12 récompenses par défaut sur 33 et 14 presets de négos
+  étaient structurellement inatteignables** (niveaux > MAX_NIVEAU = 12) depuis
+  le recalibrage v19.7. → À retenir comme leçon : tout changement de
+  MAX_NIVEAU ou de barème exige de rebalayer les listes de récompenses et de
+  presets (et les textes d'aide chiffrés — deux résidus « N16/N20 » et une
+  équivalence en semaines d'avant v19.7 ont été nettoyés au passage, ainsi que
+  le prompt `/idees` qui générait encore des niveaux 2-20).
+
 ## v19.10 — août 2026
 
 - **Moments à enjeu (pari, cagnotte, grande récompense) : mise en avant avec
@@ -103,10 +130,6 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 ---
 
 ## Questions ouvertes — à trancher
-
-- Calibrage des niveaux des récompenses par défaut : quel horizon pour un
-  mini-kiff, une récompense moyenne, une grande récompense ? À trancher avec
-  Léo.
 
 Sur le moteur de programmes (discuté, pas arbitré) :
 
