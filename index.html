@@ -4553,12 +4553,15 @@ function SeanceView({
       n: "play",
       s: 9,
       w: 2.4
-    }), "démo"), der && /*#__PURE__*/React.createElement("span", {
+    }), "démo")), der && /*#__PURE__*/React.createElement("div", {
       style: {
+        fontSize: 11.5,
         color: S.couleur,
-        fontWeight: 600
+        fontWeight: 600,
+        marginTop: 2,
+        whiteSpace: "nowrap"
       }
-    }, " · dernier : ", fmtCharge(der)))), photoSrc && /*#__PURE__*/React.createElement("img", {
+    }, "dernier : ", fmtCharge(der))), photoSrc && /*#__PURE__*/React.createElement("img", {
       src: photoSrc,
       onClick: () => onZoom({
         src: photoSrc,
@@ -5027,7 +5030,7 @@ function Spotlight({
    Mêmes précautions iOS que le Stepper (v19.6) : composant au niveau module
    (jamais démonté par un re-rendu parent), timer dans une ref nettoyée au
    démontage, capture du pointeur, touch-action none, pas de menu contextuel. */
-const MAINTIEN_MS = 2500;
+const MAINTIEN_MS = 3000;
 function BoutonMaintenir({
   label,
   enCours,
@@ -5090,13 +5093,18 @@ function BoutonMaintenir({
       position: "relative",
       overflow: "hidden",
       width: "100%",
+      minHeight: 68,
       border: "none",
-      borderRadius: 14,
-      padding: "15px",
+      borderRadius: 18,
+      padding: "20px 16px",
       fontWeight: 800,
-      fontSize: 14.5,
+      fontSize: 16.5,
       color: disabled ? "#5A6274" : "#fff",
       background: disabled ? "rgba(255,255,255,.08)" : `${couleur}55`,
+      // le bouton enfle et s'illumine au fur et à mesure du maintien
+      transform: `scale(${1 + prog * 0.04})`,
+      boxShadow: tenu ? `0 0 ${Math.round(14 + prog * 46)}px ${couleur}AA` : "none",
+      transition: tenu ? "none" : "transform .3s ease-out, box-shadow .3s ease-out",
       touchAction: "none",
       userSelect: "none",
       WebkitUserSelect: "none",
@@ -5108,13 +5116,25 @@ function BoutonMaintenir({
       inset: 0,
       width: `${prog * 100}%`,
       background: couleur,
-      transition: tenu ? "none" : "width .25s"
+      transition: tenu ? "none" : "width .3s ease-out"
     }
   }), /*#__PURE__*/React.createElement("span", {
     style: {
-      position: "relative"
+      position: "relative",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 11
     }
-  }, fait ? "Relâche : c'est parti !" : tenu ? `Tiens bon… ${resteS}` : enCours || label));
+  }, fait ? "Relâche : c'est parti ! 🎉" : tenu ? /*#__PURE__*/React.createElement(React.Fragment, null, "Tiens bon…", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 700,
+      fontSize: 30,
+      lineHeight: 1,
+      minWidth: 22
+    }
+  }, resteS)) : enCours || label));
 }
 
 /* base « encore ~N séances » : moyenne des estimations XP des cartes du
@@ -5817,7 +5837,7 @@ function Negos({
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "users",
     s: 14
-  }), "La table des négos")), mode === "sync" && chip("● En ligne — partagé avec le coach", "#fff", COL.K), mode === "local" && chip("○ Hors ligne — visible que sur ce téléphone", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("div", {
+  }), "La table des négos")), mode === "local" && chip("○ Hors ligne — ton coach ne voit pas ces propositions", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("div", {
     style: {
       marginLeft: "auto",
       display: "flex",
@@ -8535,7 +8555,12 @@ function Paris({
       fontSize: 12.5,
       color: SUB
     }
-  }, "Chargement…")), Array.isArray(liste) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Carte, {
+  }, "Chargement…")), Array.isArray(liste) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    onClick: () => setLancerOuvert(true),
+    style: {
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement(Carte, {
     style: {
       marginBottom: 8
     }
@@ -8572,7 +8597,7 @@ function Paris({
       fontSize: 12.5,
       flexShrink: 0
     }
-  }, "Lancer un pari 🎲"))), lancerOuvert && /*#__PURE__*/React.createElement(Spotlight, {
+  }, "Lancer un pari 🎲")))), lancerOuvert && /*#__PURE__*/React.createElement(Spotlight, {
     onFermer: () => setLancerOuvert(false)
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -8637,7 +8662,7 @@ function Paris({
   })), /*#__PURE__*/React.createElement("input", {
     value: miseCoachee,
     onChange: e => setMiseCoachee(e.target.value),
-    placeholder: "⚡ Gage du coaché si perdu (ex : la vaisselle 5 jours)",
+    placeholder: "⚡ Ce que le coaché met en jeu s'il perd (ex : la vaisselle 5 jours)",
     style: {
       width: "100%",
       border: `1.5px solid ${LINE}`,
@@ -8652,7 +8677,7 @@ function Paris({
     value: miseCoach,
     onChange: e => setMiseCoach(e.target.value),
     rows: 2,
-    placeholder: "🎁 Mise du coach si gagné (ex : resto au choix, une soirée thème, un massage…)",
+    placeholder: "🎁 Ce que le coach met en jeu si c'est gagné (ex : resto au choix, une soirée thème…)",
     style: {
       width: "100%",
       border: `1.5px solid ${LINE}`,
@@ -9029,6 +9054,7 @@ function Pot({
   const [m, setM] = useState("");
   const [note, setNote] = useState("");
   const [plus, setPlus] = useState(false);
+  const [dep, setDep] = useState("");
   const [ouvert, setOuvert] = useState(false);
   const [plafInput, setPlafInput] = useState("");
   const plafond = pot && pot.plafond || 30;
@@ -9145,7 +9171,14 @@ function Pot({
       fontSize: 34,
       margin: "8px 0 2px"
     }
-  }, pot ? pot.total || 0 : "…", " €"), /*#__PURE__*/React.createElement("div", {
+  }, pot ? pot.total || 0 : "…", " €", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: FONT,
+      fontSize: 13,
+      fontWeight: 500,
+      color: SUB
+    }
+  }, " disponibles")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: SUB,
@@ -9293,24 +9326,63 @@ function Pot({
       fontWeight: 700,
       fontSize: 12
     }
-  }, "OK")), pot && (pot.total || 0) > 0 ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BoutonMaintenir, {
+  }, "OK")), pot && (pot.total || 0) > 0 ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      fontSize: 11.5,
+      color: SUB
+    }
+  }, "Combien avez-vous dépensé ?"), /*#__PURE__*/React.createElement("input", {
+    value: dep,
+    onChange: e => setDep(e.target.value),
+    inputMode: "numeric",
+    placeholder: String(pot.total),
+    style: {
+      width: 80,
+      border: `1.5px solid ${LINE}`,
+      borderRadius: 10,
+      padding: "10px",
+      fontSize: 15,
+      fontWeight: 700,
+      background: FIELD,
+      outline: "none",
+      textAlign: "center"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: 700,
+      color: SUB
+    }
+  }, "€")), /*#__PURE__*/React.createElement(BoutonMaintenir, {
     label: "Maintiens : on l'a dépensée ! 🎉",
     couleur: COL.C,
     onEngage: () => {
+      const v = Math.max(1, Math.min(parseInt(dep) || pot.total, pot.total));
+      const reste = pot.total - v;
       act({
-        action: "vider"
+        action: "depenser",
+        montant: v
       });
-      setOuvert(false);
-      toast("🎉 Bonne sortie !");
+      setDep("");
+      toast(reste > 0 ? `🎉 ${v} € dépensés — il reste ${reste} €` : "🎉 Bonne sortie !");
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10.5,
       color: SUB,
       textAlign: "center",
-      marginTop: 7
+      marginTop: 8,
+      lineHeight: 1.5
     }
-  }, "Maintiens 2-3 s pour remettre à zéro — relâcher avant la fin annule.")) : /*#__PURE__*/React.createElement("div", {
+  }, "Laisse vide pour tout dépenser. Maintiens 3 s — relâcher avant la fin annule.")) : /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       color: SUB
