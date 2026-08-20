@@ -1015,19 +1015,31 @@ const STYLES = {
 const RECOMPENSES_STYLE = {
   cool: [{
     niveau: 2,
-    label: "Kebab/tacos post-séance offert",
+    label: {
+      duo: "Kebab/tacos post-séance offert",
+      solo: "Kebab/tacos post-séance, c'est mérité"
+    },
     pris: false
   }, {
     niveau: 3,
-    label: "Une story Insta à ma gloire (obligatoire)",
+    label: {
+      duo: "Une story Insta à ma gloire (obligatoire)",
+      solo: "Un post à ma gloire, assumé"
+    },
     pris: false
   }, {
     niveau: 3,
-    label: "Tu portes mon sac à la salle pendant 1 semaine",
+    label: {
+      duo: "Tu portes mon sac à la salle pendant 1 semaine",
+      solo: "Un sac de sport qui me plaît enfin"
+    },
     pris: false
   }, {
     niveau: 4,
-    label: "Soirée jeux/FIFA chez toi — tu ramènes tout",
+    label: {
+      duo: "Soirée jeux/FIFA chez toi — tu ramènes tout",
+      solo: "Soirée jeux, tout commandé, rien à préparer"
+    },
     pris: false
   }, {
     niveau: 4,
@@ -1035,7 +1047,10 @@ const RECOMPENSES_STYLE = {
     pris: false
   }, {
     niveau: 4,
-    label: "Un mois de salle remboursé",
+    label: {
+      duo: "Un mois de salle remboursé",
+      solo: "Un mois d'abonnement salle, budget validé"
+    },
     pris: false
   }, {
     niveau: 4,
@@ -1051,24 +1066,39 @@ const RECOMPENSES_STYLE = {
     pris: false
   }, {
     niveau: 5,
-    label: "Resto à volonté, l'addition est pour toi",
+    label: {
+      duo: "Resto à volonté, l'addition est pour toi",
+      solo: "Resto à volonté, sans regarder l'addition"
+    },
     pris: false
   }, {
     niveau: 5,
-    label: "Week-end entre potes organisé (et payé)",
+    label: {
+      duo: "Week-end entre potes organisé (et payé)",
+      solo: "Week-end entre potes, budget débloqué"
+    },
     pris: false
   }],
   soins: [{
     niveau: 2,
-    label: "Mon dessert/bubble tea préféré offert",
+    label: {
+      duo: "Mon dessert/bubble tea préféré offert",
+      solo: "Mon dessert/bubble tea préféré, sans hésiter"
+    },
     pris: false
   }, {
     niveau: 3,
-    label: "Un bouquet de fleurs surprise",
+    label: {
+      duo: "Un bouquet de fleurs surprise",
+      solo: "Un bouquet de fleurs pour mon salon"
+    },
     pris: false
   }, {
     niveau: 3,
-    label: "Soirée ciné ou jeux — je choisis tout",
+    label: {
+      duo: "Soirée ciné ou jeux — je choisis tout",
+      solo: "Soirée ciné ou jeux, programme 100 % à moi"
+    },
     pris: false
   }, {
     niveau: 4,
@@ -1076,7 +1106,10 @@ const RECOMPENSES_STYLE = {
     pris: false
   }, {
     niveau: 4,
-    label: "Brunch du week-end, sa tournée",
+    label: {
+      duo: "Brunch du week-end, sa tournée",
+      solo: "Brunch du week-end, la totale"
+    },
     pris: false
   }, {
     niveau: 4,
@@ -1084,7 +1117,10 @@ const RECOMPENSES_STYLE = {
     pris: false
   }, {
     niveau: 4,
-    label: "Un objet de ma wishlist (budget surprise)",
+    label: {
+      duo: "Un objet de ma wishlist (budget surprise)",
+      solo: "Un objet de ma wishlist, budget que je fixe"
+    },
     pris: false
   }, {
     niveau: 5,
@@ -1100,7 +1136,10 @@ const RECOMPENSES_STYLE = {
     pris: false
   }, {
     niveau: 5,
-    label: "Un week-end surprise",
+    label: {
+      duo: "Un week-end surprise",
+      solo: "Un week-end décidé sur un coup de tête"
+    },
     pris: false
   }],
   perf: [{
@@ -1121,7 +1160,10 @@ const RECOMPENSES_STYLE = {
     pris: false
   }, {
     niveau: 4,
-    label: "Une séance avec un coach pro, offerte",
+    label: {
+      duo: "Une séance avec un coach pro, offerte",
+      solo: "Une séance avec un coach pro"
+    },
     pris: false
   }, {
     niveau: 4,
@@ -1150,7 +1192,10 @@ const RECOMPENSES_STYLE = {
   }],
   gourmandises: [{
     niveau: 2,
-    label: "Ton dessert préféré offert",
+    label: {
+      duo: "Mon dessert préféré, offert",
+      solo: "Mon dessert préféré, sans hésiter"
+    },
     pris: false,
   }, {
     niveau: 3,
@@ -1158,11 +1203,14 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 3,
-    label: "Une boîte de chocolats que TU choisis",
+    label: "Une boîte de chocolats que je choisis",
     pris: false,
   }, {
     niveau: 4,
-    label: "Brunch sucré du week-end, sa tournée",
+    label: {
+      duo: "Brunch sucré du week-end, sa tournée",
+      solo: "Brunch sucré du week-end, la totale"
+    },
     pris: false,
   }, {
     niveau: 4,
@@ -1170,11 +1218,14 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 4,
-    label: "Un atelier pâtisserie à deux",
+    label: {
+      duo: "Un atelier pâtisserie à deux",
+      solo: "Un atelier pâtisserie"
+    },
     pris: false,
   }, {
     niveau: 4,
-    label: "Ton plat préféré livré, au choix",
+    label: "Mon plat préféré livré, au choix",
     pris: false,
   }, {
     niveau: 5,
@@ -1195,7 +1246,10 @@ const RECOMPENSES_STYLE = {
   }],
   sorties: [{
     niveau: 2,
-    label: "Un café en terrasse, sa tournée",
+    label: {
+      duo: "Un café en terrasse, sa tournée",
+      solo: "Un café en terrasse, sans regarder l'heure"
+    },
     pris: false,
   }, {
     niveau: 3,
@@ -1203,7 +1257,10 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 3,
-    label: "Balade et pique-nique préparé par l'autre",
+    label: {
+      duo: "Balade et pique-nique préparé par l'autre",
+      solo: "Balade et pique-nique préparé la veille"
+    },
     pris: false,
   }, {
     niveau: 4,
@@ -1211,7 +1268,10 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 4,
-    label: "Escape game ou laser game à deux",
+    label: {
+      duo: "Escape game ou laser game à deux",
+      solo: "Escape game ou laser game"
+    },
     pris: false,
   }, {
     niveau: 4,
@@ -1235,7 +1295,10 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 5,
-    label: "Escapade surprise de deux jours",
+    label: {
+      duo: "Escapade surprise de deux jours",
+      solo: "Escapade de deux jours, sur un coup de tête"
+    },
     pris: false
   }],
   cocooning: [{
@@ -1248,7 +1311,10 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 3,
-    label: "Soirée film clé en main — je choisis",
+    label: {
+      duo: "Soirée film clé en main — je choisis",
+      solo: "Soirée film clé en main, programme à moi"
+    },
     pris: false,
   }, {
     niveau: 4,
@@ -1260,7 +1326,10 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 4,
-    label: "Abonnement streaming offert 6 mois",
+    label: {
+      duo: "Abonnement streaming offert 6 mois",
+      solo: "Abonnement streaming, 6 mois pris d'avance"
+    },
     pris: false,
   }, {
     niveau: 4,
@@ -1297,7 +1366,10 @@ const RECOMPENSES_STYLE = {
     pris: false,
   }, {
     niveau: 4,
-    label: "Une tenue complète choisie ensemble",
+    label: {
+      duo: "Une tenue complète choisie ensemble",
+      solo: "Une tenue complète, choisie sans avis extérieur"
+    },
     pris: false,
   }, {
     niveau: 4,
@@ -1329,14 +1401,135 @@ const RECOMPENSES_STYLE = {
     pris: false
   }]
 };
+// une entrée de liste de style est soit une chaîne (valable dans les deux
+// modes), soit { duo, solo } : le duo garde sa voix (la coachée s'adresse à son
+// coach), le solo une formulation qu'on s'offre à soi-même.
+const variante = (v, solo) => typeof v === "string" ? v : solo ? v.solo : v.duo;
 const KIFFS_STYLE = {
-  cool: ["Je choisis le prochain resto", "Tu me dois une story à ma gloire", "T'es mon porteur de sac à la prochaine séance", "Un kebab offert cette semaine", "Tu likes et commentes mes 10 derniers posts", "Je choisis la musique de la prochaine séance", "Une partie de ce que JE veux à la prochaine occasion", "Tu m'appelles « champion·ne » toute la journée"],
-  soins: ["Je choisis le film de notre prochaine soirée", "Un chocolat chaud ou un thé offert", "Une grasse matinée officiellement validée", "Un compliment écrit de 10 lignes minimum", "Le prochain dîner ensemble est géré par l'autre", "Une playlist créée rien que pour moi", "Mon snack préféré offert sans prévenir", "Je choisis l'activité de notre prochain moment"],
-  perf: ["Smoothie post-séance offert", "Nouvelle playlist d'entraînement dédiée", "Je choisis l'horaire de la prochaine séance", "Une photo de progression imprimée", "L'autre prépare mon sac de sport", "Mon repas post-séance préparé", "Séance étirements guidée (vidéo choisie par l'autre)", "Un trophée ridicule fait main"],
-  gourmandises: ["Ton carré de chocolat préféré, planqué exprès", "Un smoothie préparé pendant ta douche", "Le dessert du soir, double part", "Une viennoiserie livrée au petit-déj", "Ta boisson chaude servie sans la demander", "Un cookie maison rien que pour toi", "Le paquet de bonbons de ton enfance", "Tu choisis le menu du dîner, sans débat"],
-  sorties: ["On sort marcher où tu veux, ce soir", "Tu choisis la prochaine sortie, sans veto", "Un détour par ton spot préféré", "Une photo souvenir imprimée le soir même", "Le trajet en musique, playlist à toi", "Un goûter improvisé au parc", "Tu choisis le prochain film au ciné", "Une soirée jeux, tu ne ramènes rien"],
-  cocooning: ["Le canapé et la télécommande, soirée entière", "Une grasse mat' sans culpabilité", "Ton thé préféré servi sans demander", "Une heure de calme total, garantie", "Le lit fait et les draps changés", "Une bouillotte prête avant que tu la demandes", "Tu choisis l'ambiance : lumière, musique, plaid", "Un réveil sans réveil, demain matin"],
-  shopping: ["Un petit truc de ta wishlist, sous 15 €", "Tu gardes la carte pour un achat surprise", "Des chaussettes qui claquent", "Un accessoire repéré la semaine dernière", "Le porte-clés le plus ridicule qu'on trouve", "Tu choisis ce qu'on rapporte de la prochaine virée", "Une carte cadeau de 20 € à claquer", "Le livre ou le magazine que tu lorgnais"]
+  cool: [{
+    duo: "Je choisis le prochain resto",
+    solo: "Le resto du prochain repas dehors, mon choix"
+  }, {
+    duo: "Tu me dois une story à ma gloire",
+    solo: "Une story à ma gloire, publiée sans honte"
+  }, {
+    duo: "T'es mon porteur de sac à la prochaine séance",
+    solo: "Mon sac de sport prêt la veille, rien à faire demain"
+  }, {
+    duo: "Un kebab offert cette semaine",
+    solo: "Un kebab cette semaine, c'est acté"
+  }, {
+    duo: "Tu likes et commentes mes 10 derniers posts",
+    solo: "Ma playlist la plus honteuse, à fond, sans casque"
+  }, {
+    duo: "Je choisis la musique de la prochaine séance",
+    solo: "La playlist de la prochaine séance, calée d'avance"
+  }, {
+    duo: "Une partie de ce que JE veux à la prochaine occasion",
+    solo: "Une partie de mon jeu préféré, sans culpabiliser"
+  }, {
+    duo: "Tu m'appelles « champion·ne » toute la journée",
+    solo: "Fond d'écran « champion·ne » pour la semaine"
+  }],
+  soins: [{
+    duo: "Je choisis le film de notre prochaine soirée",
+    solo: "Le film de ma prochaine soirée, choisi d'avance"
+  }, {
+    duo: "Un chocolat chaud ou un thé offert",
+    solo: "Un chocolat chaud ou un thé, pris sans se presser"
+  }, "Une grasse matinée officiellement validée", {
+    duo: "Un compliment écrit de 10 lignes minimum",
+    solo: "Dix lignes sur ce dont je suis fière, écrites pour moi"
+  }, {
+    duo: "Le prochain dîner ensemble est géré par l'autre",
+    solo: "Le prochain dîner commandé, zéro cuisine"
+  }, {
+    duo: "Une playlist créée rien que pour moi",
+    solo: "Une playlist créée pour moi, par moi"
+  }, {
+    duo: "Mon snack préféré offert sans prévenir",
+    solo: "Mon snack préféré, acheté sans réfléchir"
+  }, {
+    duo: "Je choisis l'activité de notre prochain moment",
+    solo: "Une heure pour l'activité qui me fait envie"
+  }],
+  perf: [{
+    duo: "Smoothie post-séance offert",
+    solo: "Smoothie post-séance, largement mérité"
+  }, "Nouvelle playlist d'entraînement dédiée", {
+    duo: "Je choisis l'horaire de la prochaine séance",
+    solo: "Prochaine séance calée à l'heure qui m'arrange"
+  }, "Une photo de progression imprimée", {
+    duo: "L'autre prépare mon sac de sport",
+    solo: "Mon sac de sport préparé la veille"
+  }, {
+    duo: "Mon repas post-séance préparé",
+    solo: "Mon repas post-séance préparé à l'avance"
+  }, {
+    duo: "Séance étirements guidée (vidéo choisie par l'autre)",
+    solo: "Séance étirements guidée, vidéo au choix"
+  }, {
+    duo: "Un trophée ridicule fait main",
+    solo: "Un trophée ridicule acheté exprès"
+  }],
+  gourmandises: [{
+    duo: "Tu me planques mon carré de chocolat préféré",
+    solo: "Mon carré de chocolat préféré, planqué pour plus tard"
+  }, {
+    duo: "Tu me prépares un smoothie pendant ma douche",
+    solo: "Un smoothie préparé avant la douche, prêt après"
+  }, "Le dessert du soir, double part", {
+    duo: "Tu me fais livrer une viennoiserie au petit-déj",
+    solo: "Une viennoiserie commandée pour le petit-déj"
+  }, {
+    duo: "Tu me sers ma boisson chaude sans que je demande",
+    solo: "Ma boisson chaude prête avant même de m'asseoir"
+  }, {
+    duo: "Tu me fais des cookies maison",
+    solo: "Des cookies maison, la fournée entière pour moi"
+  }, "Le paquet de bonbons de mon enfance", {
+    duo: "Je choisis le menu du dîner, sans débat",
+    solo: "Le menu du dîner, exactement ce dont j'ai envie"
+  }],
+  sorties: [{
+    duo: "On sort marcher où je veux, ce soir",
+    solo: "Une marche ce soir, l'itinéraire de mon choix"
+  }, {
+    duo: "Je choisis la prochaine sortie, sans veto",
+    solo: "La prochaine sortie, décidée sans consulter personne"
+  }, "Un détour par mon spot préféré", "Une photo souvenir imprimée le soir même", "Le trajet en musique, ma playlist", "Un goûter improvisé au parc", {
+    duo: "Je choisis le prochain film au ciné",
+    solo: "Le prochain film au ciné, séance solo assumée"
+  }, {
+    duo: "Une soirée jeux, tu ramènes tout",
+    solo: "Une soirée jeux, rien d'autre au programme"
+  }],
+  cocooning: ["Le canapé et la télécommande, soirée entière", "Une grasse mat' sans culpabilité", {
+    duo: "Tu me sers mon thé préféré sans que je demande",
+    solo: "Mon thé préféré, servi lentement"
+  }, {
+    duo: "Une heure de calme total, tu gères le reste",
+    solo: "Une heure de calme total, téléphone éteint"
+  }, {
+    duo: "Tu fais le lit et changes les draps",
+    solo: "Des draps propres pour ce soir"
+  }, {
+    duo: "Tu me prépares une bouillotte avant que je la demande",
+    solo: "Une bouillotte prête avant de me coucher"
+  }, {
+    duo: "Je choisis l'ambiance : lumière, musique, plaid",
+    solo: "L'ambiance parfaite : lumière, musique, plaid"
+  }, "Un réveil sans réveil, demain matin"],
+  shopping: ["Un petit truc de ma wishlist, sous 15 €", {
+    duo: "Tu gardes la carte, achat surprise pour moi",
+    solo: "Un achat surprise, budget fixé d'avance"
+  }, "Des chaussettes qui claquent", "Un accessoire repéré la semaine dernière", {
+    duo: "Le porte-clés le plus ridicule qu'on trouve",
+    solo: "Le porte-clés le plus ridicule du magasin"
+  }, {
+    duo: "Tu choisis ce qu'on rapporte de la prochaine virée",
+    solo: "Ce que je rapporte de la prochaine virée, sans me raisonner"
+  }, "Une carte cadeau de 20 € à claquer", "Le livre ou le magazine que je lorgnais"]
 };
 const PRESETS_STYLE = {
   cool: [{
@@ -1926,10 +2119,11 @@ function App() {
       style: extra.style || "soins",
       styles: extra.styles || [extra.style || "soins"],
       styleApplique: (extra.styles || [extra.style || "soins"]).join("+"),
-      recompenses: (extra.styles || [extra.style || "soins"]).flatMap(sid => RECOMPENSES_STYLE[sid] || []).filter((r, i, arr) => arr.findIndex(x => x.label === r.label) === i).map(r => ({
-        ...r
-      })).sort((a, b) => a.niveau - b.niveau),
-      kiffs: [...new Set((extra.styles || [extra.style || "soins"]).flatMap(sid => KIFFS_STYLE[sid] || []))]
+      recompenses: (extra.styles || [extra.style || "soins"]).flatMap(sid => RECOMPENSES_STYLE[sid] || []).map(r => ({
+        ...r,
+        label: variante(r.label, !!extra.solo)
+      })).filter((r, i, arr) => arr.findIndex(x => x.label === r.label) === i).sort((a, b) => a.niveau - b.niveau),
+      kiffs: [...new Set((extra.styles || [extra.style || "soins"]).flatMap(sid => KIFFS_STYLE[sid] || []).map(k => variante(k, !!extra.solo)))]
     }));
     if (importer) {
       const old = localStorage.getItem("lvlup-state-v3");
@@ -1946,10 +2140,10 @@ function App() {
     localStorage.setItem("lvlup-actif", id);
     window.location.reload();
   };
-  const [tab, setTab] = useState(() => {
-    const r = (localStorage.getItem("lvlup-role") || "").replace("leo", "coach");
-    return r === "coach" ? "suivi" : "jour";
-  });
+  // onglet d'ouverture selon le rôle du profil actif. (Avant : lecture de
+  // "lvlup-role", clé morte jamais écrite — le coach atterrissait donc sur
+  // l'onglet « jour », vide pour lui, avec la bulle « Ta base » hors sujet.)
+  const [tab, setTab] = useState(() => role === "coach" ? "suivi" : "jour");
   const [toasts, setToasts] = useState([]);
   const [confetti, setConfetti] = useState(false);
   const [coffre, setCoffre] = useState(null);
@@ -7081,7 +7275,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.12"));
+  }, "v19.14"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -7680,7 +7874,7 @@ function Onboarding({
     style: {
       color: INK
     }
-  }, "Par exemple :"), " ", styles.flatMap(sid => (RECOMPENSES_STYLE[sid] || []).slice(0, 3).map(r => r.label)).slice(0, 5).join(" · ")), /*#__PURE__*/React.createElement("button", {
+  }, "Par exemple :"), " ", styles.flatMap(sid => (RECOMPENSES_STYLE[sid] || []).slice(0, 3).map(r => variante(r.label, mode === "solo"))).slice(0, 5).join(" · ")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setEtape("prenom"),
     style: {
       width: "100%",
@@ -8271,7 +8465,8 @@ function Reglages({
   })), /*#__PURE__*/React.createElement(RechargerListes, {
     st: st,
     maj: maj,
-    toast: toast
+    toast: toast,
+    solo: profil.solo
   })), profil.role !== "coach" && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       maj(s => {
@@ -9475,7 +9670,8 @@ function DangerZone({
 function RechargerListes({
   st,
   maj,
-  toast
+  toast,
+  solo
 }) {
   const [conf, setConf] = useState(false);
   const sels = st.styles || [st.style || "soins"];
@@ -9485,11 +9681,12 @@ function RechargerListes({
     maj(s => {
       const ss = s.styles || [s.style || "soins"];
       const prises = (s.recompenses || []).filter(r => r.pris);
-      const neuves = ss.flatMap(sid => RECOMPENSES_STYLE[sid] || []).filter((r, i, a) => a.findIndex(x => x.label === r.label) === i).map(r => ({
-        ...r
-      }));
+      const neuves = ss.flatMap(sid => RECOMPENSES_STYLE[sid] || []).map(r => ({
+        ...r,
+        label: variante(r.label, !!solo)
+      })).filter((r, i, a) => a.findIndex(x => x.label === r.label) === i);
       s.recompenses = [...prises, ...neuves].sort((a, b) => a.niveau - b.niveau);
-      s.kiffs = [...new Set(ss.flatMap(sid => KIFFS_STYLE[sid] || []))];
+      s.kiffs = [...new Set(ss.flatMap(sid => KIFFS_STYLE[sid] || []).map(k => variante(k, !!solo)))];
       s.styleApplique = ss.join("+");
       return s;
     });
