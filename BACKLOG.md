@@ -39,6 +39,11 @@ traiter un item.
 - Coffres mystères : liste trop longue — bouton « en voir plus » progressif
 - Mini-kiffs : validation par le coach ? (risque de triche : « MacBook Pro »
   en mini-kiff)
+- **PRIORITÉ MOYENNE — Dépenser ses XP pour choisir ses récompenses** (idée de
+  Léo) : au lieu d'un déblocage automatique par palier, les XP deviendraient
+  une monnaie dépensable. Réglerait le problème des déblocages en paquets
+  (4 récompenses d'un coup à N4). Changement d'économie majeur — à discuter
+  avant toute implémentation.
 - **PRIORITÉ BASSE — Récompenses jumelles** quand deux styles proches sont
   combinés (déduplication sur le libellé exact uniquement). Ex : « Mon
   dessert/bubble tea préféré offert » + « Ton dessert préféré offert ».
