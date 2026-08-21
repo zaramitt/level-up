@@ -49,6 +49,12 @@ traiter un item.
   dessert/bubble tea préféré offert » + « Ton dessert préféré offert ».
   Piste : déduplication sémantique ou par tag de catégorie.
 
+## Coach
+
+- **PRIORITÉ MOYENNE — Page d'accueil du coach à repenser comme un vrai tableau
+  de bord** : aujourd'hui elle paraît vide à l'ouverture. Enjeu lié à la
+  rétention du coach passif (cf. `DECISIONS.md`).
+
 ## Écran Choix de programme (atteint depuis l'onboarding et « changer de programme »)
 
 - Choix à deux voies pour le programme : « décrire votre objectif » OU

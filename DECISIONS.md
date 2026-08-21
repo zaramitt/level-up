@@ -5,6 +5,26 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.14 — août 2026
+
+- **Récompenses et mini-kifs : structure à variantes `{ duo, solo }`** plutôt
+  que filtrage ou neutralisation. → Filtrer appauvrissait trop le tirage du
+  coffre mystère en solo (1 seul kif restant en « décontracté ») ; neutraliser
+  aurait aplati le mordant des formulations duo. Le duo reste la voix de
+  référence.
+
+- **Voix des listes : formulées depuis la coachée vers le coach en mode duo**
+  (« Je choisis le prochain resto »). → Toute nouvelle liste de style doit
+  respecter cette voix ; la variante solo, elle, se formule comme quelque chose
+  qu'on s'offre à soi, sans tiers implicite ni ton compensatoire.
+
+- **Bug de fond corrigé (B7)** : la clé localStorage `lvlup-role` était morte
+  depuis le passage aux profils multiples et n'était plus jamais écrite, d'où
+  un coach qui ouvrait sur l'onglet « jour » (vide pour lui, avec la bulle
+  « Ta base » hors sujet). L'onglet d'ouverture dérive désormais du rôle réel
+  du profil. → À retenir : chercher d'autres clés localStorage devenues
+  orphelines depuis cette migration.
+
 ## v19.11 — août 2026
 
 - **Horizons des récompenses, exprimés en séances** : mini-kif 2-4, moyenne
