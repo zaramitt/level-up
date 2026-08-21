@@ -2004,6 +2004,31 @@ const codeAlea = () => {
   return "duo-" + Array.from(u, x => c[x % 36]).join("");
 };
 const api = (code, path) => "/api/" + encodeURIComponent(code) + path;
+// dépose une proposition dans la table des négos. Même double voie que la table
+// elle-même : réseau si le duo est synchronisé, file locale sinon — c'est Negos
+// qui reprend la main à sa prochaine synchro.
+const proposerNego = async (code, item, maj) => {
+  if (code) {
+    try {
+      const r = await fetch(api(code, "/negos"), {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          action: "proposer",
+          ...item
+        })
+      });
+      if (r.ok) return "sync";
+    } catch {}
+  }
+  maj(s => {
+    s.negos = [item, ...(s.negos || [])];
+    return s;
+  });
+  return "local";
+};
 const yt = nom => "https://www.youtube.com/results?search_query=" + encodeURIComponent(nom.replace(/\(.*?\)/g, "").trim() + " exercice technique");
 const VAPID_PUB = "BFqceDQZrCxkL2itH31sa5FVflAvvc-FMtTcg-sRYqhEX5Jc9r6QNSpahe1GytCXjPfLb9bNIQPlZf8S9GkwK7E";
 const b64uVersU8 = s => {
@@ -4505,6 +4530,26 @@ function Carte({
     }
   }, children);
 }
+// libellé persistant au-dessus d'un champ. Un placeholder disparaît dès que le
+// champ est rempli : il ne restait qu'un nombre nu (« 18 ») sans rien pour dire
+// ce qu'il désignait.
+function ChampLabel({
+  t,
+  children,
+  style
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: style
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9.5,
+      fontWeight: 800,
+      color: SUB,
+      letterSpacing: .4,
+      marginBottom: 4
+    }
+  }, t), children);
+}
 function CarteVieille({
   children,
   style
@@ -5357,6 +5402,7 @@ function Recompenses({
   const [lvl, setLvl] = useState("");
   const [kiff, setKiff] = useState("");
   const [recOuverte, setRecOuverte] = useState(null); // index de la grande récompense en mise en avant
+  const [kiffBusy, setKiffBusy] = useState(false);
   const ajouter = () => {
     const n = parseInt(lvl);
     if (!label.trim() || !n || n < 1) return;
@@ -5381,14 +5427,33 @@ function Recompenses({
     s.recompenses.splice(i, 1);
     return s;
   });
-  const ajouterKiff = () => {
-    if (!kiff.trim()) return;
-    maj(s => {
-      s.kiffs.push(kiff.trim());
-      return s;
-    });
+  // En duo, un mini-kif passe par la table des négos : c'est le coach qui décide
+  // ce qui entre dans le coffre — sinon rien n'empêche de s'auto-attribuer un
+  // « MacBook Pro » tombable en quatre séances. En solo il n'y a pas de coach :
+  // le kif entre directement, l'auto-régulation est assumée.
+  const ajouterKiff = async () => {
+    const k = kiff.trim();
+    if (!k || kiffBusy) return;
+    if (solo) {
+      maj(s => {
+        s.kiffs.push(k);
+        return s;
+      });
+      setKiff("");
+      toast("✨ Mini-kiff ajouté au coffre");
+      return;
+    }
+    setKiffBusy(true);
+    const ou = await proposerNego(code, {
+      id: String(Date.now()),
+      type: "kiff",
+      label: k,
+      date: auj(),
+      statut: "proposee"
+    }, maj);
+    setKiffBusy(false);
     setKiff("");
-    toast("✨ Mini-kiff ajouté au coffre");
+    toast(ou === "sync" ? "🤝 Mini-kif envoyé au coach pour validation" : "🤝 Mini-kif en attente — il partira à la prochaine synchro");
   };
   const retirerKiff = i => maj(s => {
     s.kiffs.splice(i, 1);
@@ -5423,28 +5488,11 @@ function Recompenses({
       marginTop: 14
     }
   }, "Les grandes récompenses et le coffre vivent sur le téléphone du coaché — les deals conclus ici y arrivent automatiquement."));
-  return /*#__PURE__*/React.createElement("div", null, !solo && /*#__PURE__*/React.createElement(Negos, {
-    st: st,
-    maj: maj,
-    toast: toast,
-    role: role,
-    code: code
-  }), !solo && /*#__PURE__*/React.createElement(Paris, {
-    st: st,
-    maj: maj,
-    gagne: gagne,
-    toast: toast,
-    role: role,
-    code: code
-  }), !solo && /*#__PURE__*/React.createElement(Pot, {
-    code: code,
-    toast: toast,
-    role: role
-  }), /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       fontSize: 13.5,
-      margin: "18px 4px 8px",
+      margin: "2px 4px 8px",
       color: SUB
     }
   }, solo ? "Tes grandes récompenses — définis-les, offre-les-toi au niveau atteint" : "Les grandes récompenses — débloquées par tes XP, et les XP se méritent (et se perdent !)"), /*#__PURE__*/React.createElement(Carrousel, null, st.recompenses.map((r, i) => {
@@ -5671,15 +5719,21 @@ function Recompenses({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      gap: 8
+      gap: 8,
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement(ChampLabel, {
+    t: "NIVEAU À ATTEINDRE",
+    style: {
+      flex: 1
     }
   }, /*#__PURE__*/React.createElement("input", {
     value: lvl,
     onChange: e => setLvl(e.target.value),
     inputMode: "numeric",
-    placeholder: "Niveau (ex : 4)",
+    placeholder: "ex : 4",
     style: {
-      flex: 1,
+      width: "100%",
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
@@ -5687,7 +5741,7 @@ function Recompenses({
       background: FIELD,
       outline: "none"
     }
-  }), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: ajouter,
     style: {
       background: "#F2F5F9",
@@ -5725,6 +5779,23 @@ function Recompenses({
       s.recompenses.sort((a, b) => a.niveau - b.niveau);
       return s;
     })
+  }), !solo && /*#__PURE__*/React.createElement(Negos, {
+    st: st,
+    maj: maj,
+    toast: toast,
+    role: role,
+    code: code
+  }), !solo && /*#__PURE__*/React.createElement(Paris, {
+    st: st,
+    maj: maj,
+    gagne: gagne,
+    toast: toast,
+    role: role,
+    code: code
+  }), !solo && /*#__PURE__*/React.createElement(Pot, {
+    code: code,
+    toast: toast,
+    role: role
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
@@ -5742,7 +5813,7 @@ function Recompenses({
       color: SUB,
       marginBottom: 10
     }
-  }, "Les mini-kiffs qui peuvent tomber (cadeaux & attentions, à personnaliser) :"), st.kiffs.map((k, i) => /*#__PURE__*/React.createElement("div", {
+  }, solo ? "Les mini-kiffs qui peuvent tomber (cadeaux & attentions, à personnaliser) :" : "Les mini-kiffs qui peuvent tomber. Ce que tu ajoutes part au coach : il valide, ajuste ou refuse depuis la table des négos, juste en dessous."), st.kiffs.map((k, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       display: "flex",
@@ -5778,7 +5849,7 @@ function Recompenses({
   }, /*#__PURE__*/React.createElement("input", {
     value: kiff,
     onChange: e => setKiff(e.target.value),
-    placeholder: "Nouveau mini-kiff…",
+    placeholder: solo ? "Nouveau mini-kiff…" : "Proposer un mini-kiff au coach…",
     style: {
       flex: 1,
       border: `1.5px solid ${LINE}`,
@@ -5790,15 +5861,17 @@ function Recompenses({
     }
   }), /*#__PURE__*/React.createElement("button", {
     onClick: ajouterKiff,
+    disabled: kiffBusy,
     style: {
       background: "#F2F5F9",
       color: "#0B0E14",
       border: "none",
       borderRadius: 10,
       padding: "10px 16px",
-      fontWeight: 700
+      fontWeight: 700,
+      opacity: kiffBusy ? .6 : 1
     }
-  }, "+"))), (st.drops || []).length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, kiffBusy ? "…" : solo ? "+" : "Proposer"))), (st.drops || []).length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       fontSize: 13.5,
@@ -5864,6 +5937,7 @@ function Negos({
   const [mot, setMot] = useState("");
   const [contreDe, setContreDe] = useState(null);
   const [cNiv, setCNiv] = useState("");
+  const [cLab, setCLab] = useState(""); // contre-offre sur un mini-kif : on reformule le libellé, il n'y a pas de niveau à négocier
   const [cMot, setCMot] = useState("");
   const [busy, setBusy] = useState(false);
   const rafraichir = async silencieux => {
@@ -5882,17 +5956,22 @@ function Negos({
         if (nouveaux.length) {
           maj(s => {
             nouveaux.forEach(g => {
-              s.recompenses.push({
-                niveau: g.niveauFinal || g.niveau,
-                label: g.label,
-                pris: false
-              });
+              if (g.type === "kiff") {
+                const lab = g.labelFinal || g.label;
+                if (!(s.kiffs || []).includes(lab)) s.kiffs.push(lab);
+              } else {
+                s.recompenses.push({
+                  niveau: g.niveauFinal || g.niveau,
+                  label: g.label,
+                  pris: false
+                });
+              }
               s.negosImportes[g.id] = true;
             });
             s.recompenses.sort((a, b) => a.niveau - b.niveau);
             return s;
           });
-          if (!silencieux) toast("🤝 Deal conclu importé dans tes récompenses !");
+          if (!silencieux) toast(nouveaux.every(g => g.type === "kiff") ? "✨ Mini-kif validé — il est dans le coffre !" : "🤝 Deal conclu importé dans tes récompenses !");
         }
       }
     } catch {
@@ -5947,29 +6026,46 @@ function Negos({
     toast("🤝 Proposition envoyée au coach");
   };
   const accepter = (g, final) => {
-    act({
+    const kif = g.type === "kiff";
+    act(kif ? {
+      action: "accepter",
+      id: g.id,
+      label: final
+    } : {
       action: "accepter",
       id: g.id,
       niveau: final
     }, s => {
       const x = s.negos.find(y => y.id === g.id);
       x.statut = "acceptee";
-      x.niveauFinal = final;
-      s.recompenses.push({
-        niveau: final,
-        label: g.label,
-        pris: false
-      });
-      s.recompenses.sort((a, b) => a.niveau - b.niveau);
+      if (kif) {
+        x.labelFinal = final;
+        if (!(s.kiffs || []).includes(final)) s.kiffs.push(final);
+      } else {
+        x.niveauFinal = final;
+        s.recompenses.push({
+          niveau: final,
+          label: g.label,
+          pris: false
+        });
+        s.recompenses.sort((a, b) => a.niveau - b.niveau);
+      }
       return s;
     });
-    toast("🤝 Deal conclu !");
+    toast(kif ? "✨ Mini-kif validé — il entre au coffre !" : "🤝 Deal conclu !");
     if (mode === "sync" && role === "coachee") setTimeout(() => rafraichir(true), 400);
   };
   const contrer = g => {
+    const kif = g.type === "kiff";
     const n = parseInt(cNiv);
-    if (!n || n < 1 || n > MAX_NIVEAU) return;
-    act({
+    const lab = cLab.trim();
+    if (kif ? !lab : !n || n < 1 || n > MAX_NIVEAU) return;
+    act(kif ? {
+      action: "contrer",
+      id: g.id,
+      label: lab,
+      mot: cMot.trim()
+    } : {
       action: "contrer",
       id: g.id,
       niveau: n,
@@ -5977,13 +6073,14 @@ function Negos({
     }, s => {
       const x = s.negos.find(y => y.id === g.id);
       x.statut = "contre";
-      x.contreNiveau = n;
+      if (kif) x.contreLabel = lab;else x.contreNiveau = n;
       x.contreMot = cMot.trim();
       x.dateContre = auj();
       return s;
     });
     setContreDe(null);
     setCNiv("");
+    setCLab("");
     setCMot("");
     toast("↩️ Contre-offre envoyée (la seule et unique !)");
   };
@@ -6172,13 +6269,19 @@ function Negos({
     style: {
       display: "flex",
       gap: 8,
-      marginBottom: 8
+      marginBottom: 8,
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement(ChampLabel, {
+    t: "NIVEAU VISÉ",
+    style: {
+      flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("input", {
     value: niv,
     onChange: e => setNiv(e.target.value),
     inputMode: "numeric",
-    placeholder: "Niveau visé",
+    placeholder: "ex : 4",
     style: {
       width: 110,
       border: `1.5px solid ${LINE}`,
@@ -6188,10 +6291,11 @@ function Negos({
       background: FIELD,
       outline: "none"
     }
-  }), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
-      alignSelf: "center",
+      alignSelf: "flex-end",
+      paddingBottom: 11,
       fontSize: 11.5,
       color: SUB
     }
@@ -6250,7 +6354,7 @@ function Negos({
       gap: 8,
       marginBottom: 5
     }
-  }, g.statut === "proposee" && chip("EN ATTENTE DU COACH", "#fff", COL.D), g.statut === "contre" && chip("CONTRE-OFFRE — À ELLE", "#fff", COL.B), g.statut === "acceptee" && chip("DEAL CONCLU ✔", "#fff", COL.C), g.statut === "refusee" && chip("REFUSÉE", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("span", {
+  }, g.type === "kiff" && chip("MINI-KIF", "#0B0E14", "rgba(242,245,249,.85)"), g.statut === "proposee" && chip("EN ATTENTE DU COACH", "#fff", COL.D), g.statut === "contre" && chip("CONTRE-OFFRE — À ELLE", "#fff", COL.B), g.statut === "acceptee" && chip("DEAL CONCLU ✔", "#fff", COL.C), g.statut === "refusee" && chip("REFUSÉE", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10.5,
       color: SUB,
@@ -6267,7 +6371,15 @@ function Negos({
       color: SUB,
       marginTop: 2
     }
-  }, "Proposé : ", /*#__PURE__*/React.createElement("b", null, "niveau ", g.niveau), " (≈ ", semParf(g.niveau), " sem parfaites)", g.contreNiveau && /*#__PURE__*/React.createElement("span", null, " → Contre : ", /*#__PURE__*/React.createElement("b", {
+  }, g.type === "kiff" ? /*#__PURE__*/React.createElement("span", null, "Pour le coffre mystère — pas de niveau, il tombe au hasard", g.contreLabel && /*#__PURE__*/React.createElement("span", null, " → Contre : ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.B
+    }
+  }, "« ", g.contreLabel, " »")), g.statut === "acceptee" && g.labelFinal && g.labelFinal !== g.label && /*#__PURE__*/React.createElement("span", null, " → conclu sur ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.C
+    }
+  }, "« ", g.labelFinal, " »"))) : /*#__PURE__*/React.createElement("span", null, "Proposé : ", /*#__PURE__*/React.createElement("b", null, "niveau ", g.niveau), " (≈ ", semParf(g.niveau), " sem parfaites)", g.contreNiveau && /*#__PURE__*/React.createElement("span", null, " → Contre : ", /*#__PURE__*/React.createElement("b", {
     style: {
       color: COL.B
     }
@@ -6275,7 +6387,7 @@ function Negos({
     style: {
       color: COL.C
     }
-  }, "niveau ", g.niveauFinal))), g.mot && /*#__PURE__*/React.createElement("div", {
+  }, "niveau ", g.niveauFinal)))), g.mot && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       color: SUB,
@@ -6303,17 +6415,41 @@ function Negos({
       letterSpacing: .5,
       marginBottom: 6
     }
-  }, "RÉPONSE DU COACH"), contreDe === g.id ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "RÉPONSE DU COACH"), contreDe === g.id ? /*#__PURE__*/React.createElement("div", null, g.type === "kiff" ? /*#__PURE__*/React.createElement(ChampLabel, {
+    t: "TA REFORMULATION",
+    style: {
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: cLab,
+    onChange: e => setCLab(e.target.value),
+    placeholder: `ex : ${g.label.slice(0, 28)}…, version raisonnable`,
+    style: {
+      width: "100%",
+      border: `1.5px solid ${LINE}`,
+      borderRadius: 10,
+      padding: "9px 12px",
+      fontSize: 13,
+      background: FIELD,
+      outline: "none"
+    }
+  })) : /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 8,
-      marginBottom: 6
+      marginBottom: 6,
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement(ChampLabel, {
+    t: "NIVEAU CONTRE-PROPOSÉ",
+    style: {
+      flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("input", {
     value: cNiv,
     onChange: e => setCNiv(e.target.value),
     inputMode: "numeric",
-    placeholder: `Niveau (proposé : ${g.niveau})`,
+    placeholder: `ex : ${g.niveau}`,
     style: {
       width: 130,
       border: `1.5px solid ${LINE}`,
@@ -6323,10 +6459,11 @@ function Negos({
       background: FIELD,
       outline: "none"
     }
-  }), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
-      alignSelf: "center",
+      alignSelf: "flex-end",
+      paddingBottom: 10,
       fontSize: 11,
       color: SUB
     }
@@ -6366,7 +6503,7 @@ function Negos({
       gap: 7
     }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => accepter(g, g.niveau),
+    onClick: () => accepter(g, g.type === "kiff" ? g.label : g.niveau),
     disabled: busy,
     style: {
       display: "flex",
@@ -6405,16 +6542,17 @@ function Negos({
       fontWeight: 800,
       fontSize: 12.5
     }
-  }, "Accepter au niveau ", g.niveau), /*#__PURE__*/React.createElement("span", {
+  }, g.type === "kiff" ? "Accepter tel quel" : `Accepter au niveau ${g.niveau}`), /*#__PURE__*/React.createElement("span", {
     style: {
       display: "block",
       fontSize: 10.5,
       color: SUB
     }
-  }, "deal conclu, la récompense entre au tableau"))), /*#__PURE__*/React.createElement("button", {
+  }, g.type === "kiff" ? "il entre dans le coffre mystère" : "deal conclu, la récompense entre au tableau"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setContreDe(g.id);
       setCNiv("");
+      setCLab("");
       setCMot("");
     },
     style: {
@@ -6454,13 +6592,57 @@ function Negos({
       fontWeight: 800,
       fontSize: 12.5
     }
-  }, "Faire une contre-offre"), /*#__PURE__*/React.createElement("span", {
+  }, g.type === "kiff" ? "Reformuler le mini-kif" : "Faire une contre-offre"), /*#__PURE__*/React.createElement("span", {
     style: {
       display: "block",
       fontSize: 10.5,
       color: SUB
     }
-  }, "une seule autorisée — choisis bien ton niveau"))))), g.statut === "proposee" && role !== "coach" && /*#__PURE__*/React.createElement("div", {
+  }, g.type === "kiff" ? "une seule autorisée — ramène-le à une taille de mini-kif" : "une seule autorisée — choisis bien ton niveau"))), g.type === "kiff" && /*#__PURE__*/React.createElement("button", {
+    onClick: () => refuser(g),
+    disabled: busy,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      width: "100%",
+      textAlign: "left",
+      background: GLASSBG,
+      color: SUB,
+      border: `1px solid ${LINE}`,
+      borderRadius: 12,
+      padding: "12px 13px"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      background: "rgba(255,92,77,.20)",
+      color: COL.A,
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0,
+      fontSize: 13,
+      fontWeight: 800
+    }
+  }, "✕"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontWeight: 800,
+      fontSize: 12.5
+    }
+  }, "Refuser"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 10.5,
+      color: SUB
+    }
+  }, "hors sujet pour un mini-kif — il n'entre pas au coffre"))))), g.statut === "proposee" && role !== "coach" && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: SUB,
@@ -6486,7 +6668,7 @@ function Negos({
       gap: 7
     }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => accepter(g, g.contreNiveau),
+    onClick: () => accepter(g, g.type === "kiff" ? g.contreLabel : g.contreNiveau),
     disabled: busy,
     style: {
       display: "flex",
@@ -6525,13 +6707,13 @@ function Negos({
       fontWeight: 800,
       fontSize: 12.5
     }
-  }, "Accepter le niveau ", g.contreNiveau), /*#__PURE__*/React.createElement("span", {
+  }, g.type === "kiff" ? `Accepter « ${g.contreLabel} »` : `Accepter le niveau ${g.contreNiveau}`), /*#__PURE__*/React.createElement("span", {
     style: {
       display: "block",
       fontSize: 10.5,
       color: SUB
     }
-  }, "c'est un deal"))), /*#__PURE__*/React.createElement("button", {
+  }, g.type === "kiff" ? "il entre dans ton coffre sous cette forme" : "c'est un deal"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => refuser(g),
     disabled: busy,
     style: {
@@ -6621,11 +6803,13 @@ function evalPari(p, histo, jours, pauses) {
 const TYPES_PARI = [{
   id: "seances",
   label: "🏋️ Séances complètes",
-  aCible: true
+  aCible: true,
+  cibleLabel: "COMBIEN DE SÉANCES ?"
 }, {
   id: "cardio",
   label: "🫀 Cardios",
-  aCible: true
+  aCible: true,
+  cibleLabel: "COMBIEN DE CARDIOS ?"
 }, {
   id: "couverture",
   label: "🗓️ Aucun jour raté",
@@ -7275,7 +7459,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.14"));
+  }, "v19.15"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -8824,13 +9008,19 @@ function Paris({
     style: {
       display: "flex",
       gap: 8,
-      marginBottom: 8
+      marginBottom: 8,
+      alignItems: "flex-end"
     }
-  }, TYPES_PARI.find(x => x.id === type).aCible && /*#__PURE__*/React.createElement("input", {
+  }, TYPES_PARI.find(x => x.id === type).aCible && /*#__PURE__*/React.createElement(ChampLabel, {
+    t: TYPES_PARI.find(x => x.id === type).cibleLabel,
+    style: {
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("input", {
     value: cible,
     onChange: e => setCible(e.target.value),
     inputMode: "numeric",
-    placeholder: "Combien ?",
+    placeholder: "ex : 4",
     style: {
       width: 100,
       border: `1.5px solid ${LINE}`,
@@ -8840,13 +9030,18 @@ function Paris({
       background: FIELD,
       outline: "none"
     }
-  }), /*#__PURE__*/React.createElement("input", {
+  })), /*#__PURE__*/React.createElement(ChampLabel, {
+    t: "DURÉE (3 À 21 JOURS)",
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("input", {
     value: duree,
     onChange: e => setDuree(e.target.value),
     inputMode: "numeric",
-    placeholder: "En combien de jours ? (3-21)",
+    placeholder: "ex : 10",
     style: {
-      flex: 1,
+      width: "100%",
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
@@ -8854,7 +9049,7 @@ function Paris({
       background: FIELD,
       outline: "none"
     }
-  })), /*#__PURE__*/React.createElement("input", {
+  }))), /*#__PURE__*/React.createElement("input", {
     value: miseCoachee,
     onChange: e => setMiseCoachee(e.target.value),
     placeholder: "⚡ Ce que le coaché met en jeu s'il perd (ex : la vaisselle 5 jours)",
@@ -9421,15 +9616,21 @@ function Pot({
     style: {
       display: "flex",
       gap: 8,
-      marginBottom: 10
+      marginBottom: 10,
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement(ChampLabel, {
+    t: "MONTANT (€)",
+    style: {
+      flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("input", {
     value: m,
     onChange: e => setM(e.target.value),
     inputMode: "numeric",
-    placeholder: "€",
+    placeholder: "ex : 5",
     style: {
-      width: 64,
+      width: 78,
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 10px",
@@ -9437,7 +9638,7 @@ function Pot({
       background: FIELD,
       outline: "none"
     }
-  }), /*#__PURE__*/React.createElement("input", {
+  })), /*#__PURE__*/React.createElement("input", {
     value: note,
     onChange: e => setNote(e.target.value),
     placeholder: "Motif (ex : pari perdu)",
