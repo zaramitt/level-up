@@ -47,12 +47,14 @@ XP, pas de la structure de l'onglet.
   combinés (déduplication sur le libellé exact uniquement). Ex : « Mon
   dessert/bubble tea préféré offert » + « Ton dessert préféré offert ».
   Piste : déduplication sémantique ou par tag de catégorie.
-- **PRIORITÉ BASSE — État vide de la table des négos jamais affiché côté
-  coach** : la condition est écrite `role === "leo"`, valeur qui n'existe plus
-  depuis le passage aux profils multiples (`role` vaut `coach` ou `coachee`).
-  Le coach ne voit donc jamais le message « Aucune proposition en attente ».
-  Même famille de bug que la clé morte `lvlup-role` corrigée en v19.14 —
-  repéré pendant la passe 3, laissé de côté pour tenir le périmètre annoncé.
+
+## Dette technique
+
+- **PRIORITÉ MOYENNE — Balayage des valeurs en dur et clés orphelines héritées
+  de l'époque mono-duo.** Deux trouvées et corrigées : `lvlup-role` (v19.14)
+  et `role === 'leo'` (v19.15). Faire un balayage systématique du code à la
+  recherche d'autres conditions ou clés référençant des prénoms, rôles ou
+  identifiants qui n'existent plus depuis le passage aux profils multiples.
 
 ## Coach
 

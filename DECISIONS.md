@@ -30,6 +30,14 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
   la valeur est un nombre porte un libellé au-dessus, jamais dans le
   placeholder seul.
 
+- **Deuxième valeur morte de l'époque mono-duo corrigée** : l'état vide de la
+  table des négos était conditionné par `role === "leo"`, valeur qui n'existe
+  plus depuis les profils multiples — le coach ne voyait donc jamais
+  « Aucune proposition en attente ». Même famille que `lvlup-role` (v19.14).
+  → Deux occurrences en deux versions : le balayage systématique devient un
+  item de dette technique dans `BACKLOG.md` plutôt qu'une trouvaille au coup
+  par coup.
+
 - **Note de tenue de fichier** : la validation des mini-kifs était annoncée
   comme « actée en v19.9 », mais aucune section v19.9 n'a jamais existé ici —
   l'item ne vivait que comme une question ouverte dans `BACKLOG.md`. La
