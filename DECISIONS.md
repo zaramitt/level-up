@@ -5,6 +5,44 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.15 — août 2026
+
+- **Mini-kifs validés par le coach en duo, libres en solo.** → Sans garde-fou,
+  le coffre mystère est auto-servi : rien n'empêche de mettre « MacBook Pro »
+  en mini-kif et de le faire tomber en quatre séances. La validation réutilise
+  la table des négos existante (`type: "kiff"` sur l'item) plutôt qu'un
+  circuit parallèle : le coach accepte, reformule ou refuse, la coachée a le
+  dernier mot sur une reformulation. En solo il n'y a pas de coach : le kif
+  entre directement, l'auto-régulation est assumée — et ce parcours ne doit
+  jamais être bloqué par la validation.
+
+- **Contre-offre sur un mini-kif = reformulation du libellé, pas un niveau.**
+  → Un mini-kif tombe au hasard du coffre, il n'a pas de palier ; ce qui se
+  négocie, c'est sa taille (« MacBook Pro » → « un sticker de MacBook Pro »).
+
+- **Grandes récompenses en tête de l'onglet Récompenses.** → C'est l'objectif
+  de long terme : il doit être la première chose visible, avant les négos, les
+  paris et la cagnotte qui relèvent du court terme.
+
+- **Libellé persistant plutôt que placeholder sur les champs numériques.**
+  → Un placeholder disparaît à la saisie et il ne reste qu'un nombre nu
+  (« 18 ») sans rien pour dire ce qu'il désigne. À retenir : tout champ dont
+  la valeur est un nombre porte un libellé au-dessus, jamais dans le
+  placeholder seul.
+
+- **Deuxième valeur morte de l'époque mono-duo corrigée** : l'état vide de la
+  table des négos était conditionné par `role === "leo"`, valeur qui n'existe
+  plus depuis les profils multiples — le coach ne voyait donc jamais
+  « Aucune proposition en attente ». Même famille que `lvlup-role` (v19.14).
+  → Deux occurrences en deux versions : le balayage systématique devient un
+  item de dette technique dans `BACKLOG.md` plutôt qu'une trouvaille au coup
+  par coup.
+
+- **Note de tenue de fichier** : la validation des mini-kifs était annoncée
+  comme « actée en v19.9 », mais aucune section v19.9 n'a jamais existé ici —
+  l'item ne vivait que comme une question ouverte dans `BACKLOG.md`. La
+  décision est donc consignée ici, à sa vraie date.
+
 ## v19.14 — août 2026
 
 - **Récompenses et mini-kifs : structure à variantes `{ duo, solo }`** plutôt
