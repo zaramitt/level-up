@@ -44,6 +44,10 @@
     0% { transform: rotate(var(--r)) translateY(0); opacity:1; }
     100% { transform: rotate(var(--r)) translateY(-58px); opacity:0; }
   }
+  @keyframes deploie {
+    0% { opacity:0; transform: translateY(-5px); }
+    100% { opacity:1; transform: translateY(0); }
+  }
 </style>
 </head>
 <body>
@@ -110,7 +114,8 @@ const P_IC = {
   zap: ["M13 2 3 14h9l-1 8 10-12h-9l1-8z"],
   heart: ["M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"],
   bell: ["M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 0 1-3.46 0"],
-  chevron: ["M15 18l-6-6 6-6"]
+  chevron: ["M15 18l-6-6 6-6"],
+  aide: ["M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z", "M9.15 9.2a3 3 0 0 1 5.83 1c0 2-3 3-3 3", "M12 17.2h.01"]
 };
 const Ic = ({
   n,
@@ -2169,6 +2174,13 @@ function App() {
   // "lvlup-role", clé morte jamais écrite — le coach atterrissait donc sur
   // l'onglet « jour », vide pour lui, avec la bulle « Ta base » hors sujet.)
   const [tab, setTab] = useState(() => role === "coach" ? "suivi" : "jour");
+  // bulle d'aide : popup au premier passage sur un onglet, puis rappelable à
+  // tout moment par l'icône « ? » de l'en-tête. Avant : un encart permanent qui
+  // mangeait le haut de l'écran à chaque ouverture.
+  // cleAide suit le rôle : le coach a sa propre bulle sur l'onglet partagé
+  // « rec » (cf. correctif B7, v19.14).
+  const cleAide = tab === "rec" && role === "coach" ? "rec_coach" : tab;
+  const [aideOuverte, setAideOuverte] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [confetti, setConfetti] = useState(false);
   const [coffre, setCoffre] = useState(null);
@@ -2246,6 +2258,12 @@ function App() {
     }
   }, [pid]);
 
+  // premier passage sur un onglet : la popup s'ouvre d'elle-même une fois. On
+  // ne dépend que de la clé — dépendre de st.vus rouvrirait la popup au moment
+  // même où on la marque comme vue.
+  useEffect(() => {
+    if (st && BULLES[cleAide] && !(st.vus || {})[cleAide]) setAideOuverte(true);
+  }, [cleAide, !!st]);
   /* ---- timer travail / repos (enchaînement auto) ---- */
   const apresTravail = useRef(null);
   useEffect(() => {
@@ -3314,6 +3332,23 @@ function App() {
       fontWeight: 600
     }
   }, profil.nom, " · coach · duo « ", code, " »")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAideOuverte(true),
+    title: "À quoi sert cet onglet ?",
+    style: {
+      background: GLASSBG,
+      border: `1px solid ${LINE}`,
+      borderRadius: 999,
+      width: 38,
+      height: 38,
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0,
+      color: SUB
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "aide",
+    s: 17
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setReglagesOuvert(true),
     style: {
       background: GLASSBG,
@@ -3429,73 +3464,50 @@ function App() {
       color: SUB,
       fontWeight: 600
     }
-  }, "7 DERNIERS JOURS")), /*#__PURE__*/React.createElement("button", {
+  }, "7 DERNIERS JOURS")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAideOuverte(true),
+    title: "À quoi sert cet onglet ?",
+    style: {
+      background: GLASSBG,
+      border: `1px solid ${LINE}`,
+      borderRadius: 999,
+      width: 33,
+      height: 33,
+      display: "grid",
+      placeItems: "center",
+      color: SUB,
+      padding: 0
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "aide",
+    s: 15
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setReglagesOuvert(true),
     style: {
       background: GLASSBG,
       border: `1px solid ${LINE}`,
       borderRadius: 999,
-      width: 36,
-      height: 36,
+      width: 33,
+      height: 33,
       display: "grid",
       placeItems: "center",
-      flexShrink: 0
+      padding: 0
     }
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "sliders",
-    s: 16
-  })))), /*#__PURE__*/React.createElement("main", {
+    s: 15
+  }))))), /*#__PURE__*/React.createElement("main", {
     style: {
       padding: "0 14px 108px"
     }
-  }, (() => {
-    const k = tab === "rec" && role === "coach" ? "rec_coach" : tab;
-    const t = BULLES[k];
-    if (!t || (st.vus || {})[k]) return null;
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 10,
-        alignItems: "flex-start",
-        background: "rgba(124,92,255,.13)",
-        border: `1px solid ${COL.G}66`,
-        borderRadius: 14,
-        padding: "11px 14px",
-        marginBottom: 12
-      }
-    }, /*#__PURE__*/React.createElement(Ic, {
-      n: "zap",
-      s: 15,
-      c: COL.G,
-      style: {
-        marginTop: 2
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        fontSize: 12,
-        lineHeight: 1.55
-      }
-    }, t), /*#__PURE__*/React.createElement("button", {
-      onClick: () => maj(s => {
-        s.vus = {
-          ...(s.vus || {}),
-          [k]: true
-        };
-        return s;
-      }),
-      style: {
-        background: COL.G,
-        color: "#fff",
-        border: "none",
-        borderRadius: 999,
-        padding: "6px 13px",
-        fontWeight: 800,
-        fontSize: 11.5,
-        flexShrink: 0
-      }
-    }, "OK"));
-  })(), role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
+  }, role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
     onZoom: setZoom,
     code: code
   }), role !== "coach" && tab === "jour" && /*#__PURE__*/React.createElement("div", null, !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
@@ -4398,7 +4410,75 @@ function App() {
     code: code,
     gagne: gagne,
     solo: solo
-  })), timer && /*#__PURE__*/React.createElement("div", {
+  })), aideOuverte && BULLES[cleAide] && /*#__PURE__*/React.createElement(Spotlight, {
+    onFermer: () => {
+      setAideOuverte(false);
+      // vu une fois : la popup ne se rouvrira plus d'elle-même sur cet onglet,
+      // mais reste rappelable par l'icône « ? »
+      if (!(st.vus || {})[cleAide]) maj(x => {
+        x.vus = {
+          ...(x.vus || {}),
+          [cleAide]: true
+        };
+        return x;
+      });
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 9,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 30,
+      height: 30,
+      borderRadius: 999,
+      background: "rgba(124,92,255,.18)",
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "zap",
+    s: 15,
+    c: COL.G
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 700,
+      fontSize: 16
+    }
+  }, TITRES_AIDE[cleAide] || "Comment ça marche")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      lineHeight: 1.65,
+      color: INK
+    }
+  }, BULLES[cleAide]), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setAideOuverte(false);
+      if (!(st.vus || {})[cleAide]) maj(x => {
+        x.vus = {
+          ...(x.vus || {}),
+          [cleAide]: true
+        };
+        return x;
+      });
+    },
+    style: {
+      width: "100%",
+      marginTop: 16,
+      background: COL.G,
+      color: "#fff",
+      border: "none",
+      borderRadius: 12,
+      padding: "12px",
+      fontWeight: 800,
+      fontSize: 13.5
+    }
+  }, "C'est clair")), timer && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       bottom: 84,
@@ -4418,27 +4498,32 @@ function App() {
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 12
+      gap: 14
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 20
-    }
-  }, timer.reste === 0 ? "✅" : "⏱️"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1
+      flex: 1,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 11,
-      opacity: .8,
-      fontWeight: 600
+      fontSize: 11.5,
+      opacity: .85,
+      fontWeight: 700,
+      letterSpacing: .4,
+      marginBottom: 2
     }
-  }, timer.reste === 0 ? "C'EST REPARTI !" : (timer.mode === "travail" ? "💪 " : "") + timer.label.toUpperCase()), /*#__PURE__*/React.createElement("div", {
+  }, timer.reste === 0 ? "C'EST REPARTI !" : (timer.mode === "travail" ? "💪 " : "⏱️ ") + timer.label.toUpperCase()),
+  /* chrono volontairement énorme : il doit se lire d'un coup d'œil en plein
+     effort, à bout de bras et sans lunettes */
+  /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
-      fontSize: 22,
-      lineHeight: 1
+      fontWeight: 700,
+      fontSize: 46,
+      lineHeight: 1,
+      fontVariantNumeric: "tabular-nums",
+      letterSpacing: -1
     }
   }, timer.reste === 0 ? "GO !" : fmtSec(timer.reste))), timer.reste > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => setTimer(null),
@@ -4447,9 +4532,10 @@ function App() {
       color: "#fff",
       border: "none",
       borderRadius: 999,
-      padding: "8px 14px",
+      padding: "11px 16px",
       fontWeight: 700,
-      fontSize: 12
+      fontSize: 13,
+      flexShrink: 0
     }
   }, "Passer")), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4609,6 +4695,14 @@ function SeanceView({
   const photoOblig = st.reglages?.photoOblig !== false;
   const tousFaits = J.faits.length >= S.exos.length;
   const gainFait = J.gainage.length >= GAINAGE.length;
+  // accordéon : un seul exercice déployé à la fois, les autres restent visibles
+  // en compact, à leur place. L'ordre d'affichage ne bouge jamais — il porte
+  // l'ordre d'exécution de la séance.
+  const [deploye, setDeploye] = useState(null);
+  const cle = Object.keys(SEANCES).find(k => SEANCES[k] === S);
+  // changer de séance referme tout : l'exercice ouvert n'existe plus
+  useEffect(() => setDeploye(null), [cle]);
+  const basculer = id => setDeploye(o => o === id ? null : id);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14
@@ -4650,6 +4744,8 @@ function SeanceView({
     const der = hist && hist[hist.length - 1];
     const photoId = (J.photos || {})[ex.id];
     const photoSrc = photoId && photos[photoId];
+    const ouvert = deploye === ex.id;
+    // exercice déjà validé : ligne barrée, rien à déplier
     return fait && burst !== ex.id ? /*#__PURE__*/React.createElement("div", {
       key: ex.id,
       style: {
@@ -4659,8 +4755,8 @@ function SeanceView({
         background: "rgba(44,229,167,.06)",
         border: `1px solid ${S.couleur}44`,
         borderRadius: 12,
-        padding: "8px 12px",
-        marginTop: 6
+        padding: "10px 14px",
+        marginTop: 8
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
@@ -4687,11 +4783,45 @@ function SeanceView({
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
       }
-    }, ex.nom), /*#__PURE__*/React.createElement("span", {
+    }, ex.nom), photoSrc && /*#__PURE__*/React.createElement("img", {
+      src: photoSrc,
+      onClick: () => onZoom({
+        src: photoSrc,
+        nom: ex.nom,
+        date: auj()
+      }),
+      style: {
+        width: 26,
+        height: 26,
+        borderRadius: 7,
+        objectFit: "cover",
+        border: `1.5px solid ${S.couleur}`,
+        cursor: "pointer",
+        flexShrink: 0
+      }
+    }), !J.valide && /*#__PURE__*/React.createElement("button", {
+      onClick: () => onAnnulerExo(ex.id),
+      title: "Annuler",
+      style: {
+        background: "none",
+        border: `1px solid ${LINE}`,
+        borderRadius: 999,
+        width: 26,
+        height: 26,
+        color: SUB,
+        fontSize: 13,
+        lineHeight: 1,
+        display: "grid",
+        placeItems: "center",
+        padding: 0,
+        flexShrink: 0
+      }
+    }, "↩"), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 10,
         fontWeight: 800,
-        color: S.couleur
+        color: S.couleur,
+        flexShrink: 0
       }
     }, "+", XP.exo, " XP")) : /*#__PURE__*/React.createElement("div", {
       key: ex.id,
@@ -4699,11 +4829,11 @@ function SeanceView({
         position: "relative",
         overflow: "hidden",
         background: fait ? "rgba(44,229,167,.07)" : GLASSBG,
-        border: `1.5px solid ${fait ? S.couleur : LINE}`,
-        borderRadius: 14,
-        padding: "12px 14px",
+        border: `1.5px solid ${fait || ouvert ? S.couleur : LINE}`,
+        borderRadius: 16,
+        padding: ouvert ? "15px 16px 16px" : "13px 16px",
         marginTop: 8,
-        transition: "all .15s"
+        transition: "border-color .2s, padding .22s ease"
       }
     }, burst === ex.id && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -4728,11 +4858,26 @@ function SeanceView({
         animation: "confx .95s ease-out forwards",
         animationDelay: ci * 0.015 + "s"
       }
-    }))), /*#__PURE__*/React.createElement("div", {
+    }))),
+    /* ---- en-tête compact : toujours visible, le tap déploie ou referme ----
+       vrai <button> (et non un div cliquable) pour hériter du
+       touch-action:manipulation global — sans quoi iOS attend un éventuel
+       double-tap et avale le premier appui, comme sur le stepper (v19.6). */
+    /*#__PURE__*/React.createElement("button", {
+      onClick: () => basculer(ex.id),
+      "aria-expanded": ouvert,
       style: {
         display: "flex",
         alignItems: "center",
-        gap: 12
+        gap: 12,
+        width: "100%",
+        textAlign: "left",
+        background: "none",
+        border: "none",
+        padding: 0,
+        color: INK,
+        userSelect: "none",
+        WebkitUserSelect: "none"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -4742,10 +4887,11 @@ function SeanceView({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontWeight: 700,
-        fontSize: 14,
+        fontSize: 14.5,
+        lineHeight: 1.35,
         display: "flex",
         alignItems: "center",
-        gap: 7,
+        gap: 8,
         textDecoration: fait ? "line-through" : "none",
         color: fait ? SUB : INK
       }
@@ -4762,14 +4908,71 @@ function SeanceView({
         flexShrink: 0,
         background: tintCss(S.couleur),
         borderRadius: 999,
-        padding: "2px 7px"
+        padding: "3px 8px"
       }
     }, "+", XP.exo, " XP")), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 11.5,
-        color: SUB
+        fontSize: 12,
+        color: SUB,
+        marginTop: 5,
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: "2px 10px"
       }
-    }, ex.dose, " · repos ", fmtSec(ex.repos), "  ", /*#__PURE__*/React.createElement("a", {
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600,
+        color: fait ? SUB : INK
+      }
+    }, ex.dose), /*#__PURE__*/React.createElement("span", null, "repos ", fmtSec(ex.repos)), der && /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: S.couleur,
+        fontWeight: 600
+      }
+    }, "dernier ", fmtCharge(der)))), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flexShrink: 0,
+        display: "grid",
+        placeItems: "center",
+        width: 26,
+        height: 26,
+        borderRadius: 999,
+        background: ouvert ? tintCss(S.couleur) : "rgba(255,255,255,.06)",
+        color: ouvert ? S.couleur : SUB,
+        transform: ouvert ? "rotate(90deg)" : "rotate(-90deg)",
+        transition: "transform .22s ease, background .2s"
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      n: "chevron",
+      s: 14,
+      w: 2.4
+    }))),
+    /* ---- corps déployé : monté en permanence (comme avant l'accordéon), la
+       hauteur seule est animée, ce qui préserve les saisies de charge ---- */
+    /*#__PURE__*/React.createElement("div", {
+      style: {
+        maxHeight: ouvert ? 900 : 0,
+        opacity: ouvert ? 1 : 0,
+        overflow: "hidden",
+        transition: "max-height .26s ease, opacity .18s ease",
+        pointerEvents: ouvert ? "auto" : "none"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        paddingTop: 15,
+        marginTop: 15,
+        borderTop: `1px solid ${LINE}`,
+        animation: ouvert ? "deploie .24s ease-out" : "none"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        marginBottom: 14
+      }
+    }, /*#__PURE__*/React.createElement("a", {
       href: yt(ex.nom),
       target: "_blank",
       rel: "noreferrer",
@@ -4777,30 +4980,20 @@ function SeanceView({
         textDecoration: "none",
         display: "inline-flex",
         alignItems: "center",
-        gap: 4,
-        verticalAlign: "middle",
-        margin: "0 6px",
+        gap: 6,
         color: INK,
         background: "rgba(255,255,255,.08)",
         border: `1px solid ${LINE}`,
         borderRadius: 999,
-        padding: "2px 8px",
-        fontSize: 10,
+        padding: "6px 12px",
+        fontSize: 11.5,
         fontWeight: 700
       }
     }, /*#__PURE__*/React.createElement(Ic, {
       n: "play",
-      s: 9,
+      s: 11,
       w: 2.4
-    }), "démo")), der && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11.5,
-        color: S.couleur,
-        fontWeight: 600,
-        marginTop: 2,
-        whiteSpace: "nowrap"
-      }
-    }, "dernier : ", fmtCharge(der))), photoSrc && /*#__PURE__*/React.createElement("img", {
+    }), "Voir la démo"), photoSrc && /*#__PURE__*/React.createElement("img", {
       src: photoSrc,
       onClick: () => onZoom({
         src: photoSrc,
@@ -4813,13 +5006,45 @@ function SeanceView({
         borderRadius: 9,
         objectFit: "cover",
         border: `1.5px solid ${S.couleur}`,
-        cursor: "pointer"
+        cursor: "pointer",
+        marginLeft: "auto"
       }
-    }), !fait ? /*#__PURE__*/React.createElement("div", {
+    })), !fait && ex.charge && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14
+      }
+    }, /*#__PURE__*/React.createElement(SerieInputs, {
+      nb: nbSeries(ex),
+      exId: ex.id,
+      dernier: der,
+      couleur: S.couleur,
+      onSave: onCharge
+    })), !fait && /*#__PURE__*/React.createElement("button", {
+      onClick: () => onRepos(ex),
+      style: {
+        width: "100%",
+        background: GLASSBG,
+        color: INK,
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 12,
+        padding: "12px",
+        fontWeight: 700,
+        fontSize: 12.5,
+        marginBottom: 14
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      n: "clock",
+      s: 13
+    }), "Fin de série — repos ", fmtSec(ex.repos))), !fait ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
-        gap: 6,
-        flexShrink: 0
+        gap: 8
       }
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => onCamera({
@@ -4828,42 +5053,55 @@ function SeanceView({
       }),
       disabled: chargeur,
       style: {
+        flex: 1,
         background: S.couleur,
         color: "#fff",
         border: "none",
-        borderRadius: 11,
-        padding: "10px 12px",
+        borderRadius: 12,
+        padding: "13px 12px",
         fontWeight: 800,
-        fontSize: 12
+        fontSize: 13
       }
     }, chargeur ? "…" : /*#__PURE__*/React.createElement("span", {
       style: {
         display: "inline-flex",
         alignItems: "center",
-        gap: 6
+        gap: 7
       }
     }, /*#__PURE__*/React.createElement(Ic, {
       n: "camera",
-      s: 13,
+      s: 14,
       w: 2.2
-    }), "Valider")), !photoOblig && /*#__PURE__*/React.createElement("button", {
+    }), "Valider avec une photo")), !photoOblig && /*#__PURE__*/React.createElement("button", {
       onClick: () => validerSansPhoto(ex.id),
+      title: "Valider sans photo",
       style: {
         background: GLASSBG,
         color: SUB,
         border: `1.5px solid ${LINE}`,
-        borderRadius: 11,
-        padding: "10px 10px",
+        borderRadius: 12,
+        padding: "13px 16px",
         fontWeight: 800,
-        fontSize: 12
+        fontSize: 13,
+        flexShrink: 0
       }
     }, "✓")) : /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         alignItems: "center",
-        gap: 6
+        gap: 8
       }
-    }, !J.valide && /*#__PURE__*/React.createElement("button", {
+    }, /*#__PURE__*/React.createElement(Coche, {
+      ok: true,
+      couleur: S.couleur
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 12.5,
+        fontWeight: 700,
+        color: S.couleur
+      }
+    }, "Validé · +", XP.exo, " XP"), !J.valide && /*#__PURE__*/React.createElement("button", {
       onClick: () => onAnnulerExo(ex.id),
       title: "Annuler",
       style: {
@@ -4879,42 +5117,7 @@ function SeanceView({
         placeItems: "center",
         padding: 0
       }
-    }, "↩"), /*#__PURE__*/React.createElement(Coche, {
-      ok: true,
-      couleur: S.couleur
-    }))), !fait && /*#__PURE__*/React.createElement("div", {
-      style: {
-        marginTop: 10
-      }
-    }, ex.charge && /*#__PURE__*/React.createElement(SerieInputs, {
-      nb: nbSeries(ex),
-      exId: ex.id,
-      dernier: der,
-      couleur: S.couleur,
-      onSave: onCharge
-    }), /*#__PURE__*/React.createElement("button", {
-      onClick: () => onRepos(ex),
-      style: {
-        width: "100%",
-        marginTop: 8,
-        background: GLASSBG,
-        color: INK,
-        border: `1.5px solid ${LINE}`,
-        borderRadius: 10,
-        padding: "9px",
-        fontWeight: 700,
-        fontSize: 12.5
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 7
-      }
-    }, /*#__PURE__*/React.createElement(Ic, {
-      n: "clock",
-      s: 13
-    }), "Fin de série — repos ", fmtSec(ex.repos)))));
+    }, "↩")))));
   }), !J.valide ? /*#__PURE__*/React.createElement("div", null, !tousFaits && J.faits.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: onPartiel,
     style: {
@@ -5007,10 +5210,31 @@ function SeanceView({
         padding: "10px 14px",
         marginTop: 7
       }
-    }, /*#__PURE__*/React.createElement(Coche, {
-      ok: ok,
+    }, ok ? /*#__PURE__*/React.createElement(Coche, {
+      ok: true,
       couleur: COL.G
-    }), /*#__PURE__*/React.createElement("div", {
+    }) : /*#__PURE__*/React.createElement("button", {
+      onClick: () => onGainSerie(g),
+      title: g.duree ? `Lancer ${g.duree} s` : "Série finie",
+      style: {
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        flexShrink: 0,
+        border: `2px solid ${COL.G}`,
+        background: tintCss(COL.G),
+        color: COL.G,
+        display: "grid",
+        placeItems: "center",
+        padding: 0,
+        userSelect: "none",
+        WebkitUserSelect: "none"
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      n: g.duree ? "play" : "check",
+      s: 16,
+      w: 2.6
+    })), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0
@@ -7459,7 +7683,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.15"));
+  }, "v19.16"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -10026,8 +10250,18 @@ function Idees({
 }
 
 /* ============================ BULLES CONTEXTUELLES ============================ */
+// affichées en popup (icône « ? » de l'en-tête, et une fois d'office au premier
+// passage sur l'onglet) — plus en encart permanent en haut de l'écran.
+const TITRES_AIDE = {
+  jour: "Ta base",
+  hab: "Tes habitudes",
+  prog: "Tes progrès",
+  rec: "Tes récompenses",
+  rec_coach: "Tes outils de coach",
+  suivi: "Son suivi"
+};
 const BULLES = {
-  jour: "Ta base : choisis ta séance dans le carrousel, valide chaque exercice avec une photo, lance le repos quand TU finis ta série. Les jours off, la carte Repos compte comme un passage.",
+  jour: "Choisis ta séance dans le carrousel, touche un exercice pour le déplier, valide-le avec une photo, et lance le repos quand TU finis ta série. Les jours off, la carte Repos compte comme un passage.",
   hab: "+5 XP par habitude prouvée en photo. Une seule habitude cochée suffit à couvrir ta journée (pas de malus ce soir-là).",
   prog: "Ton niveau, tes badges, ton carnet de charges. La progression se calcule sur ta meilleure série.",
   rec: "Tout se joue ici : récompenses débloquées par niveau, table des négos (un seul aller-retour), paris et cagnotte.",

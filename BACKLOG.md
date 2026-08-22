@@ -6,13 +6,19 @@ traiter un item.
 
 ## Écran Séance
 
-- « Ta base » : transformer l'encart permanent en popup
-- Popup d'explication au premier passage sur chaque onglet (simple et claire)
-- Dans une séance : sélectionner UN exercice qui se déploie, les autres se
-  rangent en dessous pour aérer (on peut toujours quitter)
-- Carte d'exercice (ex. goblet squat) : aérer
-- Gainage : le cercle doit être cliquable (lancer/déplier), infos chrono plus
-  grandes
+Accordéon, aération de la carte, gainage et « Ta base » en popup traités en
+v19.16 (passe 1). Ce qui reste relève des textes d'aide et du confort de
+lecture, pas de la structure de l'écran.
+
+- **Passe 2 — textes des bulles d'aide** : le mécanisme de popup au premier
+  passage existe depuis la v19.16 et couvre les six onglets ; restent à
+  réécrire les textes eux-mêmes, pour qu'ils soient vraiment simples et clairs
+  pour une novice.
+- **PRIORITÉ BASSE — En-tête global trop serré à 390 px** : sur l'écran
+  coachée, « LEVEL UP ! » et la ligne d'XP passent sur plusieurs lignes, coincés
+  entre l'orbe de niveau et le bloc « 7 DERNIERS JOURS ». Antérieur à la v19.16
+  (mesuré : bloc titre à 85 px avant, 88 px après). À reprendre lors de la
+  refonte visuelle post-Vite.
 
 ## Onglet Progrès
 
