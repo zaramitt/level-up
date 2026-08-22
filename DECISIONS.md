@@ -5,6 +5,26 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.16 — août 2026
+
+- **Écran Séance : accordéon avec un seul exercice déployé à la fois**, les
+  autres restant visibles en compact, ordre d'affichage jamais modifié.
+  → Voir ce qui reste à faire est motivant, et l'ordre d'exécution de la séance
+  porte une logique (échauffement, gros exercices, finition) qu'un
+  réordonnancement brouillerait. **Statut : à confirmer après test terrain** —
+  deux alternatives explorables si insatisfaisant : mode focus plein écran, ou
+  repli des autres exercices sous celui qui est ouvert.
+
+- **Bulles d'aide : popup au premier passage, puis rappelables par l'icône
+  « ? » de l'en-tête** — au lieu d'un encart permanent en haut de chaque onglet.
+  → L'encart mangeait le haut de l'écran à chaque ouverture alors qu'il n'est
+  utile qu'une fois. La popup vaut pour les six bulles existantes, y compris
+  celle du coach sur l'onglet partagé (cf. correctif B7, v19.14).
+
+- **Corps de l'accordéon monté en permanence, seule la hauteur est animée.**
+  → Démonter le corps à la fermeture réinitialiserait les charges saisies par
+  série. Coût nul : avant l'accordéon, tous les exercices étaient déjà montés.
+
 ## v19.15 — août 2026
 
 - **Mini-kifs validés par le coach en duo, libres en solo.** → Sans garde-fou,
