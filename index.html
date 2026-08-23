@@ -918,7 +918,11 @@ const DEFIS = [{
   n: 1,
   txt: "Bats ton record de planche d'au moins 10 secondes. Photo du chrono."
 }, {
-  titre: "La touriste",
+  titre: {
+    f: "La touriste",
+    m: "Le touriste",
+    n: "En touriste"
+  },
   n: 3,
   txt: "3 cardios différents cette semaine (parmi les 5 du menu). Une photo par cardio."
 }, {
@@ -926,7 +930,11 @@ const DEFIS = [{
   n: 1,
   txt: "Monte la charge sur UN exercice. Photo de la machine chargée."
 }, {
-  titre: "La marcheuse",
+  titre: {
+    f: "La marcheuse",
+    m: "Le marcheur",
+    n: "En vadrouille"
+  },
   n: 3,
   txt: "10 000 pas trois jours de suite. Une photo du podomètre par jour."
 }, {
@@ -938,7 +946,11 @@ const DEFIS = [{
   n: 1,
   txt: "25 min de tapis incliné sans jamais tenir les barres. Photo du tapis en fin de session."
 }, {
-  titre: "L'exploratrice",
+  titre: {
+    f: "L'exploratrice",
+    m: "L'explorateur",
+    n: "Terre inconnue"
+  },
   n: 1,
   txt: "Apprends une variante en vidéo et fais-la en vraie séance. Photo à l'appui."
 }];
@@ -971,7 +983,16 @@ const niveauDe = xp => {
   while (n < MAX_NIVEAU && xp >= SEUILS[n]) n++;
   return n;
 };
+const titreDefi = (t, adresse) => typeof t === "string" ? t : accord(adresse, t.f, t.m, t.n);
 const titreDe = xp => TITRES[Math.min(niveauDe(xp) - 1, TITRES.length - 1)];
+// « comment on s'adresse à toi » : elle / il / neutre. Les textes d'origine
+// ont été écrits pour Léa — le féminin reste la voix de repli quand la
+// préférence est absente (profils d'avant v19.19, état coach pas encore reçu).
+const accord = (adresse, f, m, n) => adresse === "il" ? m : adresse === "neutre" ? n : f;
+// résout les formes au point médian : « Motivé·e » → « Motivée » / « Motivé »,
+// « Sérieux·se » → « Sérieuse » / « Sérieux », « champion·ne » → « championne »
+// / « champion ». Le neutre garde le point médian tel quel.
+const accorde = (txt, adresse) => !adresse || adresse === "neutre" ? txt : txt.replace(/([A-Za-zÀ-ÿ]+)·([a-zà-ÿ]+)/g, (m0, base, suf) => adresse === "il" ? base : suf === "se" && base.endsWith("x") ? base.slice(0, -1) + suf : base + suf);
 const CHANCE_COFFRE = 0.25;
 const STYLES = {
   cool: {
@@ -1444,7 +1465,7 @@ const KIFFS_STYLE = {
     solo: "Un chocolat chaud ou un thé, pris sans se presser"
   }, "Une grasse matinée officiellement validée", {
     duo: "Un compliment écrit de 10 lignes minimum",
-    solo: "Dix lignes sur ce dont je suis fière, écrites pour moi"
+    solo: "Dix lignes sur tout ce que j'ai accompli, écrites pour moi"
   }, {
     duo: "Le prochain dîner ensemble est géré par l'autre",
     solo: "Le prochain dîner commandé, zéro cuisine"
@@ -1906,6 +1927,7 @@ const BADGES = [{
   test: s => niveauDe(s.xp) >= 12
 }];
 const DEFAUT = {
+  adresse: "neutre",
   xp: 0,
   histo: [],
   habitudes: {},
@@ -2142,6 +2164,7 @@ function App() {
       code: codeNet
     };
     if (!importer && (extra.programme || extra.programmePerso)) localStorage.setItem(SKEY(p.id), JSON.stringify({
+      adresse: "neutre",
       programme: extra.programmePerso ? "perso" : extra.programme,
       ...(extra.programmePerso ? {
         programmePerso: extra.programmePerso
@@ -2212,6 +2235,9 @@ function App() {
       } : {
         ...DEFAUT
       };
+      // un état antérieur à la préférence d'adresse = un profil de l'époque où
+      // toute l'app parlait au féminin : on ne change pas la voix sous ses pieds
+      if (raw && !JSON.parse(raw).adresse) s.adresse = "elle";
     } catch {
       s = {
         ...DEFAUT
@@ -2388,6 +2414,7 @@ function App() {
         },
         body: JSON.stringify({
           xp: s.xp,
+          adresse: s.adresse,
           date: auj(),
           histo: (s.histo || []).slice(0, 30),
           photosMeta: (s.photosMeta || []).slice(-30),
@@ -3031,6 +3058,7 @@ function App() {
       animation: `fall ${1.6 + i % 5 * 0.3}s ${i % 7 * 0.12}s linear forwards`
     }
   }))), !tourVu && /*#__PURE__*/React.createElement(Tour, {
+    adresse: role === "coach" ? st.adresseCoachee : st.adresse,
     role: role,
     solo: solo,
     onFin: finirTour
@@ -3162,7 +3190,7 @@ function App() {
       fontSize: 22,
       margin: "4px 0 6px"
     }
-  }, defi.titre), /*#__PURE__*/React.createElement("div", {
+  }, titreDefi(defi.titre, st.adresse)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: SUB,
@@ -3255,6 +3283,7 @@ function App() {
   }, "Fermer"))), reglagesOuvert && /*#__PURE__*/React.createElement(Reglages, {
     st: st,
     maj: maj,
+    onPousser: pousserEtat,
     profil: profil,
     profils: profils,
     code: code,
@@ -3518,7 +3547,7 @@ function App() {
       color: COL.G,
       fontWeight: 600
     }
-  }, titreDe(st.xp))), /*#__PURE__*/React.createElement("div", {
+  }, accorde(titreDe(st.xp), st.adresse))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       color: SUB,
@@ -3593,7 +3622,13 @@ function App() {
     }
   }, role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
     onZoom: setZoom,
-    code: code
+    code: code,
+    onAdresse: a => {
+      if (a !== stRef.current?.adresseCoachee) maj(x => {
+        x.adresseCoachee = a;
+        return x;
+      });
+    }
   }), role !== "coach" && tab === "jour" && /*#__PURE__*/React.createElement("div", null, !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
     onClick: partagerInvite,
     style: {
@@ -3910,7 +3945,7 @@ function App() {
       fontSize: 13.5,
       marginTop: 1
     }
-  }, defi.titre)), /*#__PURE__*/React.createElement(Ic, {
+  }, titreDefi(defi.titre, st.adresse))), /*#__PURE__*/React.createElement(Ic, {
     n: "play",
     s: 12,
     c: SUB
@@ -5324,7 +5359,7 @@ function SeanceView({
       color: S.couleur,
       fontSize: 15
     }
-  }, "Séance validée. Fière de toi. 🎉"), Object.keys(J.photos || {}).length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "Séance validée. ", accord(st.adresse, "Fière de toi.", "Fier de toi.", "Quelle fierté."), " 🎉"), Object.keys(J.photos || {}).length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: onPartager,
     style: {
       width: "100%",
@@ -6043,7 +6078,7 @@ function Recompenses({
       s: 13,
       w: 2.2,
       c: COL.D
-    }), r.pris ? "RÉCLAMÉE" : ok ? "DÉBLOQUÉE" : `NIVEAU ${r.niveau} — ${TITRES[Math.min(r.niveau, TITRES.length) - 1]}`), /*#__PURE__*/React.createElement("div", {
+    }), r.pris ? "RÉCLAMÉE" : ok ? "DÉBLOQUÉE" : `NIVEAU ${r.niveau} — ${accorde(TITRES[Math.min(r.niveau, TITRES.length) - 1], st.adresse)}`), /*#__PURE__*/React.createElement("div", {
       style: {
         fontFamily: DISPLAY,
         fontWeight: 700,
@@ -6369,6 +6404,7 @@ function Negos({
   const [cLab, setCLab] = useState(""); // contre-offre sur un mini-kif : on reformule le libellé, il n'y a pas de niveau à négocier
   const [cMot, setCMot] = useState("");
   const [busy, setBusy] = useState(false);
+  const cible = role === "coach" ? st.adresseCoachee : st.adresse;
   const rafraichir = async silencieux => {
     try {
       if (!code) throw new Error();
@@ -6766,7 +6802,7 @@ function Negos({
       fontSize: 13,
       color: SUB
     }
-  }, "Aucune proposition en attente. Quand le coaché en enverra une depuis son téléphone, elle apparaîtra ici — touche 🔄 pour vérifier.")), list.map(g => /*#__PURE__*/React.createElement("div", {
+  }, "Aucune proposition en attente. Quand ", accord(cible, "la coachée", "le coaché", "ton binôme"), " en enverra une depuis son téléphone, elle apparaîtra ici — touche 🔄 pour vérifier.")), list.map(g => /*#__PURE__*/React.createElement("div", {
     key: g.id,
     style: {
       background: GLASSBG,
@@ -6783,7 +6819,7 @@ function Negos({
       gap: 8,
       marginBottom: 5
     }
-  }, g.type === "kiff" && chip("MINI-KIF", "#0B0E14", "rgba(242,245,249,.85)"), g.statut === "proposee" && chip("EN ATTENTE DU COACH", "#fff", COL.D), g.statut === "contre" && chip("CONTRE-OFFRE — À ELLE", "#fff", COL.B), g.statut === "acceptee" && chip("DEAL CONCLU ✔", "#fff", COL.C), g.statut === "refusee" && chip("REFUSÉE", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("span", {
+  }, g.type === "kiff" && chip("MINI-KIF", "#0B0E14", "rgba(242,245,249,.85)"), g.statut === "proposee" && chip("EN ATTENTE DU COACH", "#fff", COL.D), g.statut === "contre" && chip("CONTRE-OFFRE — " + accord(cible, "À ELLE", "À LUI", "À SON TOUR"), "#fff", COL.B), g.statut === "acceptee" && chip("DEAL CONCLU ✔", "#fff", COL.C), g.statut === "refusee" && chip("REFUSÉE", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10.5,
       color: SUB,
@@ -6823,7 +6859,7 @@ function Negos({
       fontStyle: "italic",
       marginTop: 3
     }
-  }, "Coaché·e : « ", g.mot, " »"), g.contreMot && /*#__PURE__*/React.createElement("div", {
+  }, accorde("Coaché·e", cible), " : « ", g.mot, " »"), g.contreMot && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       color: COL.B,
@@ -7182,7 +7218,7 @@ function Negos({
       color: SUB,
       marginTop: 8
     }
-  }, "⏳ Balle dans son camp — elle accepte ou refuse, c'est tout."))));
+  }, "⏳ Balle dans son camp — ", accord(cible, "elle accepte ou refuse, c'est tout.", "il accepte ou refuse, c'est tout.", "accepter ou refuser, c'est tout.")))));
 }
 const tintCss = hex => hex + "33";
 
@@ -7248,7 +7284,8 @@ const TYPES_PARI = [{
 /* ============================ SUIVI COACH ============================ */
 function SuiviCoach({
   onZoom,
-  code
+  code,
+  onAdresse
 }) {
   const [etat, setEtat] = useState(null);
   const [erreur, setErreur] = useState(false);
@@ -7262,6 +7299,7 @@ function SuiviCoach({
       setEtat(d && d.xp != null ? d : {
         vide: true
       });
+      if (d && d.adresse && onAdresse) onAdresse(d.adresse);
     } catch {
       setErreur(true);
     }
@@ -7398,7 +7436,7 @@ function SuiviCoach({
     style: {
       color: COL.G
     }
-  }, titreDe(etat.xp))), /*#__PURE__*/React.createElement("div", {
+  }, accorde(titreDe(etat.xp), etat.adresse))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: SUB,
@@ -7888,7 +7926,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.18"));
+  }, "v19.19"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -8506,6 +8544,7 @@ function Onboarding({
 function Reglages({
   st,
   maj,
+  onPousser,
   profil,
   profils,
   code,
@@ -8706,7 +8745,64 @@ function Reglages({
     style: {
       marginBottom: 14
     }
-  }, /*#__PURE__*/React.createElement(Ligne, {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: GLASSBG,
+      border: `1px solid ${LINE}`,
+      borderRadius: 14,
+      padding: "11px 14px",
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 13
+    }
+  }, "Comment on s'adresse à toi"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: SUB,
+      marginTop: 2
+    }
+  }, "accorde les titres et les textes de l'app — ton coach le voit aussi"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      marginTop: 9
+    }
+  }, [["elle", "Fière de toi"], ["il", "Fier de toi"], ["neutre", "Quelle fierté"]].map(([id, ex]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    onClick: () => {
+      if ((st.adresse || "elle") === id) return;
+      maj(x => {
+        x.adresse = id;
+        return x;
+      });
+      onPousser && onPousser();
+      toast(`✔ « ${ex} »`);
+    },
+    style: {
+      flex: 1,
+      background: (st.adresse || "elle") === id ? tintCss(COL.G) : "rgba(255,255,255,.04)",
+      border: `1.5px solid ${(st.adresse || "elle") === id ? COL.G : LINE}`,
+      borderRadius: 11,
+      padding: "8px 4px",
+      color: (st.adresse || "elle") === id ? COL.G : INK
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontWeight: 800,
+      fontSize: 12
+    }
+  }, id === "elle" ? "Au féminin" : id === "il" ? "Au masculin" : "Neutre"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 9.5,
+      color: SUB,
+      marginTop: 1
+    }
+  }, "« ", ex, " »"))))), /*#__PURE__*/React.createElement(Ligne, {
     k: "photoOblig",
     titre: "Preuve photo obligatoire",
     desc: "Désactivé : un bouton ✓ permet de valider sans photo (10 XP au lieu de 15)"
@@ -10478,6 +10574,7 @@ const BULLES = {
 function Tour({
   role,
   solo,
+  adresse,
   onFin
 }) {
   const [i, setI] = useState(0);
@@ -10493,7 +10590,7 @@ function Tour({
   }, {
     e: "users",
     t: "La table des négos",
-    x: "Elle propose une récompense et un niveau, tu acceptes ou tu fais UNE contre-offre. Un seul aller-retour, réponse sous 48 h."
+    x: accord(adresse, "Elle propose", "Il propose", "Ton binôme propose") + " une récompense et un niveau, tu acceptes ou tu fais UNE contre-offre. Un seul aller-retour, réponse sous 48 h."
   }, {
     e: "target",
     t: "Les paris",

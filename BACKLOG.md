@@ -77,9 +77,8 @@ XP, pas de la structure de l'onglet.
   rôles ou identifiants qui n'existent plus depuis le passage aux profils
   multiples. Balayage fait en v19.18 : clés localStorage toutes saines (par
   profil, ou legacy en lecture seule pour l'import), aucune condition
-  d'identité morte restante — restent trois textes genrés au féminin côté
-  coach (« À ELLE », « elle accepte ou refuse », « Fière de toi »), listés à
-  Léo pour arbitrage (question de voix produit, pas de code mort).
+  d'identité morte restante. Les textes genrés relevés au passage sont réglés
+  en v19.19 (préférence d'adresse elle/il/neutre, accords appliqués).
 
 ## Coach
 
