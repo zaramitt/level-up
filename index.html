@@ -2258,6 +2258,38 @@ function App() {
     }
   }, [pid]);
 
+  // clôture automatique (filet de sécurité) : une séance d'un jour PASSÉ avec
+  // au moins un exercice validé mais jamais clôturée est enregistrée comme
+  // partielle au chargement suivant — une séance réelle ne doit jamais être
+  // perdue pour un bouton non vu. Le geste explicite reste le chemin normal.
+  useEffect(() => {
+    if (!st || role === "coach") return;
+    const perdues = Object.entries(st.jour || {}).filter(([d, j]) => d < jourKey && j && estSeance(j.seance) && !j.valide && (j.faits || []).length > 0 && !(st.histo || []).some(h => h.date === d && h.type === j.seance));
+    if (!perdues.length) return;
+    maj(s => {
+      perdues.forEach(([d, j]) => {
+        s.jour[d] = {
+          ...s.jour[d],
+          valide: true,
+          partiel: true
+        };
+        s.histo.unshift({
+          date: d,
+          type: j.seance,
+          xp: 0,
+          partiel: true,
+          auto: true
+        });
+      });
+      // l'historique reste trié du plus récent au plus ancien : la suggestion
+      // de prochaine séance lit la première entrée
+      s.histo.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+      s.histo = s.histo.slice(0, 30);
+      return s;
+    });
+    toast(perdues.length > 1 ? `${perdues.length} séances passées enregistrées — rien n'est perdu ✔` : "Séance passée enregistrée — rien n'est perdu ✔");
+    pousserEtat();
+  }, [!!st]);
   // premier passage sur un onglet : la popup s'ouvre d'elle-même une fois. On
   // ne dépend que de la clé — dépendre de st.vus rouvrirait la popup au moment
   // même où on la marque comme vue.
@@ -5222,17 +5254,51 @@ function SeanceView({
   }), !J.valide ? /*#__PURE__*/React.createElement("div", null, !tousFaits && J.faits.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: onPartiel,
     style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
       width: "100%",
+      textAlign: "left",
       marginTop: 12,
-      background: GLASSBG,
+      background: tintCss(S.couleur),
       color: INK,
-      border: `1px solid ${LINE}`,
+      border: `1.5px solid ${S.couleur}`,
       borderRadius: 14,
-      padding: "12px",
-      fontWeight: 700,
-      fontSize: 12.5
+      padding: "13px 14px"
     }
-  }, "Séance finie pour aujourd'hui — je m'arrête là (", J.faits.length, "/", S.exos.length, " exos gardés)"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 30,
+      height: 30,
+      borderRadius: 999,
+      background: S.couleur,
+      color: "#fff",
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "check",
+    s: 14,
+    w: 2.6
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontWeight: 800,
+      fontSize: 13.5
+    }
+  }, "Séance finie pour aujourd'hui — je m'arrête là"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 11,
+      color: SUB,
+      marginTop: 2
+    }
+  }, J.faits.length, "/", S.exos.length, " exercices gardés · la séance compte, sans le bonus de séance complète"))), /*#__PURE__*/React.createElement("button", {
     onClick: onValider,
     disabled: !tousFaits,
     style: {
@@ -7822,7 +7888,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.17"));
+  }, "v19.18"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {

@@ -5,6 +5,20 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.18 — août 2026
+
+- **Séance partielle = 1 séance pleine au compteur, sans bonus ni coffre.**
+  → Venir compte ; la perfection est récompensée à part (+40 et tirage du
+  coffre réservés à la séance complète). C'est le principe « confiance +
+  audit » appliqué aux séances.
+
+- **Clôture automatique en fin de journée si ≥ 1 exercice validé.** → Une
+  séance réelle ne doit jamais être perdue pour un bouton non vu. Le geste
+  explicite (« je m'arrête là », carte visible dès le premier exercice validé)
+  reste le chemin normal ; la clôture auto n'est qu'un filet de sécurité.
+  Mise en œuvre : l'app étant côté client, la clôture se joue au premier
+  chargement d'un jour ultérieur (aucun processus ne tourne à minuit).
+
 ## v19.17 — août 2026
 
 - **Tous les chronos sont basés sur un horodatage cible (`fin` en epoch ms),

@@ -68,14 +68,18 @@ XP, pas de la structure de l'onglet.
 
 ## Dette technique
 
-- **PRIORITÉ MOYENNE — Balayage des valeurs en dur et clés orphelines héritées
+- **PRIORITÉ HAUTE — Balayage des valeurs en dur et clés orphelines héritées
   de l'époque mono-duo.** Trois trouvées et corrigées : `lvlup-role` (v19.14),
   `role === 'leo'` (v19.15) et `incTour` qui sauvegardait les tours de gainage
   dans `lvlup-state-v3`, la clé mono-profil (v19.17 — les tours n'étaient
   jamais persistés sous la clé du profil). Faire un balayage systématique du
   code à la recherche d'autres conditions ou clés référençant des prénoms,
   rôles ou identifiants qui n'existent plus depuis le passage aux profils
-  multiples.
+  multiples. Balayage fait en v19.18 : clés localStorage toutes saines (par
+  profil, ou legacy en lecture seule pour l'import), aucune condition
+  d'identité morte restante — restent trois textes genrés au féminin côté
+  coach (« À ELLE », « elle accepte ou refuse », « Fière de toi »), listés à
+  Léo pour arbitrage (question de voix produit, pas de code mort).
 
 ## Coach
 
