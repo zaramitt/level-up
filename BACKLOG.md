@@ -14,11 +14,23 @@ lecture, pas de la structure de l'écran.
   passage existe depuis la v19.16 et couvre les six onglets ; restent à
   réécrire les textes eux-mêmes, pour qu'ils soient vraiment simples et clairs
   pour une novice.
+- **PRIORITÉ HAUTE — Remplacer un exercice en cours de séance** (machine
+  indisponible, exercice non réalisable, préférence — ex : tirage vertical
+  remplacé par tractions). Vécu dès la première séance en salle réelle.
+- Niveaux de difficulté des exercices : certains sont durs pour une débutante
+  (ex : deadbug, coordination). Pouvoir choisir plus simple.
 - **PRIORITÉ BASSE — En-tête global trop serré à 390 px** : sur l'écran
   coachée, « LEVEL UP ! » et la ligne d'XP passent sur plusieurs lignes, coincés
   entre l'orbe de niveau et le bloc « 7 DERNIERS JOURS ». Antérieur à la v19.16
   (mesuré : bloc titre à 85 px avant, 88 px après). À reprendre lors de la
   refonte visuelle post-Vite.
+
+## Générateur de séances
+
+- Mode « je construis ma séance du jour » : temps disponible, intensité (charge
+  lourde vs entretien, impact sur les repos), partie du corps ciblée ou au
+  choix de l'app, proposition de compléments (abdos…) si minutes restantes.
+  Gros chantier produit — à concevoir avec Léo avant toute implémentation.
 
 ## Onglet Progrès
 
@@ -57,10 +69,13 @@ XP, pas de la structure de l'onglet.
 ## Dette technique
 
 - **PRIORITÉ MOYENNE — Balayage des valeurs en dur et clés orphelines héritées
-  de l'époque mono-duo.** Deux trouvées et corrigées : `lvlup-role` (v19.14)
-  et `role === 'leo'` (v19.15). Faire un balayage systématique du code à la
-  recherche d'autres conditions ou clés référençant des prénoms, rôles ou
-  identifiants qui n'existent plus depuis le passage aux profils multiples.
+  de l'époque mono-duo.** Trois trouvées et corrigées : `lvlup-role` (v19.14),
+  `role === 'leo'` (v19.15) et `incTour` qui sauvegardait les tours de gainage
+  dans `lvlup-state-v3`, la clé mono-profil (v19.17 — les tours n'étaient
+  jamais persistés sous la clé du profil). Faire un balayage systématique du
+  code à la recherche d'autres conditions ou clés référençant des prénoms,
+  rôles ou identifiants qui n'existent plus depuis le passage aux profils
+  multiples.
 
 ## Coach
 
