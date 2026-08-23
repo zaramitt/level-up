@@ -5,6 +5,31 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.17 — août 2026
+
+- **Tous les chronos sont basés sur un horodatage cible (`fin` en epoch ms),
+  jamais sur un décompte par intervalles.** → iOS gèle le JS de Safari en
+  arrière-plan : un « reste − 1 » par seconde s'arrêtait dès qu'on quittait
+  l'app (vécu en salle par Léo). Le restant est recalculé à chaque tick et au
+  `visibilitychange` ; un segment enchaîné démarre à la fin théorique du
+  précédent, pas à « maintenant ». Règle pour tout futur chrono.
+
+- **Re-tap sur « repos » : ignoré, pas de pause/reprise.** → Remettre à zéro
+  était le bug ; une pause mentirait sur le temps réellement écoulé, en
+  contradiction avec le point précédent (le chrono suit l'horloge, pas l'app).
+
+- **Troisième orphelin mono-profil corrigé** : `incTour` sauvegardait les
+  tours de gainage dans `lvlup-state-v3` (clé d'avant les profils multiples) —
+  ils n'étaient jamais persistés sous la clé du profil et ne survivaient que si
+  une autre écriture passait derrière. Réécrit sur `maj()` comme le reste.
+  → Après `lvlup-role` (v19.14) et `role === "leo"` (v19.15), le balayage
+  systématique du backlog monte d'un cran en urgence.
+
+- **Gainage : 3 s de mise en place avant chaque série chronométrée,
+  enchaînement automatique après le repos, pas de repos après le dernier
+  tour.** → Le tour visé est passé en paramètre de la relance plutôt que relu
+  dans l'état : la relance part d'un setTimeout, hors du rendu courant.
+
 ## v19.16 — août 2026
 
 - **Écran Séance : accordéon avec un seul exercice déployé à la fois**, les

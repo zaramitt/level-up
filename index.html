@@ -2264,39 +2264,62 @@ function App() {
   useEffect(() => {
     if (st && BULLES[cleAide] && !(st.vus || {})[cleAide]) setAideOuverte(true);
   }, [cleAide, !!st]);
-  /* ---- timer travail / repos (enchaînement auto) ---- */
-  const apresTravail = useRef(null);
+  /* ---- timer prep / travail / repos (enchaînement auto) ----
+     Basé sur un horodatage cible (fin = epoch ms) et non sur un décompte par
+     intervalles : iOS gèle le JS quand Safari passe en arrière-plan, un
+     « reste − 1 » chaque seconde figeait donc le chrono dès qu'on quittait
+     l'app. Ici chaque tick — et le retour au premier plan (visibilitychange) —
+     RECALCULE le restant depuis l'horloge : le temps s'écoule même app fermée,
+     et les fins de segment ratées en arrière-plan se rejouent au retour.
+     Un segment enchaîné démarre à la fin THÉORIQUE du précédent (fin + total),
+     pas à « maintenant » : pas de dérive après un passage en arrière-plan. */
+  const apresTravail = useRef(null); // fin d'un travail : compter le tour, XP
+  const apresRepos = useRef(null); // fin d'un repos de gainage : relancer la série suivante
   useEffect(() => {
-    if (!timer || timer.reste <= 0) return;
-    const t = setTimeout(() => {
-      setTimer(tm => {
-        if (!tm) return null;
-        if (tm.reste <= 1) {
-          bip(stRef.current?.reglages?.sons !== false);
-          if (tm.mode === "travail") {
-            if (apresTravail.current) {
-              apresTravail.current();
-              apresTravail.current = null;
-            }
-            if (tm.next) return {
-              ...tm.next,
-              mode: "repos"
-            };
-          }
-          setTimeout(() => setTimer(null), 2500);
-          return {
-            ...tm,
-            reste: 0
-          };
-        }
+    if (!timer || !timer.fin || timer.reste <= 0) return;
+    const tick = () => setTimer(tm => {
+      if (!tm || !tm.fin) return tm;
+      const reste = Math.max(0, Math.ceil((tm.fin - Date.now()) / 1000));
+      if (reste > 0) return reste === tm.reste ? tm : {
+        ...tm,
+        reste
+      };
+      // segment terminé
+      bip(stRef.current?.reglages?.sons !== false);
+      if (tm.mode === "travail" && apresTravail.current) {
+        const f = apresTravail.current;
+        apresTravail.current = null;
+        f();
+      }
+      if (tm.next) {
+        const fin = tm.fin + tm.next.total * 1000;
         return {
-          ...tm,
-          reste: tm.reste - 1
+          ...tm.next,
+          fin,
+          reste: Math.max(0, Math.ceil((fin - Date.now()) / 1000))
         };
-      });
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [timer]);
+      }
+      if (tm.mode === "repos" && apresRepos.current) {
+        const f = apresRepos.current;
+        apresRepos.current = null;
+        setTimeout(f, 0);
+        return null;
+      }
+      setTimeout(() => setTimer(t2 => t2 && t2.reste === 0 ? null : t2), 2500);
+      return {
+        ...tm,
+        reste: 0,
+        fin: null
+      };
+    });
+    const iv = setInterval(tick, 300);
+    const vis = () => document.visibilityState === "visible" && tick();
+    document.addEventListener("visibilitychange", vis);
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", vis);
+    };
+  }, [timer && timer.fin, timer && timer.mode]);
   const maj = fn => setSt(prev => {
     const nx = fn(structuredClone(prev));
     clearTimeout(saveT.current);
@@ -2640,8 +2663,7 @@ function App() {
     }
   };
   const incTour = g => {
-    setSt(prev => {
-      const s = structuredClone(prev);
+    maj(s => {
       const j = s.jour[jourKey] || {
         ...J
       };
@@ -2653,52 +2675,82 @@ function App() {
         j.gainage = [...j.gainage, g.id];
       }
       s.jour[jourKey] = j;
-      clearTimeout(saveT.current);
-      saveT.current = setTimeout(() => {
-        try {
-          localStorage.setItem("lvlup-state-v3", JSON.stringify(s));
-        } catch (e) {}
-      }, 400);
       return s;
+    });
+  };
+  // Série chronométrée de gainage, tour `tour` (0-based) : 3 s de mise en
+  // place, puis le travail, puis — sauf au dernier tour — le repos suivi de la
+  // relance AUTOMATIQUE du tour suivant. Le tour est passé en paramètre plutôt
+  // que relu dans J : la relance part d'un setTimeout, hors du rendu courant.
+  const lancerChronoGain = (g, tour) => {
+    const dernier = tour + 1 >= 3;
+    apresTravail.current = () => {
+      incTour(g);
+      if (dernier) gagne(XP.gainageItem, `· ${g.nom} bouclé`);
+    };
+    apresRepos.current = dernier ? null : () => lancerChronoGain(g, tour + 1);
+    setTimer({
+      mode: "prep",
+      gainId: g.id,
+      reste: 3,
+      total: 3,
+      fin: Date.now() + 3000,
+      label: `En place — ${g.nom}`,
+      next: {
+        mode: "travail",
+        gainId: g.id,
+        reste: g.duree,
+        total: g.duree,
+        label: `${g.nom} — tiens bon !`,
+        ...(dernier ? {} : {
+          next: {
+            mode: "repos",
+            gainId: g.id,
+            reste: g.repos,
+            total: g.repos,
+            label: `Repos — ${g.nom} · tour ${tour + 2}/3 dans…`
+          }
+        })
+      }
     });
   };
   const lancerSerieGain = g => {
     const dejaFait = J.gainage.includes(g.id);
     if (dejaFait) return;
+    const t = (J.gainTours || {})[g.id] || 0;
     if (g.duree) {
-      apresTravail.current = () => {
-        incTour(g);
-        const t = (J.gainTours || {})[g.id] || 0;
-        if (t + 1 >= 3) gagne(XP.gainageItem, `· ${g.nom} bouclé`);
-      };
-      setTimer({
-        mode: "travail",
-        reste: g.duree,
-        total: g.duree,
-        label: `${g.nom} — tiens bon !`,
-        next: {
-          reste: g.repos,
-          total: g.repos,
-          label: `Repos — ${g.nom}`
-        }
-      });
-    } else {
-      const t = (J.gainTours || {})[g.id] || 0;
-      incTour(g);
-      if (t + 1 >= 3) gagne(XP.gainageItem, `· ${g.nom} bouclé`);
-      setTimer({
-        mode: "repos",
-        reste: g.repos,
-        total: g.repos,
-        label: `Repos — ${g.nom}`
-      });
+      lancerChronoGain(g, t);
+      return;
     }
-  };
-  const lancerRepos = ex => {
+    // exercice au compte de répétitions : pas de chrono de travail à enchaîner,
+    // et pas de repos après le DERNIER tour — il ne précède rien
+    incTour(g);
+    apresRepos.current = null;
+    if (t + 1 >= 3) {
+      gagne(XP.gainageItem, `· ${g.nom} bouclé`);
+      return;
+    }
     setTimer({
       mode: "repos",
+      gainId: g.id,
+      reste: g.repos,
+      total: g.repos,
+      fin: Date.now() + g.repos * 1000,
+      label: `Repos — ${g.nom} · tour ${t + 2}/3`
+    });
+  };
+  const lancerRepos = ex => {
+    // re-tap pendant le repos du même exercice : on ne touche à rien —
+    // remettre le chrono à zéro était le bug, et une pause mentirait sur le
+    // temps réellement écoulé (le chrono suit l'horloge, pas l'app)
+    if (timer && timer.mode === "repos" && timer.exId === ex.id && timer.reste > 0) return;
+    apresRepos.current = null;
+    setTimer({
+      mode: "repos",
+      exId: ex.id,
       reste: ex.repos,
       total: ex.repos,
+      fin: Date.now() + ex.repos * 1000,
       label: `Repos — ${ex.nom}`
     });
   };
@@ -3876,6 +3928,7 @@ function App() {
       gagne(10, "· sans photo");
     },
     onPartiel: finirPartiel,
+    timer: timer,
     burst: burst
   }), J.seance === "K" && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4487,7 +4540,7 @@ function App() {
       width: "calc(100% - 24px)",
       maxWidth: 496,
       zIndex: 55,
-      background: timer.reste === 0 ? COL.C : timer.mode === "travail" ? COL.G : "rgba(16,20,30,.92)",
+      background: timer.reste === 0 ? COL.C : timer.mode === "travail" ? COL.G : timer.mode === "prep" ? COL.D : COL.B,
       color: "#fff",
       borderRadius: 16,
       padding: "12px 16px",
@@ -4513,7 +4566,7 @@ function App() {
       letterSpacing: .4,
       marginBottom: 2
     }
-  }, timer.reste === 0 ? "C'EST REPARTI !" : (timer.mode === "travail" ? "💪 " : "⏱️ ") + timer.label.toUpperCase()),
+  }, timer.reste === 0 ? "C'EST REPARTI !" : (timer.mode === "travail" ? "💪 " : timer.mode === "prep" ? "🚦 " : "⏱️ ") + timer.label.toUpperCase()),
   /* chrono volontairement énorme : il doit se lire d'un coup d'œil en plein
      effort, à bout de bras et sans lunettes */
   /*#__PURE__*/React.createElement("div", {
@@ -4526,7 +4579,24 @@ function App() {
       letterSpacing: -1
     }
   }, timer.reste === 0 ? "GO !" : fmtSec(timer.reste))), timer.reste > 0 && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setTimer(null),
+    onClick: () => {
+      const tm = timer;
+      if (tm.mode === "prep" && tm.next) {
+        setTimer({
+          ...tm.next,
+          fin: Date.now() + tm.next.total * 1000
+        });
+      } else if (tm.mode === "repos" && apresRepos.current) {
+        const f = apresRepos.current;
+        apresRepos.current = null;
+        setTimer(null);
+        f();
+      } else {
+        apresTravail.current = null;
+        apresRepos.current = null;
+        setTimer(null);
+      }
+    },
     style: {
       background: "rgba(255,255,255,.15)",
       color: "#fff",
@@ -4690,7 +4760,8 @@ function SeanceView({
   onAnnulerGain,
   validerSansPhoto,
   onPartiel,
-  burst
+  burst,
+  timer
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
   const tousFaits = J.faits.length >= S.exos.length;
@@ -4925,12 +4996,14 @@ function SeanceView({
         fontWeight: 600,
         color: fait ? SUB : INK
       }
-    }, ex.dose), /*#__PURE__*/React.createElement("span", null, "repos ", fmtSec(ex.repos)), der && /*#__PURE__*/React.createElement("span", {
+    }, ex.dose), /*#__PURE__*/React.createElement("span", null, "repos ", fmtSec(ex.repos))), der && /*#__PURE__*/React.createElement("div", {
       style: {
+        fontSize: 12,
         color: S.couleur,
-        fontWeight: 600
+        fontWeight: 600,
+        marginTop: 3
       }
-    }, "dernier ", fmtCharge(der)))), /*#__PURE__*/React.createElement("span", {
+    }, "dernier : ", fmtCharge(der))), /*#__PURE__*/React.createElement("span", {
       style: {
         flexShrink: 0,
         display: "grid",
@@ -5019,29 +5092,57 @@ function SeanceView({
       dernier: der,
       couleur: S.couleur,
       onSave: onCharge
-    })), !fait && /*#__PURE__*/React.createElement("button", {
-      onClick: () => onRepos(ex),
-      style: {
-        width: "100%",
-        background: GLASSBG,
-        color: INK,
-        border: `1.5px solid ${LINE}`,
-        borderRadius: 12,
-        padding: "12px",
-        fontWeight: 700,
-        fontSize: 12.5,
-        marginBottom: 14
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 7
-      }
-    }, /*#__PURE__*/React.createElement(Ic, {
-      n: "clock",
-      s: 13
-    }), "Fin de série — repos ", fmtSec(ex.repos))), !fait ? /*#__PURE__*/React.createElement("div", {
+    })), !fait && (() => {
+      // repos en cours pour CET exercice : le bouton devient le chrono lui-même
+      // (bleu, décompte en gros) — un re-tap ne remet jamais à zéro (garde dans
+      // lancerRepos)
+      const reposActif = timer && timer.mode === "repos" && timer.exId === ex.id && timer.reste > 0;
+      return /*#__PURE__*/React.createElement("button", {
+        onClick: () => onRepos(ex),
+        style: {
+          width: "100%",
+          background: reposActif ? COL.B : GLASSBG,
+          color: reposActif ? "#fff" : INK,
+          border: `1.5px solid ${reposActif ? COL.B : LINE}`,
+          borderRadius: 12,
+          padding: "12px",
+          fontWeight: 700,
+          fontSize: 12.5,
+          marginBottom: 14,
+          transition: "background .2s, border-color .2s"
+        }
+      }, reposActif ? /*#__PURE__*/React.createElement("span", {
+        style: {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 9
+        }
+      }, /*#__PURE__*/React.createElement(Ic, {
+        n: "clock",
+        s: 15
+      }), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontFamily: DISPLAY,
+          fontSize: 21,
+          lineHeight: 1,
+          fontVariantNumeric: "tabular-nums"
+        }
+      }, fmtSec(timer.reste)), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 11.5,
+          opacity: .85
+        }
+      }, "repos en cours")) : /*#__PURE__*/React.createElement("span", {
+        style: {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 7
+        }
+      }, /*#__PURE__*/React.createElement(Ic, {
+        n: "clock",
+        s: 13
+      }), "Fin de série — repos ", fmtSec(ex.repos)));
+    })(), !fait ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 8
@@ -5376,7 +5477,7 @@ function SerieInputs({
 }) {
   const [vals, setVals] = useState(Array(nb).fill(""));
   const [saved, setSaved] = useState(Array(nb).fill(false));
-  const derniers = dernier ? dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || [] : [];
+  const [derniers] = useState(() => dernier ? dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || [] : []);
   const sauver = i => {
     if (!vals[i]) return;
     onSave(exId, i, vals[i]);
@@ -5401,45 +5502,83 @@ function SerieInputs({
     }
   }, Array.from({
     length: nb
-  }).map((_, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      position: "relative"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: -6,
-      left: 8,
-      fontSize: 8,
-      fontWeight: 800,
-      letterSpacing: .5,
-      color: saved[i] ? couleur : "#5A6274",
-      background: "#10141D",
-      padding: "0 4px",
-      borderRadius: 4,
-      zIndex: 1
-    }
-  }, "S", i + 1, saved[i] ? " ✓" : ""), /*#__PURE__*/React.createElement(Stepper, {
-    compact: true,
-    unite: "kg",
-    pas: 2.5,
-    accent: couleur,
-    valeur: vals[i] !== "" ? vals[i] : derniers[i] != null ? derniers[i] : "",
-    onChange: v => {
+  }).map((_, i) => {
+    // valeur effectivement affichée pour une série (saisie du jour, sinon
+    // pré-remplissage de la dernière séance) — sert au bouton « = »
+    const eff = k => vals[k] !== "" ? vals[k] : derniers[k] != null ? derniers[k] : "";
+    const fixer = v => {
       setVals(vv => {
         const n = [...vv];
         n[i] = v;
         return n;
       });
       onSave(exId, i, v);
-      setSaved(s => {
-        const n = [...s];
+      setSaved(sv => {
+        const n = [...sv];
         n[i] = true;
         return n;
       });
+    };
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        position: "relative",
+        display: "flex",
+        gap: 4
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "absolute",
+        top: -6,
+        left: 8,
+        fontSize: 8,
+        fontWeight: 800,
+        letterSpacing: .5,
+        color: saved[i] ? couleur : "#5A6274",
+        background: "#10141D",
+        padding: "0 4px",
+        borderRadius: 4,
+        zIndex: 1
+      }
+    }, "S", i + 1, saved[i] ? " ✓" : ""), i > 0 && /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        const v = parseFloat(eff(i - 1));
+        if (v > 0) fixer(v);
+      },
+      title: "Même charge que la série précédente",
+      style: {
+        alignSelf: "stretch",
+        width: 30,
+        flexShrink: 0,
+        background: "rgba(255,255,255,.04)",
+        border: `1px solid ${LINE}`,
+        borderRadius: 9,
+        color: eff(i - 1) !== "" ? couleur : "#5A6274",
+        fontSize: 13,
+        fontWeight: 800,
+        padding: 0,
+        touchAction: "manipulation"
+      }
+    }, "="), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement(Stepper, {
+      compact: true,
+      unite: "kg",
+      pas: 2.5,
+      accent: couleur,
+      valeur: eff(i),
+      onChange: fixer
+    })));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9.5,
+      color: "#5A6274",
+      marginTop: 6
     }
-  })))));
+  }, "= reprend la charge de la série d'avant · touche la valeur pour la taper au clavier"));
 }
 /* ---------- mise en avant (spotlight) : carte agrandie centrée, fond flouté ---------- */
 function Spotlight({
@@ -7683,7 +7822,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.16"));
+  }, "v19.17"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -10741,6 +10880,17 @@ function Stepper({
   // réécrirait la même valeur au lieu de continuer à monter
   const vRef = useRef(valeur);
   vRef.current = valeur;
+  // saisie libre : un tap sur la valeur ouvre le clavier numérique — les pas
+  // de 2,5 ne couvrent pas tout (88 kg, 12,5…)
+  const [edit, setEdit] = useState(false);
+  const valider = txt => {
+    setEdit(false);
+    const v = Math.round(parseFloat(String(txt).replace(",", ".")) * 100) / 100;
+    if (!isNaN(v) && v >= min && v <= max) {
+      vRef.current = v;
+      onChange(v);
+    }
+  };
   const bouge = d => {
     const v = Math.round(((parseFloat(vRef.current) || 0) + d * pas) * 100) / 100;
     if (v < min || v > max) return;
@@ -10776,15 +10926,39 @@ function Stepper({
     debut: debut,
     stop: stop
   }), /*#__PURE__*/React.createElement("div", {
+    onClick: () => !edit && setEdit(true),
     style: {
       flex: 1,
       textAlign: "center",
       fontFamily: DISPLAY,
       fontWeight: 700,
       fontSize: compact ? 13.5 : 16,
-      minWidth: compact ? 40 : 56
+      minWidth: compact ? 40 : 56,
+      cursor: "text"
     }
-  }, valeur === "" || valeur == null ? /*#__PURE__*/React.createElement("span", {
+  }, edit ? /*#__PURE__*/React.createElement("input", {
+    autoFocus: true,
+    type: "text",
+    inputMode: "decimal",
+    defaultValue: valeur === "" || valeur == null ? "" : String(valeur),
+    onFocus: e => e.target.select(),
+    onBlur: e => valider(e.target.value),
+    onKeyDown: e => {
+      if (e.key === "Enter") e.target.blur();
+    },
+    style: {
+      width: "100%",
+      textAlign: "center",
+      fontFamily: DISPLAY,
+      fontWeight: 700,
+      fontSize: compact ? 13.5 : 16,
+      background: "none",
+      border: "none",
+      outline: "none",
+      color: INK,
+      padding: 0
+    }
+  }) : valeur === "" || valeur == null ? /*#__PURE__*/React.createElement("span", {
     style: {
       color: "#5A6274",
       fontWeight: 500,
