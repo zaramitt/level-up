@@ -5,6 +5,18 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.19 — août 2026
+
+- **Adresse au profil : préférence elle / il / neutre dans les Réglages, sans
+  question d'onboarding.** Le ton chaleureux prime : le neutre est une
+  reformulation chaleureuse (« Quelle fierté »), jamais un appauvrissement
+  (« Bravo pour votre séance »). Textes d'origine écrits pour Léa : le féminin
+  reste le défaut des profils existants ; les nouveaux profils démarrent en
+  neutre. → Côté coach, les textes qui parlent de la coachée s'accordent avec
+  l'adresse qu'elle publie via `/etat` (repli : féminin tant qu'elle n'est pas
+  reçue) — la préférence appartient à la personne concernée, pas à l'appareil
+  qui l'affiche.
+
 ## v19.18 — août 2026
 
 - **Séance partielle = 1 séance pleine au compteur, sans bonus ni coffre.**
