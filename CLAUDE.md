@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v19.17**
+Version actuelle : **v19.18**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v19.17"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v19.18"` dans le composant
 `Onboarding`, écran « profils existants »). Il n'apparaît ni dans `worker.js`,
 ni dans un fichier de version dédié — chercher la chaîne pour la mettre à jour.
 
