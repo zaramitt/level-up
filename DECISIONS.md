@@ -5,6 +5,31 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.21 — août 2026
+
+- **Sons du chrono lus par un `<audio>` (canal média), pas par Web Audio.**
+  → Sur iOS, le bouton silencieux coupe Web Audio mais laisse passer la
+  lecture média : c'est ce qui permet au bip de sonner en salle, téléphone en
+  silencieux (les boutons de volume restent maîtres). Safari refuse toute
+  lecture non initiée par un tap : les deux sons sont joués en muet au premier
+  geste (lancement d'un repos ou d'une série), ce qui les débloque pour le
+  reste de la session. Bip à 10 s de la fin du repos, triple bip à la fin.
+
+- **Repos écoulé : le compteur continue en « + » jusqu'au tap suivant.**
+  → Montrer le temps de repos réellement pris est plus honnête qu'un « GO »
+  qui disparaît ; le tap suivant (OK, ou relance d'un repos) le referme.
+  Corollaire : la fin du dernier tour de gainage affiche « bouclé », plus
+  « c'est reparti » (bug vu en salle).
+
+- **Fin de séance : barre fixe au-dessus des onglets** tant qu'une séance est
+  en cours avec au moins un exercice validé — « Fin de séance · 3/6 » ou
+  « Valider ma séance · +40 XP » quand tout est fait. → Plus jamais de bouton
+  de clôture à chercher en bas de liste.
+
+- **Célébration en popup à la validation** : récap des XP de la séance, barre
+  vers le niveau suivant, secousse visuelle (`navigator.vibrate` n'existe pas
+  sur iOS Safari) et confettis allongés.
+
 ## v19.20 — août 2026
 
 - **Appels IA (`/idees`, `/generer`) : format de réponse garanti par l'API

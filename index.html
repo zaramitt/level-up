@@ -42,11 +42,28 @@
   }
   @keyframes confx {
     0% { transform: rotate(var(--r)) translateY(0); opacity:1; }
-    100% { transform: rotate(var(--r)) translateY(-58px); opacity:0; }
+    100% { transform: rotate(var(--r)) translateY(-96px) scale(.6); opacity:0; }
   }
   @keyframes deploie {
     0% { opacity:0; transform: translateY(-5px); }
     100% { opacity:1; transform: translateY(0); }
+  }
+  /* secousse visuelle : iOS Safari n'a pas navigator.vibrate */
+  @keyframes secousse {
+    0%,100% { transform: translateX(0); }
+    12% { transform: translateX(-10px) rotate(-1.5deg); }
+    28% { transform: translateX(9px) rotate(1.2deg); }
+    44% { transform: translateX(-7px); }
+    60% { transform: translateX(5px); }
+    78% { transform: translateX(-3px); }
+  }
+  @keyframes flashOk {
+    0% { box-shadow: 0 0 0 0 rgba(44,229,167,.85); }
+    100% { box-shadow: 0 0 0 26px rgba(44,229,167,0); }
+  }
+  @keyframes glow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,176,32,0); }
+    50% { box-shadow: 0 0 34px 6px rgba(255,176,32,.45); }
   }
 </style>
 </head>
@@ -2081,27 +2098,50 @@ const compresser = file => new Promise((res, rej) => {
   img.onerror = rej;
   img.src = url;
 });
-const bip = (sons = true) => {
-  if (!sons) {
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    return;
-  }
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.22, 0.44].forEach(t => {
-      const o = ctx.createOscillator(),
-        g = ctx.createGain();
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.25, ctx.currentTime + t);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.18);
-      o.start(ctx.currentTime + t);
-      o.stop(ctx.currentTime + t + 0.2);
-    });
-  } catch (e) {}
-  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+/* Sons : lus par un <audio> (canal « média ») et non par Web Audio. Sur iOS,
+   le bouton silencieux coupe Web Audio mais laisse passer la lecture média —
+   c'est ce qui permet au bip de sonner en salle, téléphone en silencieux.
+   Safari refuse toute lecture non initiée par un tap : debloquerSon() joue les
+   deux sons en muet au premier geste (lancement d'un repos ou d'une série). */
+const wavDataUri = notes => {
+  const sr = 22050, echs = [];
+  notes.forEach(([f, d]) => {
+    const n = Math.round(sr * d);
+    for (let i = 0; i < n; i++) {
+      const env = Math.min(1, i / 200, (n - i) / 400);
+      echs.push(f ? Math.sin(2 * Math.PI * f * i / sr) * env * 0.7 : 0);
+    }
+  });
+  const buf = new ArrayBuffer(44 + echs.length * 2), v = new DataView(buf);
+  const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, "RIFF"); v.setUint32(4, 36 + echs.length * 2, true); str(8, "WAVE"); str(12, "fmt ");
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+  v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  str(36, "data"); v.setUint32(40, echs.length * 2, true);
+  echs.forEach((e, i) => v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, e)) * 32767, true));
+  let b = ""; new Uint8Array(buf).forEach(x => b += String.fromCharCode(x));
+  return "data:audio/wav;base64," + btoa(b);
 };
+const audioFin = typeof Audio !== "undefined" ? new Audio(wavDataUri([[880, .18], [0, .06], [880, .18], [0, .06], [880, .24]])) : null;
+const audioAlerte = typeof Audio !== "undefined" ? new Audio(wavDataUri([[660, .14], [0, .08], [660, .14]])) : null;
+let sonDebloque = false;
+const debloquerSon = () => {
+  if (sonDebloque) return;
+  sonDebloque = true;
+  [audioFin, audioAlerte].forEach(a => {
+    if (!a) return;
+    a.muted = true;
+    a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
+  });
+};
+const jouer = (a, sons) => {
+  if (sons && a) {
+    try { a.currentTime = 0; a.play().catch(() => {}); } catch (e) {}
+  }
+  if (navigator.vibrate) navigator.vibrate(sons ? [200, 100, 200] : [200, 100, 200]);
+};
+const bip = (sons = true) => jouer(audioFin, sons); // fin de repos / de série
+const bipAlerte = (sons = true) => jouer(audioAlerte, sons); // 10 s avant la fin du repos
 const nomDe = id => {
   const ex = Object.values(SEANCES).flatMap(s => s.exos).find(e => e.id === id);
   if (ex) return ex.nom;
@@ -2207,6 +2247,7 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const [confetti, setConfetti] = useState(false);
   const [coffre, setCoffre] = useState(null);
+  const [celebration, setCelebration] = useState(null); // popup de fin de séance {exos, xpExos, bonus, gain, total, partiel}
   const [photos, setPhotos] = useState({});
   const [zoom, setZoom] = useState(null); // photo plein écran {src, nom, date}
   const [timer, setTimer] = useState(null); // {reste, total, label}
@@ -2334,14 +2375,27 @@ function App() {
   const apresTravail = useRef(null); // fin d'un travail : compter le tour, XP
   const apresRepos = useRef(null); // fin d'un repos de gainage : relancer la série suivante
   useEffect(() => {
-    if (!timer || !timer.fin || timer.reste <= 0) return;
+    if (!timer || !timer.fin && timer.mode !== "depasse") return;
     const tick = () => setTimer(tm => {
-      if (!tm || !tm.fin) return tm;
+      if (!tm) return tm;
+      // repos écoulé : on continue à compter en « + » jusqu'au tap suivant, pour
+      // montrer le temps de repos réellement pris
+      if (tm.mode === "depasse") {
+        const plus = Math.floor((Date.now() - tm.depuis) / 1000);
+        return plus === tm.plus ? tm : {
+          ...tm,
+          plus
+        };
+      }
+      if (!tm.fin) return tm;
       const reste = Math.max(0, Math.ceil((tm.fin - Date.now()) / 1000));
-      if (reste > 0) return reste === tm.reste ? tm : {
-        ...tm,
-        reste
-      };
+      if (reste > 0) {
+        if (tm.mode === "repos" && tm.reste > 10 && reste <= 10) bipAlerte(stRef.current?.reglages?.sons !== false);
+        return reste === tm.reste ? tm : {
+          ...tm,
+          reste
+        };
+      }
       // segment terminé
       bip(stRef.current?.reglages?.sons !== false);
       if (tm.mode === "travail" && apresTravail.current) {
@@ -2363,11 +2417,23 @@ function App() {
         setTimeout(f, 0);
         return null;
       }
-      setTimeout(() => setTimer(t2 => t2 && t2.reste === 0 ? null : t2), 2500);
+      if (tm.mode === "repos") return {
+        ...tm,
+        mode: "depasse",
+        reste: 0,
+        fin: null,
+        depuis: tm.fin,
+        plus: 0
+      };
+      // fin d'un travail sans suite = dernier tour de gainage : « bouclé », pas
+      // « c'est reparti » (le message GO réapparaissait alors que l'exercice était fini)
+      setTimeout(() => setTimer(t2 => t2 && t2.mode === "fini" ? null : t2), 2200);
       return {
         ...tm,
+        mode: "fini",
         reste: 0,
-        fin: null
+        fin: null,
+        label: tm.label.replace(" — tiens bon !", " — bouclé !")
       };
     });
     const iv = setInterval(tick, 300);
@@ -2527,6 +2593,11 @@ function App() {
     photos: {}
   };
   const habJ = st.habitudes[jourKey] || [];
+  // barre « Fin de séance » fixe au-dessus de la barre d'onglets, tant qu'une
+  // séance est en cours avec au moins un exercice validé (le chrono se pose
+  // au-dessus d'elle)
+  const barreFin = !!(role !== "coach" && tab === "jour" && estSeance(J.seance) && !J.valide && (J.faits || []).length > 0 && !reglagesOuvert);
+  const tousFaitsJ = !!(J.seance && SEANCES[J.seance] && (J.faits || []).length >= SEANCES[J.seance].exos.length);
   const niveau = niveauDe(st.xp);
   const basNiveau = SEUILS[niveau - 1],
     hautNiveau = SEUILS[Math.min(niveau, MAX_NIVEAU - 1)];
@@ -2586,7 +2657,25 @@ function App() {
       valide: true,
       partiel: true
     }));
-    toast("Séance sauvegardée — journée couverte ✔");
+    setCelebration(recapSeance(true));
+    setConfetti(true);
+    setTimeout(() => setConfetti(false), 2600);
+  };
+  // récap des XP de la séance du jour, pour la popup de célébration
+  const recapSeance = partiel => {
+    const exos = (J.faits || []).length;
+    const xpExos = exos * XP.exo;
+    const bonus = partiel ? 0 : XP.bonusSeance;
+    const gain = (J.gainage || []).length * XP.gainageItem + (J.gainValide ? XP.bonusGainage : 0);
+    return {
+      partiel,
+      exos,
+      total: (J.seance && SEANCES[J.seance] ? SEANCES[J.seance].exos.length : exos),
+      xpExos,
+      bonus,
+      gain,
+      xp: xpExos + bonus + gain
+    };
   };
   const choisir = type => {
     setJour(j => ({
@@ -2662,7 +2751,7 @@ function App() {
         }
       }));
       setBurst(p.exId);
-      setTimeout(() => setBurst(null), 1100);
+      setTimeout(() => setBurst(null), 1900);
       gagne(XP.exo, "· preuve validée 📷");
     }
     if (p.type === "cardio") {
@@ -2774,6 +2863,7 @@ function App() {
     });
   };
   const lancerSerieGain = g => {
+    debloquerSon();
     const dejaFait = J.gainage.includes(g.id);
     if (dejaFait) return;
     const t = (J.gainTours || {})[g.id] || 0;
@@ -2799,6 +2889,7 @@ function App() {
     });
   };
   const lancerRepos = ex => {
+    debloquerSon();
     // re-tap pendant le repos du même exercice : on ne touche à rien —
     // remettre le chrono à zéro était le bug, et une pause mentirait sur le
     // temps réellement écoulé (le chrono suit l'horloge, pas l'app)
@@ -2829,8 +2920,9 @@ function App() {
       return s;
     });
     gagne(XP.bonusSeance, "· séance complète 🎉");
+    setCelebration(recapSeance(false));
     setConfetti(true);
-    setTimeout(() => setConfetti(false), 2600);
+    setTimeout(() => setConfetti(false), 4200);
     if (st.kiffs.length > 0 && Math.random() < CHANCE_COFFRE) {
       const kiff = st.kiffs[Math.floor(Math.random() * st.kiffs.length)];
       setTimeout(() => {
@@ -3871,21 +3963,23 @@ function App() {
   }, "journée couverte"))))) : (J.faits || []).length === 0 && !J.valide && !J.cardioFait && /*#__PURE__*/React.createElement("button", {
     onClick: () => choisir(null),
     style: {
-      background: "none",
-      border: "none",
-      color: SUB,
-      fontSize: 11,
-      textDecoration: "underline",
-      margin: "6px 4px 0",
-      display: "flex",
+      background: GLASSBG,
+      border: `1.5px solid ${LINE}`,
+      borderRadius: 999,
+      color: INK,
+      fontSize: 12.5,
+      fontWeight: 700,
+      margin: "10px 0 0",
+      display: "inline-flex",
       alignItems: "center",
-      gap: 5,
-      padding: 0
+      gap: 7,
+      padding: "9px 14px"
     }
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "undo",
-    s: 11
-  }), " changer de choix"), Object.keys(st.activeDays || {}).length > 0 && /*#__PURE__*/React.createElement("div", {
+    s: 13,
+    w: 2.4
+  }), "Changer de séance"), Object.keys(st.activeDays || {}).length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14
     }
@@ -4530,7 +4624,174 @@ function App() {
     code: code,
     gagne: gagne,
     solo: solo
-  })), aideOuverte && BULLES[cleAide] && /*#__PURE__*/React.createElement(Spotlight, {
+  })), barreFin && /*#__PURE__*/React.createElement("button", {
+    onClick: tousFaitsJ ? validerSeance : finirPartiel,
+    style: {
+      position: "fixed",
+      bottom: 84,
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "calc(100% - 24px)",
+      maxWidth: 496,
+      zIndex: 54,
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      textAlign: "left",
+      background: tousFaitsJ ? (SEANCES[J.seance] || {}).couleur || COL.C : "rgba(16,20,30,.96)",
+      color: "#fff",
+      border: `1.5px solid ${tousFaitsJ ? "transparent" : (SEANCES[J.seance] || {}).couleur || COL.C}`,
+      borderRadius: 16,
+      padding: "12px 14px",
+      boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+      animation: tousFaitsJ ? "glow 1.6s ease-in-out infinite" : "pop .25s"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 32,
+      height: 32,
+      borderRadius: 999,
+      background: tousFaitsJ ? "rgba(255,255,255,.22)" : (SEANCES[J.seance] || {}).couleur || COL.C,
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: tousFaitsJ ? "star" : "check",
+    s: 16,
+    w: 2.4
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontWeight: 800,
+      fontSize: 14
+    }
+  }, tousFaitsJ ? `Valider ma séance · +${XP.bonusSeance} XP` : "Fin de séance"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 11,
+      opacity: .85,
+      marginTop: 1
+    }
+  }, tousFaitsJ ? "tous les exercices sont faits — bonus de séance complète" : `${(J.faits || []).length}/${(SEANCES[J.seance] || {exos: []}).exos.length} exercices gardés · la séance compte, sans le bonus`))), celebration && /*#__PURE__*/React.createElement(Spotlight, {
+    onFermer: () => setCelebration(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      animation: "secousse .75s ease-in-out .15s",
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 64,
+      height: 64,
+      borderRadius: 999,
+      margin: "4px auto 12px",
+      background: celebration.partiel ? tintCss(COL.C) : `linear-gradient(150deg, ${COL.D}, ${COL.G})`,
+      display: "grid",
+      placeItems: "center",
+      boxShadow: celebration.partiel ? "none" : `0 12px 36px ${COL.D}55`,
+      animation: "pop .5s"
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: celebration.partiel ? "check" : "star",
+    s: 30,
+    w: 2.4,
+    c: celebration.partiel ? COL.C : "#fff"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 700,
+      fontSize: 21,
+      lineHeight: 1.2
+    }
+  }, celebration.partiel ? "Séance enregistrée" : "Séance validée !"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13.5,
+      color: SUB,
+      marginTop: 4
+    }
+  }, celebration.partiel ? `${celebration.exos}/${celebration.total} exercices gardés — ça compte.` : accord(st.adresse, "Fière de toi.", "Fier de toi.", "Quelle fierté.")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 800,
+      fontSize: 44,
+      lineHeight: 1,
+      margin: "16px 0 4px",
+      color: COL.C
+    }
+  }, "+", celebration.xp, " XP"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 4,
+      fontSize: 12,
+      color: SUB,
+      margin: "8px 0 16px"
+    }
+  }, /*#__PURE__*/React.createElement("div", null, celebration.exos, " exercice", celebration.exos > 1 ? "s" : "", " × ", XP.exo, " XP = ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: INK
+    }
+  }, celebration.xpExos)), celebration.bonus > 0 && /*#__PURE__*/React.createElement("div", null, "Bonus séance complète : ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: INK
+    }
+  }, "+", celebration.bonus)), celebration.gain > 0 && /*#__PURE__*/React.createElement("div", null, "Gainage : ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: INK
+    }
+  }, "+", celebration.gain))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "left",
+      background: GLASSBG,
+      border: `1px solid ${LINE}`,
+      borderRadius: 14,
+      padding: "11px 13px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 11.5,
+      fontWeight: 700,
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Niveau ", niveau, " · ", accorde(titreDe(st.xp), st.adresse)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: SUB
+    }
+  }, niveau >= MAX_NIVEAU ? "niveau max" : `niveau ${niveau + 1} dans ${Math.max(0, hautNiveau - st.xp)} XP`)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 10,
+      background: "rgba(255,255,255,.08)",
+      borderRadius: 999,
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: "100%",
+      width: `${Math.round(progNiveau * 100)}%`,
+      background: `linear-gradient(90deg, ${COL.G}, ${COL.C})`,
+      borderRadius: 999,
+      transition: "width 1.2s ease-out"
+    }
+  }))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setCelebration(null),
+    style: {
+      width: "100%",
+      marginTop: 16,
+      background: "#F2F5F9",
+      color: "#0B0E14",
+      border: "none",
+      borderRadius: 12,
+      padding: "13px",
+      fontWeight: 800,
+      fontSize: 14
+    }
+  }, "Continuer"))), aideOuverte && BULLES[cleAide] && /*#__PURE__*/React.createElement(Spotlight, {
     onFermer: () => {
       setAideOuverte(false);
       // vu une fois : la popup ne se rouvrira plus d'elle-même sur cet onglet,
@@ -4601,18 +4862,18 @@ function App() {
   }, "C'est clair")), timer && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
-      bottom: 84,
+      bottom: barreFin ? 152 : 84,
       left: "50%",
       transform: "translateX(-50%)",
       width: "calc(100% - 24px)",
       maxWidth: 496,
       zIndex: 55,
-      background: timer.reste === 0 ? COL.C : timer.mode === "travail" ? COL.G : timer.mode === "prep" ? COL.D : COL.B,
+      background: timer.mode === "depasse" ? COL.C : timer.mode === "fini" ? COL.G : timer.mode === "travail" ? COL.G : timer.mode === "prep" ? COL.D : COL.B,
       color: "#fff",
       borderRadius: 16,
       padding: "12px 16px",
       boxShadow: "0 8px 24px rgba(38,35,31,.25)",
-      animation: timer.reste === 0 ? "pulse .6s 3" : "pop .25s"
+      animation: timer.mode === "fini" ? "pulse .6s 3" : "pop .25s"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4633,7 +4894,7 @@ function App() {
       letterSpacing: .4,
       marginBottom: 2
     }
-  }, timer.reste === 0 ? "C'EST REPARTI !" : (timer.mode === "travail" ? "💪 " : timer.mode === "prep" ? "🚦 " : "⏱️ ") + timer.label.toUpperCase()),
+  }, timer.mode === "depasse" ? "REPOS FINI — TU DÉPASSES DE" : (timer.mode === "travail" || timer.mode === "fini" ? "💪 " : timer.mode === "prep" ? "🚦 " : "⏱️ ") + timer.label.toUpperCase()),
   /* chrono volontairement énorme : il doit se lire d'un coup d'œil en plein
      effort, à bout de bras et sans lunettes */
   /*#__PURE__*/React.createElement("div", {
@@ -4645,9 +4906,13 @@ function App() {
       fontVariantNumeric: "tabular-nums",
       letterSpacing: -1
     }
-  }, timer.reste === 0 ? "GO !" : fmtSec(timer.reste))), timer.reste > 0 && /*#__PURE__*/React.createElement("button", {
+  }, timer.mode === "depasse" ? "+" + fmtSec(timer.plus || 0) : timer.mode === "fini" ? "Bouclé ✔" : fmtSec(timer.reste))), (timer.reste > 0 || timer.mode === "depasse") && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       const tm = timer;
+      if (tm.mode === "depasse") {
+        setTimer(null);
+        return;
+      }
       if (tm.mode === "prep" && tm.next) {
         setTimer({
           ...tm.next,
@@ -4674,7 +4939,7 @@ function App() {
       fontSize: 13,
       flexShrink: 0
     }
-  }, "Passer")), /*#__PURE__*/React.createElement("div", {
+  }, timer.mode === "depasse" ? "OK" : "Passer")), /*#__PURE__*/React.createElement("div", {
     style: {
       height: 4,
       background: "rgba(255,255,255,.2)",
@@ -4684,7 +4949,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       height: "100%",
-      width: `${(1 - timer.reste / timer.total) * 100}%`,
+      width: timer.fin ? `${(1 - timer.reste / timer.total) * 100}%` : "100%",
       background: GLASSBG,
       borderRadius: 2,
       transition: "width 1s linear"
@@ -4971,7 +5236,8 @@ function SeanceView({
         borderRadius: 16,
         padding: ouvert ? "15px 16px 16px" : "13px 16px",
         marginTop: 8,
-        transition: "border-color .2s, padding .22s ease"
+        transition: "border-color .2s, padding .22s ease",
+        animation: burst === ex.id ? "flashOk 1.5s ease-out" : "none"
       }
     }, burst === ex.id && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -4981,20 +5247,20 @@ function SeanceView({
         zIndex: 5
       }
     }, Array.from({
-      length: 14
+      length: 24
     }).map((_, ci) => /*#__PURE__*/React.createElement("span", {
       key: ci,
       style: {
         position: "absolute",
         left: "50%",
         top: "55%",
-        width: 7,
-        height: 7,
-        borderRadius: ci % 2 ? "50%" : 2,
+        width: ci % 3 ? 9 : 12,
+        height: ci % 3 ? 9 : 12,
+        borderRadius: ci % 2 ? "50%" : 3,
         background: [COL.C, COL.D, COL.G, COL.K][ci % 4],
-        "--r": ci * (360 / 14) + "deg",
-        animation: "confx .95s ease-out forwards",
-        animationDelay: ci * 0.015 + "s"
+        "--r": ci * (360 / 24) + "deg",
+        animation: "confx 1.6s ease-out forwards",
+        animationDelay: ci * 0.025 + "s"
       }
     }))),
     /* ---- en-tête compact : toujours visible, le tap déploie ou referme ----
@@ -5164,13 +5430,14 @@ function SeanceView({
       // (bleu, décompte en gros) — un re-tap ne remet jamais à zéro (garde dans
       // lancerRepos)
       const reposActif = timer && timer.mode === "repos" && timer.exId === ex.id && timer.reste > 0;
+      const reposDepasse = timer && timer.mode === "depasse" && timer.exId === ex.id;
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => onRepos(ex),
         style: {
           width: "100%",
-          background: reposActif ? COL.B : GLASSBG,
-          color: reposActif ? "#fff" : INK,
-          border: `1.5px solid ${reposActif ? COL.B : LINE}`,
+          background: reposDepasse ? COL.C : reposActif ? COL.B : GLASSBG,
+          color: reposActif || reposDepasse ? "#fff" : INK,
+          border: `1.5px solid ${reposDepasse ? COL.C : reposActif ? COL.B : LINE}`,
           borderRadius: 12,
           padding: "12px",
           fontWeight: 700,
@@ -5178,7 +5445,7 @@ function SeanceView({
           marginBottom: 14,
           transition: "background .2s, border-color .2s"
         }
-      }, reposActif ? /*#__PURE__*/React.createElement("span", {
+      }, reposActif || reposDepasse ? /*#__PURE__*/React.createElement("span", {
         style: {
           display: "inline-flex",
           alignItems: "center",
@@ -5194,12 +5461,12 @@ function SeanceView({
           lineHeight: 1,
           fontVariantNumeric: "tabular-nums"
         }
-      }, fmtSec(timer.reste)), /*#__PURE__*/React.createElement("span", {
+      }, reposDepasse ? "+" + fmtSec(timer.plus || 0) : fmtSec(timer.reste)), /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: 11.5,
           opacity: .85
         }
-      }, "repos en cours")) : /*#__PURE__*/React.createElement("span", {
+      }, reposDepasse ? "repos dépassé — tape pour relancer" : "repos en cours")) : /*#__PURE__*/React.createElement("span", {
         style: {
           display: "inline-flex",
           alignItems: "center",
@@ -5286,54 +5553,7 @@ function SeanceView({
         padding: 0
       }
     }, "↩")))));
-  }), !J.valide ? /*#__PURE__*/React.createElement("div", null, !tousFaits && J.faits.length > 0 && /*#__PURE__*/React.createElement("button", {
-    onClick: onPartiel,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      width: "100%",
-      textAlign: "left",
-      marginTop: 12,
-      background: tintCss(S.couleur),
-      color: INK,
-      border: `1.5px solid ${S.couleur}`,
-      borderRadius: 14,
-      padding: "13px 14px"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 30,
-      height: 30,
-      borderRadius: 999,
-      background: S.couleur,
-      color: "#fff",
-      display: "grid",
-      placeItems: "center",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement(Ic, {
-    n: "check",
-    s: 14,
-    w: 2.6
-  })), /*#__PURE__*/React.createElement("span", {
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "block",
-      fontWeight: 800,
-      fontSize: 13.5
-    }
-  }, "Séance finie pour aujourd'hui — je m'arrête là"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "block",
-      fontSize: 11,
-      color: SUB,
-      marginTop: 2
-    }
-  }, J.faits.length, "/", S.exos.length, " exercices gardés · la séance compte, sans le bonus de séance complète"))), /*#__PURE__*/React.createElement("button", {
+  }), !J.valide ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
     onClick: onValider,
     disabled: !tousFaits,
     style: {
@@ -5401,11 +5621,16 @@ function SeanceView({
     const tours = (J.gainTours || {})[g.id] || 0;
     return /*#__PURE__*/React.createElement("div", {
       key: g.id,
+      // tap n'importe où sur le cadre = lancer la série (les boutons internes
+      // stoppent la propagation)
+      onClick: () => !ok && onGainSerie(g),
       style: {
         display: "flex",
         width: "100%",
         alignItems: "center",
         gap: 12,
+        cursor: ok ? "default" : "pointer",
+        touchAction: "manipulation",
         background: ok ? "rgba(124,92,255,.16)" : GLASSBG,
         border: `1.5px solid ${ok ? COL.G : LINE}`,
         borderRadius: 12,
@@ -5416,7 +5641,10 @@ function SeanceView({
       ok: true,
       couleur: COL.G
     }) : /*#__PURE__*/React.createElement("button", {
-      onClick: () => onGainSerie(g),
+      onClick: e => {
+        e.stopPropagation();
+        onGainSerie(g);
+      },
       title: g.duree ? `Lancer ${g.duree} s` : "Série finie",
       style: {
         width: 40,
@@ -5455,6 +5683,7 @@ function SeanceView({
       }
     }, g.dose, " · tour ", Math.min(tours, 3), "/3", "  ", /*#__PURE__*/React.createElement("a", {
       href: yt(g.nom),
+      onClick: e => e.stopPropagation(),
       target: "_blank",
       rel: "noreferrer",
       style: {
@@ -5484,7 +5713,10 @@ function SeanceView({
         flexShrink: 0
       }
     }, tours > 0 && !J.gainValide && /*#__PURE__*/React.createElement("button", {
-      onClick: () => onAnnulerGain(g),
+      onClick: e => {
+        e.stopPropagation();
+        onAnnulerGain(g);
+      },
       title: "Remettre à zéro",
       style: {
         background: "none",
@@ -5500,7 +5732,10 @@ function SeanceView({
         padding: 0
       }
     }, "↩"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => onGainSerie(g),
+      onClick: e => {
+        e.stopPropagation();
+        onGainSerie(g);
+      },
       style: {
         background: COL.G,
         color: "#fff",
@@ -5531,7 +5766,10 @@ function SeanceView({
       s: 11,
       w: 2.4
     }), "Série finie"))) : !J.gainValide && /*#__PURE__*/React.createElement("button", {
-      onClick: () => onAnnulerGain(g),
+      onClick: e => {
+        e.stopPropagation();
+        onAnnulerGain(g);
+      },
       title: "Annuler",
       style: {
         background: "none",
@@ -5576,6 +5814,8 @@ function SerieInputs({
   couleur,
   onSave
 }) {
+  // nbLoc : séries affichées — nb au départ, + une à chaque « + une série »
+  const [nbLoc, setNbLoc] = useState(nb);
   const [vals, setVals] = useState(Array(nb).fill(""));
   const [saved, setSaved] = useState(Array(nb).fill(false));
   const [derniers] = useState(() => dernier ? dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || [] : []);
@@ -5598,15 +5838,15 @@ function SerieInputs({
   }, "CHARGE PAR SÉRIE (KG)"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: nb > 2 ? "1fr 1fr" : `repeat(${nb},1fr)`,
+      gridTemplateColumns: nbLoc > 2 ? "1fr 1fr" : `repeat(${nbLoc},1fr)`,
       gap: 6
     }
   }, Array.from({
-    length: nb
+    length: nbLoc
   }).map((_, i) => {
     // valeur effectivement affichée pour une série (saisie du jour, sinon
     // pré-remplissage de la dernière séance) — sert au bouton « = »
-    const eff = k => vals[k] !== "" ? vals[k] : derniers[k] != null ? derniers[k] : "";
+    const eff = k => vals[k] != null && vals[k] !== "" ? vals[k] : derniers[k] != null ? derniers[k] : "";
     const fixer = v => {
       setVals(vv => {
         const n = [...vv];
@@ -5649,18 +5889,19 @@ function SerieInputs({
       title: "Même charge que la série précédente",
       style: {
         alignSelf: "stretch",
-        width: 30,
+        width: 44,
         flexShrink: 0,
         background: "rgba(255,255,255,.04)",
         border: `1px solid ${LINE}`,
         borderRadius: 9,
         color: eff(i - 1) !== "" ? couleur : "#5A6274",
-        fontSize: 13,
+        fontSize: 10.5,
         fontWeight: 800,
+        letterSpacing: .3,
         padding: 0,
         touchAction: "manipulation"
       }
-    }, "="), /*#__PURE__*/React.createElement("div", {
+    }, "idem"), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0
@@ -5673,13 +5914,30 @@ function SerieInputs({
       valeur: eff(i),
       onChange: fixer
     })));
-  })), /*#__PURE__*/React.createElement("div", {
+  })), nbLoc < 8 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setNbLoc(n => n + 1);
+      setVals(v => [...v, ""]);
+      setSaved(sv => [...sv, false]);
+    },
+    style: {
+      marginTop: 8,
+      background: "rgba(255,255,255,.04)",
+      border: `1px dashed ${LINE}`,
+      borderRadius: 10,
+      color: INK,
+      fontSize: 11.5,
+      fontWeight: 700,
+      padding: "8px 12px",
+      width: "100%"
+    }
+  }, "+ une série"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9.5,
       color: "#5A6274",
       marginTop: 6
     }
-  }, "= reprend la charge de la série d'avant · touche la valeur pour la taper au clavier"));
+  }, "« idem » reprend la charge de la série d'avant · touche la valeur pour la taper au clavier"));
 }
 /* ---------- mise en avant (spotlight) : carte agrandie centrée, fond flouté ---------- */
 function Spotlight({
@@ -7926,7 +8184,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.20"));
+  }, "v19.21"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -8558,6 +8816,8 @@ function Reglages({
   onNouveau
 }) {
   const [regles, setRegles] = useState(false);
+  const tx = useRef(0),
+    ty = useRef(0); // swipe gauche→droite = fermer, comme dans l'onboarding
   const [pMotif, setPMotif] = useState("");
   const [pDuree, setPDuree] = useState("");
   const actPause = async payload => {
@@ -8718,8 +8978,37 @@ function Reglages({
       padding: 20
     },
     onClick: onFermer
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onFermer,
+    title: "Fermer",
+    style: {
+      position: "fixed",
+      top: 14,
+      right: 14,
+      zIndex: 81,
+      width: 40,
+      height: 40,
+      borderRadius: 999,
+      background: "#F2F5F9",
+      color: "#0B0E14",
+      border: "none",
+      fontSize: 18,
+      fontWeight: 800,
+      display: "grid",
+      placeItems: "center",
+      boxShadow: "0 6px 20px rgba(0,0,0,.45)"
+    }
+  }, "✕"), /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
+    onTouchStart: e => {
+      tx.current = e.touches[0].clientX;
+      ty.current = e.touches[0].clientY;
+    },
+    onTouchEnd: e => {
+      const dx = e.changedTouches[0].clientX - tx.current;
+      const dy = Math.abs(e.changedTouches[0].clientY - ty.current);
+      if (dx > 55 && dy < 45) onFermer();
+    },
     style: {
       background: PAPER,
       borderRadius: 20,
