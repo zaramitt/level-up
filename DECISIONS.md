@@ -5,6 +5,18 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## v19.20 — août 2026
+
+- **Appels IA (`/idees`, `/generer`) : format de réponse garanti par l'API
+  (structured outputs, `output_config.format`) au lieu d'un JSON demandé en
+  prose puis nettoyé à la main.** → Une réponse hors format renvoyait
+  « generation impossible » (502) à l'utilisatrice ; le schéma est maintenant
+  imposé côté API, la validation métier (catalogue, palette, plafonds) reste
+  côté serveur. Issu d'un audit de prompts (`/claude-api prompt-audit`) : les
+  prompts n'avaient aucune béquille d'ancien modèle, seul ce mécanisme était
+  daté. À vérifier par Léo sur l'URL Worker — la vraie API n'est pas
+  atteignable en session.
+
 ## v19.19 — août 2026
 
 - **Adresse au profil : préférence elle / il / neutre dans les Réglages, sans

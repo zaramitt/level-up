@@ -1,8 +1,9 @@
 # Backlog — Level Up!
 
-Source : retour complet de Léo sur v19.5. Rien ici n'est perdu ; chaque
-chantier sera traité dans une session dédiée. Vérifier `DECISIONS.md` avant de
-traiter un item.
+Origine : le retour complet de Léo sur la v19.5, enrichi depuis à chaque
+session et à chaque test terrain. Rien ici n'est perdu ; chaque chantier sera
+traité dans une session dédiée. Vérifier `DECISIONS.md` avant de traiter un
+item.
 
 ## Écran Séance
 

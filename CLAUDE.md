@@ -7,12 +7,13 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v19.19**
+Version actuelle : **v19.20**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v19.19"` dans le composant
-`Onboarding`, écran « profils existants »). Il n'apparaît ni dans `worker.js`,
-ni dans un fichier de version dédié — chercher la chaîne pour la mettre à jour.
+le pied du premier écran d'onboarding (chaîne `"v19.20"` dans le composant
+`Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
+ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
+régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
 
 ## Architecture
 
@@ -35,7 +36,9 @@ Configuration Cloudflare :
 | Cron compléments du matin | `0 6 * * *` |
 
 Génération de programmes et route `/idees` : appels à l'API Anthropic
-(Claude Haiku). `/idees` accepte des **styles de récompenses combinés**.
+(modèle épinglé dans `worker.js`, `claude-haiku-4-5` à ce jour), réponses au
+format garanti par l'API (structured outputs). `/idees` accepte des **styles
+de récompenses combinés**.
 
 ### Routes API
 
@@ -110,12 +113,13 @@ partage.
 
 - `worker.js` et `index.html` sont **toujours livrés en paire**. Une
   modification d'un seul des deux fichiers est presque toujours un bug.
-- Toute modification doit être testée sur l'URL Worker avant d'être considérée
-  comme faite.
+- En session, toute modification est vérifiée sur un worker mock local
+  (Playwright) ; c'est Léo qui la valide sur l'URL Worker après déploiement.
+  Une modification n'est « faite » qu'après cette seconde vérification.
 - **La version affichée dans `index.html` et celle de `CLAUDE.md` doivent être
   mises à jour à chaque livraison, dans le même commit que le chantier.
-  Vérifier systématiquement avant de commiter.** (Le décalage v19.5 → v19.12
-  vient de l'absence de cette règle.)
+  Vérifier avant de commiter** — sans ça, les deux numéros divergent en
+  quelques livraisons.
 
 ## Conventions de design — à respecter systématiquement
 
@@ -128,9 +132,11 @@ maintenir tel quel — mais ne pas le défendre si Léo demande à en changer.
 - Fond : `#0B0E14`, avec halos radiaux bleu / violet
 - Police : **Space Grotesk** uniquement, pas de seconde famille
 - Palette « électrifiée » (voir les variables en tête de `index.html`)
-- **Icônes : système SVG maison** (~30 paths façon Feather). Aucun emoji dans
-  l'interface. Les emojis sont réservés aux contenus rédigés (récompenses,
-  messages), jamais aux éléments d'UI.
+- **Icônes : système SVG maison** (~30 paths façon Feather). Pour tout nouvel
+  élément d'interface, une icône SVG — pas d'emoji. Il en reste des dizaines
+  dans l'UI existante : ils partiront avec la refonte post-Vite, ne pas en
+  ajouter d'ici là. Les emojis restent normaux dans les contenus rédigés
+  (récompenses, messages).
 - Barre d'onglets : pilule flottante
 - Approbations et négociations : cartes d'approbation
 
@@ -153,6 +159,6 @@ maintenir tel quel — mais ne pas le défendre si Léo demande à en changer.
 Lire `DECISIONS.md`. Plusieurs pistes évidentes ont déjà été écartées pour de
 bonnes raisons.
 
-`BACKLOG.md` liste tout ce qui est identifié mais pas encore traité (retour
-complet de Léo sur la v19.5) — le consulter avant de proposer un chantier, et
-y piocher les items d'une session dédiée.
+`BACKLOG.md` liste tout ce qui est identifié mais pas encore traité — le
+consulter avant de proposer un chantier, et y piocher les items d'une session
+dédiée.
