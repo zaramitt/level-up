@@ -303,6 +303,72 @@ Vérification des règles : aucune violation.
 
 Vérification des règles : aucune violation.
 
+## Trous de la banque
+
+Audit mécanique (`auditerBanque`, lancé par les tests) : pour chaque compartiment (isolations par muscle, cardio et mobilité par type), chaque matériel et chaque niveau, combien d'exercices sont disponibles et combien de remplaçants exacts la règle 12 trouve pour le plus isolé d'entre eux (même compartiment, même muscle, un cran de difficulté au plus). Un trou = aucun exercice disponible, ou moins de 2 remplaçants. **Rien n'est comblé ici** : Léo décide quels exercices ajouter, ils passeront par `EXERCICES.md` comme les autres.
+
+140 trous sur 216 combinaisons, dont 22 sans aucun exercice. Chaque cellule : exercices disponibles, remplaçants trouvés, et l'exercice le plus isolé (celui qui a le moins de remplaçants). « — » : pas un trou.
+
+Deux choses à savoir pour lire le tableau. Certains trous viennent du **muscle principal déclaré** plus que du nombre d'exercices : la fente latérale est seule sur les adducteurs dans l'unilatéral, le soulevé de terre est seul sur la chaîne postérieure à un cran de difficulté, la planche latérale n'a que le Pallof sur les obliques — la réponse peut être un exercice de plus ou un muscle principal différent, c'est à trancher dans la banque. Et le matériel d'un exercice est lu comme « tout est nécessaire » (barre **et** banc pour le hip thrust), premier de la liste en tête : un exercice noté « poulie, élastique » (Pallof, face pull, traction assistée) n'est donc pas compté comme faisable avec haltères et élastique — si la banque veut dire « poulie **ou** élastique », il faut le noter autrement.
+
+| Compartiment | Matériel | Niveau 1 | Niveau 2 | Niveau 3 |
+|---|---|---|---|---|
+| Squat (s'accroupir) | poids du corps | 2 exos, 1 rempl. · Chaise contre le mur | — | — |
+| Squat (s'accroupir) | rien | 2 exos, 1 rempl. · Chaise contre le mur | — | — |
+| Hinge (charnière de hanche) | salle | 4 exos, 0 rempl. · Soulevé de terre roumain haltères | 7 exos, 1 rempl. · Superman au sol | 8 exos, 0 rempl. · Soulevé de terre |
+| Hinge (charnière de hanche) | haltères | 3 exos, 0 rempl. · Superman au sol | 4 exos, 0 rempl. · Superman au sol | 4 exos, 0 rempl. · Superman au sol |
+| Hinge (charnière de hanche) | poids du corps | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol |
+| Hinge (charnière de hanche) | rien | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol |
+| Poussée horizontale | haltères | 2 exos, 1 rempl. · Pompes au mur / sur banc | — | — |
+| Poussée horizontale | poids du corps | 1 exo, 0 rempl. · Pompes au mur / sur banc | 2 exos, 1 rempl. · Pompes au mur / sur banc | 3 exos, 1 rempl. · Pompes au mur / sur banc |
+| Poussée horizontale | rien | 1 exo, 0 rempl. · Pompes au mur / sur banc | 2 exos, 1 rempl. · Pompes au mur / sur banc | 2 exos, 1 rempl. · Pompes au mur / sur banc |
+| Poussée verticale | haltères | 2 exos, 1 rempl. · Pompes piquées (épaules) | — | — |
+| Poussée verticale | poids du corps | 1 exo, 0 rempl. · Pompes piquées (épaules) | 1 exo, 0 rempl. · Pompes piquées (épaules) | 1 exo, 0 rempl. · Pompes piquées (épaules) |
+| Poussée verticale | rien | 1 exo, 0 rempl. · Pompes piquées (épaules) | 1 exo, 0 rempl. · Pompes piquées (épaules) | 1 exo, 0 rempl. · Pompes piquées (épaules) |
+| Tirage horizontal | salle | — | — | 6 exos, 1 rempl. · Rowing Pendlay |
+| Tirage horizontal | poids du corps | 1 exo, 0 rempl. · Rowing inversé | 1 exo, 0 rempl. · Rowing inversé | 1 exo, 0 rempl. · Rowing inversé |
+| Tirage horizontal | rien | 1 exo, 0 rempl. · Rowing inversé | 1 exo, 0 rempl. · Rowing inversé | 1 exo, 0 rempl. · Rowing inversé |
+| Tirage vertical | haltères | 1 exo, 0 rempl. · Tirage vertical à l'élastique | 2 exos, 1 rempl. · Tirage vertical à l'élastique | 4 exos, 1 rempl. · Tirage vertical à l'élastique |
+| Tirage vertical | poids du corps | **aucun exercice** | 1 exo, 0 rempl. · Traction négative | — |
+| Tirage vertical | rien | **aucun exercice** | **aucun exercice** | **aucun exercice** |
+| Unilatéral jambes | salle | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
+| Unilatéral jambes | haltères | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
+| Unilatéral jambes | poids du corps | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
+| Unilatéral jambes | rien | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
+| Gainage | salle | — | 8 exos, 1 rempl. · Planche latérale | 9 exos, 1 rempl. · Planche latérale |
+| Gainage | haltères | — | 7 exos, 0 rempl. · Planche latérale | 8 exos, 0 rempl. · Planche latérale |
+| Gainage | poids du corps | — | 7 exos, 0 rempl. · Planche latérale | 8 exos, 0 rempl. · Planche latérale |
+| Gainage | rien | — | 7 exos, 0 rempl. · Planche latérale | 8 exos, 0 rempl. · Planche latérale |
+| Isolations · fessiers | haltères | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol |
+| Isolations · fessiers | poids du corps | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol |
+| Isolations · fessiers | rien | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol |
+| Isolations · abducteurs | haltères | 2 exos, 1 rempl. · Abduction à l'élastique | 2 exos, 1 rempl. · Abduction à l'élastique | 2 exos, 1 rempl. · Abduction à l'élastique |
+| Isolations · abducteurs | poids du corps | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) |
+| Isolations · abducteurs | rien | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) |
+| Isolations · ischio-jambiers | salle | 2 exos, 1 rempl. · Leg curl allongé | 2 exos, 1 rempl. · Leg curl allongé | 3 exos, 0 rempl. · Nordic curl |
+| Isolations · ischio-jambiers | haltères | 1 exo, 0 rempl. · Leg curl au ballon | 1 exo, 0 rempl. · Leg curl au ballon | 2 exos, 0 rempl. · Leg curl au ballon |
+| Isolations · ischio-jambiers | poids du corps | 1 exo, 0 rempl. · Leg curl au ballon | 1 exo, 0 rempl. · Leg curl au ballon | 2 exos, 0 rempl. · Leg curl au ballon |
+| Isolations · ischio-jambiers | rien | 1 exo, 0 rempl. · Leg curl au ballon | 1 exo, 0 rempl. · Leg curl au ballon | 2 exos, 0 rempl. · Leg curl au ballon |
+| Isolations · biceps | haltères | 2 exos, 1 rempl. · Curl biceps haltères | 2 exos, 1 rempl. · Curl biceps haltères | 2 exos, 1 rempl. · Curl biceps haltères |
+| Isolations · biceps | poids du corps | **aucun exercice** | **aucun exercice** | **aucun exercice** |
+| Isolations · biceps | rien | **aucun exercice** | **aucun exercice** | **aucun exercice** |
+| Isolations · triceps | haltères | 2 exos, 1 rempl. · Dips sur banc | 2 exos, 1 rempl. · Dips sur banc | 2 exos, 1 rempl. · Dips sur banc |
+| Isolations · triceps | poids du corps | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc |
+| Isolations · triceps | rien | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc |
+| Isolations · épaules latérales | haltères | 1 exo, 0 rempl. · Élévations latérales | 1 exo, 0 rempl. · Élévations latérales | 1 exo, 0 rempl. · Élévations latérales |
+| Isolations · épaules latérales | poids du corps | **aucun exercice** | **aucun exercice** | **aucun exercice** |
+| Isolations · épaules latérales | rien | **aucun exercice** | **aucun exercice** | **aucun exercice** |
+| Isolations · arrière d'épaule | salle | 2 exos, 1 rempl. · Oiseau (élévations arrière) | 2 exos, 1 rempl. · Oiseau (élévations arrière) | 2 exos, 1 rempl. · Oiseau (élévations arrière) |
+| Isolations · arrière d'épaule | haltères | 1 exo, 0 rempl. · Oiseau (élévations arrière) | 1 exo, 0 rempl. · Oiseau (élévations arrière) | 1 exo, 0 rempl. · Oiseau (élévations arrière) |
+| Isolations · arrière d'épaule | poids du corps | **aucun exercice** | **aucun exercice** | **aucun exercice** |
+| Isolations · arrière d'épaule | rien | **aucun exercice** | **aucun exercice** | **aucun exercice** |
+| Isolations · mollets | haltères | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche |
+| Isolations · mollets | poids du corps | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche |
+| Isolations · mollets | rien | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche |
+| Cardio et mobilité · cardio | haltères | 1 exo, 0 rempl. · Montées de genoux | — | — |
+| Cardio et mobilité · cardio | poids du corps | 1 exo, 0 rempl. · Montées de genoux | — | — |
+| Cardio et mobilité · cardio | rien | 1 exo, 0 rempl. · Montées de genoux | — | — |
+
 ## Points d'extension laissés ouverts (IA, étape ultérieure)
 
 - interpreterObjectifLibre(texte) : l'IA choisira les muscles prioritaires depuis un objectif en texte libre (aujourd'hui : mots-clés).

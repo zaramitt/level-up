@@ -566,6 +566,37 @@
   };
 
   /* ------------------------------------------------------------------ */
+  /* Audit de la banque : où la règle 12 manque de candidats            */
+  /* ------------------------------------------------------------------ */
+  // Pour chaque compartiment (isolations par muscle, cardio / mobilité par type) × matériel × niveau :
+  // combien d'exercices sont disponibles, et combien de remplaçants exacts la règle 12 trouve pour le
+  // plus isolé d'entre eux. Un « trou » = aucun exercice, ou moins de 2 remplaçants. Le cardio et la
+  // mobilité n'ont pas de « même muscle » : on y compte simplement les autres exercices du même type.
+  const MATERIELS = ["salle", "halteres", "pdc", "rien"];
+  const auditerBanque = banque => {
+    const groupes = [];
+    for (const c of banque.compartiments) {
+      const du = banque.exercices.filter(e => e.compartiment === c.id);
+      if (c.id === "isolation") for (const m of [...new Set(du.map(e => e.muscle))]) groupes.push({ compartiment: c.id, nom: `${c.nom} · ${m}`, exos: du.filter(e => e.muscle === m) });
+      else if (c.id === "cardio_mobilite") for (const t of ["cardio", "mobilite"]) groupes.push({ compartiment: c.id, nom: `${c.nom} · ${t === "cardio" ? "cardio" : "mobilité"}`, type: t, exos: du.filter(e => e.type === t) });
+      else groupes.push({ compartiment: c.id, nom: c.nom, exos: du });
+    }
+    const lignes = [];
+    for (const g of groupes) for (const materiel of MATERIELS) for (let niveau = 1; niveau <= 3; niveau++) {
+      const dispo = g.exos.filter(e => faisable(e, materiel) && e.difficulte <= NIVEAU[niveau].difficulteMax);
+      let min = null, isole = null;
+      for (const e of dispo) {
+        let k;
+        if (g.type) k = dispo.length - 1;
+        else { const r = remplacerExercice(banque, e.id, { materiel, niveau }); k = r.approximatif === null ? r.candidats.length : 0; }
+        if (min === null || k < min) { min = k; isole = e; }
+      }
+      lignes.push({ compartiment: g.compartiment, nom: g.nom, materiel, niveau, disponibles: dispo.length, remplacants: min, isole: isole ? { id: isole.id, nom: isole.nom } : null, trou: !dispo.length || min < 2 });
+    }
+    return lignes;
+  };
+
+  /* ------------------------------------------------------------------ */
   /* Vérificateur : les règles, mécaniquement                            */
   /* ------------------------------------------------------------------ */
   const verifierRegles = (prog, banque) => {
@@ -614,5 +645,5 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, dureeSeance, dureeExercice, appartientAuFocus, faisable, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_NOM, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, dureeSeance, dureeExercice, appartientAuFocus, faisable, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_NOM, MATERIELS, POIDS };
 });

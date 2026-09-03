@@ -372,6 +372,28 @@ test("aucun candidat dans le compartiment : même muscle ailleurs, signalé appr
   assert.ok(r2.exercice === null || r2.approximatif, "sans candidat exact, le remplaçant est approximatif ou absent");
 });
 
+console.log("\n=== audit de la banque (règle 12) ===");
+test("chaque combinaison compartiment × matériel × niveau est auditée ; les trous sont listés, pas comblés", () => {
+  const audit = M.auditerBanque(banque);
+  const groupes = new Set(audit.map(l => l.nom));
+  assert.strictEqual(audit.length, groupes.size * M.MATERIELS.length * 3, "une ligne par combinaison");
+  assert.ok(groupes.has("Squat (s'accroupir)") && groupes.has("Isolations · biceps") && groupes.has("Cardio et mobilité · cardio"), [...groupes].join(", "));
+  for (const l of audit) {
+    assert.ok(Number.isInteger(l.disponibles) && l.disponibles >= 0);
+    if (l.disponibles === 0) assert.ok(l.trou && l.remplacants === null && l.isole === null, JSON.stringify(l));
+    else { assert.ok(l.isole && byId[l.isole.id], JSON.stringify(l)); assert.strictEqual(l.trou, l.remplacants < 2, JSON.stringify(l)); }
+    if (l.disponibles > 0) assert.ok(l.remplacants <= l.disponibles - 1, JSON.stringify(l));
+  }
+  // ce que l'on sait de la banque : le squat en salle n'est pas un trou, le tirage vertical sans rien en est un
+  assert.ok(audit.filter(l => l.nom === "Squat (s'accroupir)" && l.materiel === "salle").every(l => !l.trou));
+  assert.ok(audit.filter(l => l.nom === "Tirage vertical" && l.materiel === "rien").every(l => l.trou && l.disponibles === 0));
+  // le remplaçant compté est bien celui de la règle 12 (même compartiment, même muscle, ≤ 1 cran)
+  const l = audit.find(x => x.nom === "Hinge (charnière de hanche)" && x.materiel === "salle" && x.niveau === 3);
+  assert.strictEqual(l.isole.id, "souleve_terre", "le soulevé de terre (difficulté 3) n'a aucun remplaçant à un cran");
+  const trous = audit.filter(x => x.trou);
+  console.log(`      ${trous.length} trous sur ${audit.length} combinaisons (${trous.filter(x => !x.disponibles).length} sans aucun exercice) — voir MOTEUR.md, « Trous de la banque »`);
+});
+
 console.log("\n=== le vérificateur détecte un programme comme l'actuel ===");
 test("hip thrust en séance poitrine → violation de la règle 1", () => {
   const p = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "salle", niveau: 2 }, banque);

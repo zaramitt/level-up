@@ -37,6 +37,18 @@ for (const cas of CAS) {
   if (p.avertissements.length) md += `**Avertissements du moteur** :\n` + p.avertissements.map(a => `- ${a}`).join("\n") + `\n\n`;
   md += `Vérification des règles : ${v.length ? "**" + v.length + " violation(s)** — " + v.map(x => `[${x.regle}] ${x.message}`).join(" ; ") : "aucune violation."}\n`;
 }
+/* ---------- Trous de la banque ---------- */
+const audit = M.auditerBanque(banque);
+const trous = audit.filter(l => l.trou);
+const MAT = { salle: "salle", halteres: "haltères", pdc: "poids du corps", rien: "rien" };
+const cellule = l => !l.trou ? "—" : !l.disponibles ? "**aucun exercice**" : `${l.disponibles} exo${l.disponibles > 1 ? "s" : ""}, ${l.remplacants} rempl. · ${l.isole.nom}`;
+md += `\n## Trous de la banque\n\nAudit mécanique (\`auditerBanque\`, lancé par les tests) : pour chaque compartiment (isolations par muscle, cardio et mobilité par type), chaque matériel et chaque niveau, combien d'exercices sont disponibles et combien de remplaçants exacts la règle 12 trouve pour le plus isolé d'entre eux (même compartiment, même muscle, un cran de difficulté au plus). Un trou = aucun exercice disponible, ou moins de 2 remplaçants. **Rien n'est comblé ici** : Léo décide quels exercices ajouter, ils passeront par \`EXERCICES.md\` comme les autres.\n\n${trous.length} trous sur ${audit.length} combinaisons, dont ${trous.filter(l => !l.disponibles).length} sans aucun exercice. Chaque cellule : exercices disponibles, remplaçants trouvés, et l'exercice le plus isolé (celui qui a le moins de remplaçants). « — » : pas un trou.\n\nDeux choses à savoir pour lire le tableau. Certains trous viennent du **muscle principal déclaré** plus que du nombre d'exercices : la fente latérale est seule sur les adducteurs dans l'unilatéral, le soulevé de terre est seul sur la chaîne postérieure à un cran de difficulté, la planche latérale n'a que le Pallof sur les obliques — la réponse peut être un exercice de plus ou un muscle principal différent, c'est à trancher dans la banque. Et le matériel d'un exercice est lu comme « tout est nécessaire » (barre **et** banc pour le hip thrust), premier de la liste en tête : un exercice noté « poulie, élastique » (Pallof, face pull, traction assistée) n'est donc pas compté comme faisable avec haltères et élastique — si la banque veut dire « poulie **ou** élastique », il faut le noter autrement.\n\n| Compartiment | Matériel | Niveau 1 | Niveau 2 | Niveau 3 |\n|---|---|---|---|---|\n`;
+const cles = [...new Set(trous.map(l => l.nom + "|" + l.materiel))];
+for (const nom of [...new Set(audit.map(l => l.nom))]) for (const materiel of M.MATERIELS) {
+  if (!cles.includes(nom + "|" + materiel)) continue;
+  const par = n => audit.find(l => l.nom === nom && l.materiel === materiel && l.niveau === n);
+  md += `| ${nom} | ${MAT[materiel]} | ${cellule(par(1))} | ${cellule(par(2))} | ${cellule(par(3))} |\n`;
+}
 md += `\n## Points d'extension laissés ouverts (IA, étape ultérieure)\n\n` + M.genererProgramme(CAS[0].entrees, banque).pointsExtension.map(x => `- ${x}`).join("\n") + `\n`;
 fs.writeFileSync("MOTEUR.md", md);
 console.log("MOTEUR.md écrit :", md.split("\n").length, "lignes");
