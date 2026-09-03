@@ -5771,7 +5771,8 @@ function SeanceView({
         borderRadius: 12,
         padding: "12px 12px",
         fontWeight: 800,
-        fontSize: 13
+        fontSize: 13,
+        whiteSpace: "nowrap"
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
@@ -5783,7 +5784,7 @@ function SeanceView({
       n: g.duree ? "play" : "check",
       s: 14,
       w: 2.6
-    }), enCours ? "En cours…" : g.duree ? `Lancer le tour ${prochain} · ${g.duree} s` : `Tour ${prochain} fini`)) : /*#__PURE__*/React.createElement("span", {
+    }), enCours ? "En cours…" : g.duree ? `Tour ${prochain} · ${g.duree} s` : `Tour ${prochain} fini`)) : /*#__PURE__*/React.createElement("span", {
       style: {
         flex: 1,
         fontSize: 12.5,
