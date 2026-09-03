@@ -338,12 +338,28 @@ test("rien du tout (maison sans équipement) : ni barre de traction, ni dips, ni
       assert.ok(M.faisable(byId[e.id], "rien"), `${e.nom}`);
       assert.ok(!["traction", "traction_negative", "traction_lestee", "dips", "pallof", "rowing_elastique"].includes(e.id), e.nom);
     }
-    assert.ok(p.avertissements.some(a => /tirage_v/.test(a)), "avertissement tirage vertical attendu : " + p.avertissements.join(" | "));
+    assert.ok(p.limites.some(l => l.compartiment === "tirage_v"), "limite tirage vertical attendue : " + JSON.stringify(p.limites));
+    assert.ok(p.avertissements.some(a => /^Sans barre de traction ni élastique, pas de tirage vertical : le dos reste sous-travaillé\.$/.test(a)), "en langage utilisateur : " + p.avertissements.join(" | "));
     assert.strictEqual(verifierRegles(p, banque).length, 0);
   }
   // le poids du corps garde l'hypothèse barre de traction + dips
   const pdc = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "pdc", niveau: 2 }, banque);
   assert.ok(seances(pdc).flatMap(s => s.exercices).some(e => e.id.startsWith("traction")), "pdc : tractions présentes");
+  assert.ok(pdc.limites.every(l => l.compartiment === "isolation"), "poids du corps avec barre de traction et dips : les gros mouvements existent tous — " + JSON.stringify(pdc.limites));
+  assert.ok(pdc.limites.some(l => /^Sans élastique ni haltères, pas de travail isolé des biceps, épaules latérales, arrière d'épaule : ces muscles ne travaillent que dans les gros mouvements\.$/.test(l.message)), JSON.stringify(pdc.limites));
+});
+test("convention du matériel : alternatives (n'importe laquelle suffit) et combinaisons « a + b »", () => {
+  assert.ok(M.faisable(byId.pallof, "halteres"), "Pallof : poulie OU élastique → faisable avec un élastique");
+  assert.ok(M.faisable(byId.tirage_ela, "halteres") && M.faisable(byId.traction_assistee, "halteres"), "face pull et traction assistée à l'élastique");
+  assert.ok(!M.faisable(byId.pallof, "rien") && !M.faisable(byId.pallof, "pdc"));
+  assert.ok(M.faisable(byId.hipthrust, "salle") && !M.faisable(byId.hipthrust, "halteres"), "hip thrust : barre + banc, les deux");
+  assert.ok(M.faisable(byId.dc_incline, "halteres") && !M.faisable(byId.dc_incline, "pdc"), "développé incliné : haltères + banc");
+  assert.ok(M.faisable(byId.traction, "pdc") && M.faisable(byId.traction, "halteres") && !M.faisable(byId.traction, "rien"), "traction : barre de traction explicite");
+  assert.ok(M.faisable(byId.dips, "pdc") && !M.faisable(byId.dips, "halteres") && !M.faisable(byId.dips, "rien"), "dips : barres de dips");
+  assert.ok(!M.faisable(byId.roulette, "pdc") && !M.faisable(byId.legcurl_ballon, "rien"), "roulette et ballon sont du matériel");
+  assert.ok(M.faisable(byId.bulgare, "rien") && M.faisable(byId.stepup, "rien"), "bulgares et step-up existent au poids du corps");
+  const TAGS = new Set(["poids du corps", "haltères", "kettlebell", "machine", "barre", "élastique", "poulie", "banc", "barres de dips", "barre de traction", "roulette", "ballon", "trap bar", "rack", "tapis / machine cardio", "aucun", "rouleau"]);
+  for (const e of banque.exercices) for (const alt of e.materiel) for (const t of alt.split(" + ")) assert.ok(TAGS.has(t), `${e.id} : tag « ${t} » inconnu (dans « ${alt} »)`);
 });
 
 console.log("\n=== règle 12 — remplacement ===");
@@ -380,18 +396,24 @@ test("chaque combinaison compartiment × matériel × niveau est auditée ; les 
   assert.ok(groupes.has("Squat (s'accroupir)") && groupes.has("Isolations · biceps") && groupes.has("Cardio et mobilité · cardio"), [...groupes].join(", "));
   for (const l of audit) {
     assert.ok(Number.isInteger(l.disponibles) && l.disponibles >= 0);
-    if (l.disponibles === 0) assert.ok(l.trou && l.remplacants === null && l.isole === null, JSON.stringify(l));
+    if (l.disponibles === 0) assert.ok((l.trou || l.limite) && l.remplacants === null && l.isole === null, JSON.stringify(l));
     else { assert.ok(l.isole && byId[l.isole.id], JSON.stringify(l)); assert.strictEqual(l.trou, l.remplacants < 2, JSON.stringify(l)); }
     if (l.disponibles > 0) assert.ok(l.remplacants <= l.disponibles - 1, JSON.stringify(l));
   }
   // ce que l'on sait de la banque : le squat en salle n'est pas un trou, le tirage vertical sans rien en est un
   assert.ok(audit.filter(l => l.nom === "Squat (s'accroupir)" && l.materiel === "salle").every(l => !l.trou));
-  assert.ok(audit.filter(l => l.nom === "Tirage vertical" && l.materiel === "rien").every(l => l.trou && l.disponibles === 0));
+  assert.ok(audit.filter(l => l.nom === "Tirage vertical" && l.materiel === "rien").every(l => l.disponibles === 0));
   // le remplaçant compté est bien celui de la règle 12 (même compartiment, même muscle, ≤ 1 cran)
   const l = audit.find(x => x.nom === "Hinge (charnière de hanche)" && x.materiel === "salle" && x.niveau === 3);
   assert.strictEqual(l.isole.id, "souleve_terre", "le soulevé de terre (difficulté 3) n'a aucun remplaçant à un cran");
+  // limites physiques : hors salle, aucun exercice à aucun niveau — signalées, pas comptées comme trous
+  const limites = audit.filter(x => x.limite);
+  assert.ok(limites.length && limites.every(x => !x.trou && x.disponibles === 0 && x.materiel !== "salle"));
+  assert.ok(audit.filter(x => x.nom === "Isolations · biceps" && x.materiel === "rien").every(x => x.limite));
+  assert.ok(audit.filter(x => x.nom === "Tirage vertical" && x.materiel === "rien").every(x => x.limite));
+  assert.ok(!audit.some(x => x.limite && x.materiel === "salle"));
   const trous = audit.filter(x => x.trou);
-  console.log(`      ${trous.length} trous sur ${audit.length} combinaisons (${trous.filter(x => !x.disponibles).length} sans aucun exercice) — voir MOTEUR.md, « Trous de la banque »`);
+  console.log(`      ${trous.length} trous sur ${audit.length} combinaisons, ${limites.length} limites physiques mises à part — voir MOTEUR.md, « Trous de la banque »`);
 });
 
 console.log("\n=== le vérificateur détecte un programme comme l'actuel ===");

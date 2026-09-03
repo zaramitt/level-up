@@ -1,7 +1,8 @@
 {
   "version": 1,
-  "genere": "programmes étape 1 (marqueurs étape 2 : accessoire, regression, coordination)",
+  "genere": "programmes étape 1 (marqueurs étape 2 : accessoire, regression, coordination ; convention du matériel : alternatives, « a + b » = combinaison)",
   "regles": {
+    "materiel": "liste d'alternatives : n'importe laquelle suffit ; « a + b » = combinaison obligatoire (barre + banc)",
     "repos": "≤6 reps → 180 s ; 8-12 → 120 s ; 12+ et isolation → 60-90 s (règle 5)",
     "echelle": "simple → phare → avancé ; monte_vers = exercice proposé après plusieurs semaines stables (règle 9)",
     "demo": "champ demo = requête du système de démos existant (recherche YouTube « <demo> exercice technique »)"
@@ -626,8 +627,7 @@
         "triceps"
       ],
       "materiel": [
-        "haltères",
-        "banc"
+        "haltères + banc"
       ],
       "difficulte": 2,
       "echelle": "avance",
@@ -652,7 +652,7 @@
         "épaules"
       ],
       "materiel": [
-        "poids du corps"
+        "barres de dips"
       ],
       "difficulte": 3,
       "echelle": "avance",
@@ -915,8 +915,7 @@
         "trapèzes"
       ],
       "materiel": [
-        "haltères",
-        "banc"
+        "haltères + banc"
       ],
       "difficulte": 1,
       "echelle": "simple",
@@ -1074,7 +1073,7 @@
         "gainage"
       ],
       "materiel": [
-        "poids du corps"
+        "barre de traction"
       ],
       "difficulte": 2,
       "echelle": "simple",
@@ -1101,7 +1100,7 @@
         "gainage"
       ],
       "materiel": [
-        "poids du corps"
+        "barre de traction"
       ],
       "difficulte": 3,
       "echelle": "phare",
@@ -1127,7 +1126,7 @@
         "gainage"
       ],
       "materiel": [
-        "poids du corps"
+        "barre de traction"
       ],
       "difficulte": 3,
       "echelle": "avance",
@@ -1204,9 +1203,9 @@
         "fessiers"
       ],
       "materiel": [
+        "banc",
         "poids du corps",
-        "haltères",
-        "banc"
+        "haltères + banc"
       ],
       "difficulte": 1,
       "echelle": "simple",
@@ -1287,8 +1286,7 @@
         "gainage"
       ],
       "materiel": [
-        "haltères",
-        "banc",
+        "haltères + banc",
         "poids du corps"
       ],
       "difficulte": 2,
@@ -1538,7 +1536,7 @@
         "épaules"
       ],
       "materiel": [
-        "poids du corps"
+        "roulette"
       ],
       "difficulte": 3,
       "echelle": "avance",
@@ -1641,8 +1639,7 @@
         "gainage"
       ],
       "materiel": [
-        "barre",
-        "banc"
+        "barre + banc"
       ],
       "difficulte": 2,
       "echelle": "phare",
@@ -1797,7 +1794,7 @@
         "gainage"
       ],
       "materiel": [
-        "poids du corps"
+        "ballon"
       ],
       "difficulte": 1,
       "echelle": "simple",

@@ -45,25 +45,40 @@
   const ORDRE_COMP = { squat: 0, hinge: 1, poussee_h: 2, tirage_h: 3, poussee_v: 4, tirage_v: 5, unilateral: 6, isolation: 10, gainage: 20, cardio_mobilite: 30 };
   const rangOrdre = x => (x.accessoire && COMPOSES.includes(x.compartiment) ? 9 : ORDRE_COMP[x.compartiment]);
 
-  // matériel : « salle » (tout), « halteres » (haltères, banc, élastique, poids du corps),
-  // « pdc » (poids du corps, avec barre de traction et barres de dips), « rien » (maison sans rien)
+  // matériel disponible par situation : « salle » (tout), « halteres » (maison équipée : haltères,
+  // banc, élastique, kettlebell, barre de traction, rouleau), « pdc » (poids du corps, avec barre de
+  // traction et barres de dips), « rien » (maison sans équipement)
   const MATERIEL_OK = {
     salle: null,
-    halteres: new Set(["haltères", "poids du corps", "banc", "aucun", "kettlebell", "élastique"]),
-    pdc: new Set(["poids du corps", "aucun"]),
+    halteres: new Set(["haltères", "banc", "élastique", "kettlebell", "barre de traction", "rouleau", "poids du corps", "aucun"]),
+    pdc: new Set(["poids du corps", "aucun", "barre de traction", "barres de dips"]),
     rien: new Set(["poids du corps", "aucun"])
   };
-  const MATERIEL_NOM = { salle: "salle complète", halteres: "haltères et banc", pdc: "poids du corps (barre de traction, barres de dips)", rien: "rien du tout (maison sans équipement)" };
-  // « rien » : pas de barre de traction ni de barres de dips ; le rowing inversé se fait sous une table solide
-  const EXIGE_BARRE = new Set(["traction", "traction_negative", "traction_lestee", "dips"]);
-  // un exercice est faisable si son matériel principal (premier de la liste) est disponible, ou s'il
-  // existe en version poids du corps. Le cardio sur machine n'est faisable qu'en salle.
+  const MATERIEL_NOM = { salle: "salle complète", halteres: "haltères, banc, élastique et barre de traction (maison équipée)", pdc: "poids du corps (barre de traction, barres de dips)", rien: "rien du tout (maison sans équipement)" };
+  // convention de la banque : le champ materiel est une liste d'ALTERNATIVES (n'importe laquelle
+  // suffit) ; un tag « a + b » est une combinaison obligatoire. Faisable = une alternative dont
+  // chaque composant est disponible.
+  const tagsDe = alt => alt.split(" + ").map(t => t.trim());
   const faisable = (e, materiel) => {
     const ok = MATERIEL_OK[materiel];
     if (ok === null || ok === undefined) return true;
-    if (materiel === "rien" && EXIGE_BARRE.has(e.id)) return false;
-    if (e.compartiment === "cardio_mobilite") return e.materiel.some(m => ok.has(m) || m === "rouleau" || (materiel !== "rien" && m === "élastique"));
-    return ok.has(e.materiel[0]) || (e.materiel.includes("poids du corps") && ok.has("poids du corps"));
+    return e.materiel.some(alt => tagsDe(alt).every(t => ok.has(t)));
+  };
+  // ce qui manque pour une case vide, en langage utilisateur : les tags absents, du plus courant à la
+  // maison au plus « salle »
+  const ORDRE_TAGS = ["barre de traction", "élastique", "haltères", "banc", "kettlebell", "barres de dips", "ballon", "roulette", "rouleau", "poulie", "machine", "barre", "trap bar", "rack", "tapis / machine cardio"];
+  const manqueDe = (exos, materiel) => {
+    const ok = MATERIEL_OK[materiel] || new Set();
+    const tags = new Set(exos.flatMap(e => e.materiel.flatMap(tagsDe)).filter(t => !ok.has(t)));
+    const l = [...tags].sort((a, b) => (ORDRE_TAGS.indexOf(a) + 1 || 99) - (ORDRE_TAGS.indexOf(b) + 1 || 99)).slice(0, 2);
+    return l.length ? l.join(" ni ") : "matériel";
+  };
+  const CONSEQUENCE = {
+    tirage_v: ["tirage vertical", "le dos reste sous-travaillé"], tirage_h: ["tirage horizontal", "le dos reste sous-travaillé"],
+    poussee_h: ["poussée horizontale", "les pectoraux restent sous-travaillés"], poussee_v: ["poussée verticale", "les épaules restent sous-travaillées"],
+    squat: ["squat", "les cuisses restent sous-travaillées"], hinge: ["charnière de hanche", "l'arrière des cuisses et les fessiers restent sous-travaillés"],
+    unilateral: ["travail sur une jambe", "les cuisses et l'équilibre restent sous-travaillés"], gainage: ["gainage", "le tronc reste sous-travaillé"],
+    cardio_mobilite: ["cardio ou mobilité", "la séance de récupération est plus courte"]
   };
 
   /* ------------------------------------------------------------------ */
@@ -383,7 +398,7 @@
     const tempsMin = Math.max(15, Math.round(Number(entrees.tempsMin)) || 60);
     const materiel = MATERIEL_OK.hasOwnProperty(entrees.materiel) ? entrees.materiel : "salle";
     const joursSport = [...new Set((entrees.joursSport || []).map(Number).filter(d => d >= 1 && d <= 7))].sort();
-    const avertissements = [];
+    const avertissements = [], limites = [];
 
     // objectif : les 5 de l'onboarding, ou texte libre interprété (point d'extension)
     let objCle = entrees.objectif, prioritaires = [];
@@ -451,7 +466,21 @@
           if (r) { e = r.exercice; role = cas.extra ? "objectif_extra" : "objectif"; if (r.remplace && !ctxBase.dejaSemaine.has(e.id)) avertissements.push(`Séance ${lettres[i]} : ${byId[cas.force].nom} remplacé par ${e.nom} (matériel « ${materiel} », niveau ${niveau}, règle 12).`); }
         }
         if (!e) e = choisir(banque, cas, focus, ctx);
-        if (!e) { if (!cas.force && !(cas.c === "isolation" && obj.reps === "force")) avertissements.push(`Séance ${lettres[i]} : aucun exercice faisable pour la case « ${cas.c}${cas.m ? " " + cas.m.join("/") : ""} » avec le matériel « ${MATERIEL_NOM[materiel]} ».`); continue; }
+        if (!e) {
+          // case vide faute de matériel : une limite physique, dite en langage utilisateur (une fois par case)
+          if (!cas.force && !(cas.c === "isolation" && obj.reps === "force")) {
+            // pour une isolation : seuls les muscles sans aucun exercice faisable comptent (pas ceux déjà pris dans la séance)
+            const muscles = cas.c === "isolation" ? (cas.m || f.iso).filter(m => !banque.exercices.some(x => x.compartiment === "isolation" && x.muscle === m && faisable(x, materiel))) : null;
+            const groupe = banque.exercices.filter(x => x.compartiment === cas.c && (cas.c !== "isolation" || muscles.includes(x.muscle)) && (cas.c !== "cardio_mobilite" || x.type === cas.type));
+            if (cas.c !== "isolation" || muscles.length) {
+              const manque = manqueDe(groupe, materiel);
+              const quoi = cas.c === "isolation" ? [`travail isolé des ${muscles.join(", ")}`, "ces muscles ne travaillent que dans les gros mouvements"] : CONSEQUENCE[cas.c];
+              const message = `Sans ${manque}, pas de ${quoi[0]} : ${quoi[1]}.`;
+              if (!limites.some(l => l.message === message)) { limites.push({ seance: lettres[i], compartiment: cas.c, muscles, manque, message }); avertissements.push(message); }
+            }
+          }
+          continue;
+        }
         const dose = doser(e, { ...ctx, dureeCardio: cas.duree });
         exercices.push(exerciceProgramme(e, dose, role || (cas.sport ? "sport" : null)));
         ctx.dejaSeance.add(e.id); ctxBase.dejaSemaine.add(e.id); ctxBase.compteSemaine[e.id] = (ctxBase.compteSemaine[e.id] || 0) + 1;
@@ -535,7 +564,7 @@
     return {
       entrees: { frequence, objectif: objCle, objectifLibre: entrees.objectifLibre || "", sport: sport ? entrees.sport : null, intention: intentionSport ? "sport" : "soi", materiel, niveau, tempsMin, joursSport },
       squelette: { nom: squelette.nom, description: squelette.description },
-      semaine, seances, volume, avertissements,
+      semaine, seances, volume, avertissements, limites,
       pointsExtension: [
         "interpreterObjectifLibre(texte) : l'IA choisira les muscles prioritaires depuis un objectif en texte libre (aujourd'hui : mots-clés).",
         "habillage : phrases d'accompagnement par séance et par exercice (nom du programme, mot d'encouragement) — non implémenté, le moteur ne produit que la structure.",
@@ -591,8 +620,12 @@
         else { const r = remplacerExercice(banque, e.id, { materiel, niveau }); k = r.approximatif === null ? r.candidats.length : 0; }
         if (min === null || k < min) { min = k; isole = e; }
       }
-      lignes.push({ compartiment: g.compartiment, nom: g.nom, materiel, niveau, disponibles: dispo.length, remplacants: min, isole: isole ? { id: isole.id, nom: isole.nom } : null, trou: !dispo.length || min < 2 });
+      lignes.push({ compartiment: g.compartiment, nom: g.nom, materiel, niveau, disponibles: dispo.length, remplacants: min, isole: isole ? { id: isole.id, nom: isole.nom } : null, trou: !dispo.length || min < 2, limite: false });
     }
+    // limite physique : hors salle, aucun exercice à aucun niveau — le mouvement n'existe pas avec ce
+    // matériel (isolation des biceps sans charge…). Ce n'est pas un trou à combler : le moteur le dit
+    // dans le programme.
+    for (const l of lignes) if (l.materiel !== "salle" && lignes.filter(x => x.nom === l.nom && x.materiel === l.materiel).every(x => x.disponibles === 0)) { l.limite = true; l.trou = false; }
     return lignes;
   };
 
@@ -634,7 +667,7 @@
       for (const e of s.exercices) if (!faisable(banque.exercices.find(x => x.id === e.id) || e, materiel)) v.push({ regle: "materiel", message: `${e.nom} infaisable avec « ${materiel} »` });
     }
     // règle 3
-    if (f >= 4) for (const g of GROS_GROUPES) { const n = seances.filter(s => s.exercices.some(e => groupesDe(e).has(g))).length; if (n < 2 && !prog.avertissements.some(a => /aucun exercice faisable/.test(a))) v.push({ regle: 3, message: `${g} travaillé ${n} fois par semaine` }); }
+    if (f >= 4) for (const g of GROS_GROUPES) { const n = seances.filter(s => s.exercices.some(e => groupesDe(e).has(g))).length; if (n < 2 && !(prog.limites || []).length) v.push({ regle: 3, message: `${g} travaillé ${n} fois par semaine` }); }
     const vol = volumeSemaine(seances);
     for (const g of GROS_GROUPES) { if (vol.direct[g] > niv.volumeMax && !prog.avertissements.some(a => a.startsWith(`Volume ${g} : `) && /au-dessus du maximum/.test(a))) v.push({ regle: 3, message: `${g} : ${vol.direct[g]} séries directes > max ${niv.volumeMax}` }); if (f >= 3 && vol.total[g] < niv.volumeMin && !prog.avertissements.some(a => a.startsWith(`Volume ${g}`))) v.push({ regle: 3, message: `${g} : ${vol.total[g]} séries < min ${niv.volumeMin}` }); }
     // règle 4 (cyclique) et jours de sport
