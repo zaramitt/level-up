@@ -254,7 +254,7 @@ Les 45 exercices existants (36 des programmes et du catalogue, 4 de gainage, 5 c
 | `Vélo` | Vélo (`velo`) | Cardio et mobilité |
 | `Corde à sauter` | Corde à sauter (`corde`) | Cardio et mobilité |
 
-### Rangés de façon approximative — à trancher
+### Rangés de façon approximative — tranchés à la relecture (voir DECISIONS.md)
 
 - **Superman au sol** (`superman`) : chaîne postérieure au sol : geste de hinge sans charge
 - **Développé haltères assis** (`dev`) : « Développé haltères » des templates : rangé en poussée verticale (épaules). Si c'était un développé couché haltères, le déplacer vers dc_halteres.
