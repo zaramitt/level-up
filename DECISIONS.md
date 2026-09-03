@@ -65,6 +65,14 @@ poitrine, même structure à 3 et à 6 séances par semaine.
     questions chaînées à l'onboarding : le sport, puis « pour progresser
     dans ce sport ou pour toi ? ».
 11. **Objectif = coloration des exercices** dans les cases du squelette.
+12. **Remplacement d'exercice** (« pas cette machine », « générer une
+    variante ») : candidats du **même compartiment ET même muscle principal**
+    d'abord, triés par difficulté la plus proche et matériel disponible. Si
+    aucun candidat : même muscle principal dans un autre compartiment,
+    signalé comme approximatif (« même muscle, geste différent »). → Deux
+    exercices d'un même compartiment travaillent les mêmes muscles par le
+    même geste : le compartiment est le critère d'interchangeabilité, le
+    muscle est la vérification.
 
 ### Squelettes par fréquence
 

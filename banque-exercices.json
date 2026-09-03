@@ -1,0 +1,2544 @@
+{
+  "version": 1,
+  "genere": "programmes étape 1",
+  "regles": {
+    "repos": "≤6 reps → 180 s ; 8-12 → 120 s ; 12+ et isolation → 60-90 s (règle 5)",
+    "echelle": "simple → phare → avancé ; monte_vers = exercice proposé après plusieurs semaines stables (règle 9)",
+    "demo": "champ demo = requête du système de démos existant (recherche YouTube « <demo> exercice technique »)"
+  },
+  "compartiments": [
+    {
+      "n": 1,
+      "id": "squat",
+      "nom": "Squat (s'accroupir)",
+      "phare": "squat"
+    },
+    {
+      "n": 2,
+      "id": "hinge",
+      "nom": "Hinge (charnière de hanche)",
+      "phare": "rdl"
+    },
+    {
+      "n": 3,
+      "id": "poussee_h",
+      "nom": "Poussée horizontale",
+      "phare": "developpe_couche"
+    },
+    {
+      "n": 4,
+      "id": "poussee_v",
+      "nom": "Poussée verticale",
+      "phare": "militaire"
+    },
+    {
+      "n": 5,
+      "id": "tirage_h",
+      "nom": "Tirage horizontal",
+      "phare": "rowing_barre"
+    },
+    {
+      "n": 6,
+      "id": "tirage_v",
+      "nom": "Tirage vertical",
+      "phare": "traction"
+    },
+    {
+      "n": 7,
+      "id": "unilateral",
+      "nom": "Unilatéral jambes",
+      "phare": "fente"
+    },
+    {
+      "n": 8,
+      "id": "gainage",
+      "nom": "Gainage",
+      "phare": "planche"
+    },
+    {
+      "n": 9,
+      "id": "isolation",
+      "nom": "Isolations",
+      "phare": "hipthrust"
+    },
+    {
+      "n": 10,
+      "id": "cardio_mobilite",
+      "nom": "Cardio et mobilité",
+      "phare": null
+    }
+  ],
+  "exercices": [
+    {
+      "id": "chaise",
+      "nom": "Chaise contre le mur",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "squat_pdc",
+      "reps": null,
+      "unilateral": false,
+      "consigne": "Dos plaqué au mur, cuisses à l'horizontale, genoux au-dessus des chevilles, respire calmement.",
+      "erreur": "Se laisser glisser plus bas que 90° ou décoller les talons.",
+      "duree_s": 40,
+      "existant": "chaise",
+      "demo": "Chaise contre le mur"
+    },
+    {
+      "id": "squat_pdc",
+      "nom": "Squat au poids du corps",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "goblet",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Pieds largeur d'épaules, pointes légèrement ouvertes, descends comme pour t'asseoir en gardant la poitrine haute.",
+      "erreur": "Genoux qui rentrent vers l'intérieur en remontant.",
+      "existant": "squat_pdc",
+      "repos_s": 90,
+      "demo": "Squat au poids du corps"
+    },
+    {
+      "id": "goblet",
+      "nom": "Goblet squat",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "gainage"
+      ],
+      "materiel": [
+        "haltères",
+        "kettlebell"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "squat",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Haltère serré contre la poitrine, coudes qui passent entre les genoux en bas, talons au sol tout du long.",
+      "erreur": "Arrondir le dos en bas pour aller chercher la profondeur.",
+      "existant": "goblet",
+      "repos_s": 120,
+      "demo": "Goblet squat"
+    },
+    {
+      "id": "presse",
+      "nom": "Presse à cuisses",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "squat",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Pieds au milieu du plateau, descends jusqu'à ce que les cuisses touchent le buste sans que le bassin décolle du dossier.",
+      "erreur": "Verrouiller les genoux en haut ou laisser le bas du dos se décoller.",
+      "existant": "presse",
+      "repos_s": 120,
+      "demo": "Presse à cuisses"
+    },
+    {
+      "id": "hack_squat",
+      "nom": "Hack squat",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "squat",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Dos entier contre le dossier, descends contrôlé jusqu'à 90° minimum, pousse dans le talon.",
+      "erreur": "Pieds trop bas sur le plateau : les genoux passent loin devant et ça tire.",
+      "repos_s": 120,
+      "demo": "Hack squat"
+    },
+    {
+      "id": "squat",
+      "nom": "Squat barre",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "adducteurs",
+        "gainage"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": "squat_avant",
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Barre sur les trapèzes, inspire et bloque, descends genoux dans l'axe des pieds jusqu'aux cuisses parallèles, remonte en poussant le sol.",
+      "erreur": "Fesses qui remontent avant les épaules (good morning involontaire) : trop lourd.",
+      "existant": "squat",
+      "repos_s": 180,
+      "demo": "Squat barre"
+    },
+    {
+      "id": "squat_saut",
+      "nom": "Squats sautés",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "mollets"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Descends à mi-hauteur, saute en extension complète, atterris en douceur genoux fléchis, enchaîne.",
+      "erreur": "Atterrir jambes tendues ou genoux qui claquent vers l'intérieur.",
+      "existant": "squat_saut",
+      "repos_s": 120,
+      "demo": "Squats sautés"
+    },
+    {
+      "id": "squat_avant",
+      "nom": "Squat avant (front squat)",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "gainage",
+        "haut du dos"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Barre posée sur les épaules devant, coudes hauts tout le mouvement, buste vertical, descends profond.",
+      "erreur": "Coudes qui tombent : la barre roule vers l'avant et le dos s'arrondit.",
+      "repos_s": 180,
+      "demo": "Squat avant (front squat)"
+    },
+    {
+      "id": "superman",
+      "nom": "Superman au sol",
+      "compartiment": "hinge",
+      "muscle": "chaîne postérieure",
+      "secondaires": [
+        "fessiers",
+        "lombaires"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "lombaire",
+      "reps": [
+        10,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Allongé sur le ventre, décolle bras et jambes de quelques centimètres en serrant les fesses, tiens une seconde.",
+      "erreur": "Cambrer le cou en regardant devant : regard au sol.",
+      "existant": "superman",
+      "approximatif": "chaîne postérieure au sol : geste de hinge sans charge",
+      "repos_s": 120,
+      "demo": "Superman au sol"
+    },
+    {
+      "id": "lombaire",
+      "nom": "Extension lombaire 45°",
+      "compartiment": "hinge",
+      "muscle": "chaîne postérieure",
+      "secondaires": [
+        "fessiers",
+        "ischio-jambiers",
+        "lombaires"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "rdl_halteres",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Bassin calé sur le coussin, descends en pliant la hanche pas le dos, remonte jusqu'à l'alignement — pas au-delà.",
+      "erreur": "Hyperextension en haut : on s'arrête aligné.",
+      "existant": "lombaire",
+      "repos_s": 90,
+      "demo": "Extension lombaire 45°"
+    },
+    {
+      "id": "rdl_halteres",
+      "nom": "Soulevé de terre roumain haltères",
+      "compartiment": "hinge",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "fessiers",
+        "lombaires"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "rdl",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Haltères le long des cuisses, pousse les fesses vers l'arrière genoux à peine fléchis, descends jusqu'à sentir l'étirement derrière les cuisses.",
+      "erreur": "Plier les genoux pour descendre plus bas : c'est la hanche qui recule, pas un squat.",
+      "repos_s": 120,
+      "demo": "Soulevé de terre roumain haltères"
+    },
+    {
+      "id": "rdl",
+      "nom": "Soulevé de terre roumain",
+      "compartiment": "hinge",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "fessiers",
+        "lombaires",
+        "haut du dos"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": "souleve_terre",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Barre collée aux cuisses, hanches qui reculent, dos plat, descends jusqu'à mi-tibia ou l'étirement, remonte en serrant les fesses.",
+      "erreur": "Barre qui s'éloigne des jambes : le dos prend tout.",
+      "existant": "rdl",
+      "repos_s": 120,
+      "demo": "Soulevé de terre roumain"
+    },
+    {
+      "id": "swing",
+      "nom": "Kettlebell swing",
+      "compartiment": "hinge",
+      "muscle": "fessiers",
+      "secondaires": [
+        "ischio-jambiers",
+        "gainage"
+      ],
+      "materiel": [
+        "kettlebell"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "rdl",
+      "reps": [
+        15,
+        20
+      ],
+      "unilateral": false,
+      "consigne": "Hanches qui claquent vers l'avant pour projeter la kettlebell à hauteur d'épaules, bras relâchés, fesses serrées en haut.",
+      "erreur": "Soulever avec les bras ou faire un squat : c'est un mouvement de hanche.",
+      "existant": "swing",
+      "repos_s": 60,
+      "demo": "Kettlebell swing"
+    },
+    {
+      "id": "good_morning",
+      "nom": "Good morning",
+      "compartiment": "hinge",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "fessiers",
+        "lombaires"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 2,
+      "echelle": "avance",
+      "monte_vers": "souleve_terre",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Barre légère sur les trapèzes, penche le buste en reculant les hanches jusqu'à sentir l'arrière des cuisses, dos plat.",
+      "erreur": "Charger trop vite : c'est un exercice de technique, pas de force.",
+      "repos_s": 120,
+      "demo": "Good morning"
+    },
+    {
+      "id": "souleve_terre",
+      "nom": "Soulevé de terre",
+      "compartiment": "hinge",
+      "muscle": "chaîne postérieure",
+      "secondaires": [
+        "fessiers",
+        "ischio-jambiers",
+        "quadriceps",
+        "haut du dos",
+        "gainage"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Barre au-dessus du milieu du pied, dos plat, pousse le sol avec les jambes puis ouvre les hanches — la barre reste collée aux tibias.",
+      "erreur": "Tirer avec le dos en premier : hanches et épaules doivent monter ensemble.",
+      "repos_s": 180,
+      "demo": "Soulevé de terre"
+    },
+    {
+      "id": "hip_hinge_elastique",
+      "nom": "Pull-through à l'élastique",
+      "compartiment": "hinge",
+      "muscle": "fessiers",
+      "secondaires": [
+        "ischio-jambiers"
+      ],
+      "materiel": [
+        "élastique",
+        "poulie"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "rdl_halteres",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Élastique ancré bas derrière toi tenu entre les jambes, recule les hanches puis ouvre-les en serrant les fesses.",
+      "erreur": "Se redresser avec le dos au lieu de pousser les hanches vers l'avant.",
+      "repos_s": 90,
+      "demo": "Pull-through à l'élastique"
+    },
+    {
+      "id": "pompes_mur",
+      "nom": "Pompes au mur / sur banc",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules"
+      ],
+      "materiel": [
+        "poids du corps",
+        "banc"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "pompes",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Mains un peu plus larges que les épaules, corps droit comme une planche, poitrine vers le support, coudes à 45°.",
+      "erreur": "Bassin qui casse : serre les fesses et le ventre.",
+      "existant": "pompes_mur",
+      "repos_s": 120,
+      "demo": "Pompes au mur / sur banc"
+    },
+    {
+      "id": "pompes",
+      "nom": "Pompes (genoux ok)",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "developpe_couche",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste.",
+      "erreur": "Tête qui plonge en premier et bassin qui reste en l'air.",
+      "existant": "pompes",
+      "repos_s": 120,
+      "demo": "Pompes (genoux ok)"
+    },
+    {
+      "id": "chest_press",
+      "nom": "Chest press machine",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "developpe_couche",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Poignées à hauteur de poitrine, omoplates serrées contre le dossier, pousse sans verrouiller les coudes.",
+      "erreur": "Épaules qui remontent vers les oreilles pendant la poussée.",
+      "repos_s": 120,
+      "demo": "Chest press machine"
+    },
+    {
+      "id": "dc_halteres",
+      "nom": "Développé couché haltères",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "developpe_couche",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Allongé, haltères au-dessus de la poitrine, descends coudes à 45° jusqu'à la hauteur du buste, remonte sans cogner les haltères.",
+      "erreur": "Descendre coudes écartés à 90° : les épaules encaissent.",
+      "repos_s": 120,
+      "demo": "Développé couché haltères"
+    },
+    {
+      "id": "developpe_couche",
+      "nom": "Développé couché",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": "dc_incline",
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière.",
+      "erreur": "Rebondir la barre sur la poitrine ou décoller les fesses du banc.",
+      "repos_s": 180,
+      "demo": "Développé couché"
+    },
+    {
+      "id": "dc_incline",
+      "nom": "Développé incliné haltères",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "épaules",
+        "triceps"
+      ],
+      "materiel": [
+        "haltères",
+        "banc"
+      ],
+      "difficulte": 2,
+      "echelle": "avance",
+      "monte_vers": "dips",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Banc à 30°, haltères qui descendent à hauteur du haut de la poitrine, poussée légèrement convergente.",
+      "erreur": "Banc trop redressé : ça devient un exercice d'épaules.",
+      "repos_s": 120,
+      "demo": "Développé incliné haltères"
+    },
+    {
+      "id": "dips",
+      "nom": "Dips aux barres parallèles",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        6,
+        10
+      ],
+      "unilateral": false,
+      "consigne": "Buste légèrement penché en avant, descends jusqu'à ce que les épaules soient au niveau des coudes, remonte sans balancer.",
+      "erreur": "Descendre trop bas épaules en avant : douleur à l'avant de l'épaule.",
+      "repos_s": 180,
+      "demo": "Dips aux barres parallèles"
+    },
+    {
+      "id": "pike",
+      "nom": "Pompes piquées (épaules)",
+      "compartiment": "poussee_v",
+      "muscle": "épaules",
+      "secondaires": [
+        "triceps",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "dev",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Fesses hautes en V inversé, descends le sommet du crâne vers le sol entre les mains, pousse pour revenir.",
+      "erreur": "Casser le V et retomber en pompe classique.",
+      "existant": "pike",
+      "repos_s": 120,
+      "demo": "Pompes piquées (épaules)"
+    },
+    {
+      "id": "shoulder_press_machine",
+      "nom": "Développé épaules machine",
+      "compartiment": "poussee_v",
+      "muscle": "épaules",
+      "secondaires": [
+        "triceps"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "dev",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Poignées à hauteur des oreilles, dos contre le dossier, pousse en haut sans verrouiller.",
+      "erreur": "Cambrer le bas du dos pour aider la poussée.",
+      "repos_s": 120,
+      "demo": "Développé épaules machine"
+    },
+    {
+      "id": "dev",
+      "nom": "Développé haltères assis",
+      "compartiment": "poussee_v",
+      "muscle": "épaules",
+      "secondaires": [
+        "triceps",
+        "haut des pectoraux"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "militaire",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Haltères à hauteur des oreilles paumes vers l'avant, pousse jusqu'à ce que les haltères se rapprochent en haut, redescends contrôlé.",
+      "erreur": "Cambrer le dos pour pousser plus lourd : réduis la charge.",
+      "existant": "dev",
+      "ambigu": "« Développé haltères » des templates : rangé en poussée verticale (épaules). Si c'était un développé couché haltères, le déplacer vers dc_halteres.",
+      "repos_s": 120,
+      "demo": "Développé haltères assis"
+    },
+    {
+      "id": "arnold",
+      "nom": "Arnold press",
+      "compartiment": "poussee_v",
+      "muscle": "épaules",
+      "secondaires": [
+        "triceps",
+        "avant d'épaule"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 2,
+      "echelle": "avance",
+      "monte_vers": "militaire",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Départ paumes vers toi haltères devant le visage, tourne les paumes vers l'avant en poussant vers le haut.",
+      "erreur": "Faire la rotation en bas seulement : elle se fait pendant la montée.",
+      "repos_s": 120,
+      "demo": "Arnold press"
+    },
+    {
+      "id": "militaire",
+      "nom": "Développé militaire",
+      "compartiment": "poussee_v",
+      "muscle": "épaules",
+      "secondaires": [
+        "triceps",
+        "gainage",
+        "haut des pectoraux"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": "push_press",
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Debout, barre sur le haut de la poitrine, fesses et ventre serrés, pousse la barre au-dessus de la tête en reculant légèrement le menton.",
+      "erreur": "Cambrer le bas du dos et pousser la barre devant le visage au lieu de dans l'axe.",
+      "existant": "militaire",
+      "repos_s": 180,
+      "demo": "Développé militaire"
+    },
+    {
+      "id": "push_press",
+      "nom": "Push press",
+      "compartiment": "poussee_v",
+      "muscle": "épaules",
+      "secondaires": [
+        "triceps",
+        "quadriceps",
+        "gainage"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Petite flexion de genoux puis extension explosive des jambes pour lancer la barre, termine la poussée avec les bras.",
+      "erreur": "Plier trop les genoux : c'est un ressort court, pas un squat.",
+      "repos_s": 180,
+      "demo": "Push press"
+    },
+    {
+      "id": "rowing_inverse",
+      "nom": "Rowing inversé",
+      "compartiment": "tirage_h",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "trapèzes",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps",
+        "barre"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "rowing_halteres",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Suspendu sous une barre basse corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates.",
+      "erreur": "Bassin qui tombe : serre les fesses, plus la position est verticale, plus c'est facile.",
+      "repos_s": 120,
+      "demo": "Rowing inversé"
+    },
+    {
+      "id": "rowing_elastique",
+      "nom": "Rowing à l'élastique",
+      "compartiment": "tirage_h",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "trapèzes"
+      ],
+      "materiel": [
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "rowing",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Assis ou debout, tire les coudes vers l'arrière le long du corps, omoplates qui se rapprochent en fin de mouvement.",
+      "erreur": "Tirer avec les bras seulement : les coudes passent derrière le buste grâce aux omoplates.",
+      "repos_s": 90,
+      "demo": "Rowing à l'élastique"
+    },
+    {
+      "id": "rowing",
+      "nom": "Tirage horizontal (poulie / machine)",
+      "compartiment": "tirage_h",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "trapèzes",
+        "arrière d'épaule"
+      ],
+      "materiel": [
+        "poulie",
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "rowing_barre",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Buste droit et stable, tire la poignée vers le nombril coudes le long du corps, laisse les omoplates s'ouvrir en revenant.",
+      "erreur": "Se balancer d'avant en arrière avec le buste pour tirer plus lourd.",
+      "existant": "rowing",
+      "anciens_ids": [
+        "rowing2"
+      ],
+      "repos_s": 120,
+      "demo": "Tirage horizontal (poulie / machine)"
+    },
+    {
+      "id": "rowing_halteres",
+      "nom": "Rowing haltère un bras",
+      "compartiment": "tirage_h",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "trapèzes"
+      ],
+      "materiel": [
+        "haltères",
+        "banc"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "rowing_barre",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Main et genou sur le banc, dos plat, tire l'haltère vers la hanche coude près du corps, redescends jusqu'à l'étirement.",
+      "erreur": "Tourner le buste pour monter l'haltère plus haut.",
+      "repos_s": 120,
+      "demo": "Rowing haltère un bras"
+    },
+    {
+      "id": "rowing_barre",
+      "nom": "Rowing barre",
+      "compartiment": "tirage_h",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "trapèzes",
+        "lombaires",
+        "arrière d'épaule"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": "rowing_pendlay",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Buste penché à 45°, dos plat, tire la barre vers le bas du ventre coudes vers l'arrière, redescends bras tendus.",
+      "erreur": "Se redresser à chaque répétition pour tricher : le buste reste fixe.",
+      "repos_s": 120,
+      "demo": "Rowing barre"
+    },
+    {
+      "id": "rowing_pendlay",
+      "nom": "Rowing Pendlay",
+      "compartiment": "tirage_h",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "trapèzes",
+        "lombaires"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Buste à l'horizontale, barre repose au sol entre chaque répétition, tire explosif vers le bas de la poitrine.",
+      "erreur": "Laisser le buste remonter au fil des répétitions.",
+      "repos_s": 180,
+      "demo": "Rowing Pendlay"
+    },
+    {
+      "id": "tirage_elastique_v",
+      "nom": "Tirage vertical à l'élastique",
+      "compartiment": "tirage_v",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "arrière d'épaule"
+      ],
+      "materiel": [
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "tirage_v",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Élastique ancré haut, tire les coudes vers les hanches en gardant le buste droit.",
+      "erreur": "Hausser les épaules au départ : elles restent basses.",
+      "repos_s": 90,
+      "demo": "Tirage vertical à l'élastique"
+    },
+    {
+      "id": "tirage_v",
+      "nom": "Tirage vertical poulie",
+      "compartiment": "tirage_v",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "arrière d'épaule"
+      ],
+      "materiel": [
+        "poulie",
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "traction_assistee",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Prise un peu plus large que les épaules, tire la barre vers le haut de la poitrine coudes vers le bas et l'arrière, buste à peine incliné.",
+      "erreur": "Tirer derrière la nuque ou se pencher fort en arrière.",
+      "existant": "tirage_v",
+      "repos_s": 120,
+      "demo": "Tirage vertical poulie"
+    },
+    {
+      "id": "traction_assistee",
+      "nom": "Traction assistée (machine ou élastique)",
+      "compartiment": "tirage_v",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "arrière d'épaule",
+        "gainage"
+      ],
+      "materiel": [
+        "machine",
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "traction_negative",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Choisis une assistance qui te laisse 8 à 12 répétitions propres, menton au-dessus de la barre, descente contrôlée.",
+      "erreur": "Assistance trop forte : on ne progresse plus. Réduis-la dès que 12 passent.",
+      "repos_s": 120,
+      "demo": "Traction assistée (machine ou élastique)"
+    },
+    {
+      "id": "traction_negative",
+      "nom": "Traction négative",
+      "compartiment": "tirage_v",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "arrière d'épaule",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "traction",
+      "reps": [
+        3,
+        5
+      ],
+      "unilateral": false,
+      "consigne": "Monte avec un saut ou un banc, puis descends le plus lentement possible (3 à 5 secondes) jusqu'aux bras tendus.",
+      "erreur": "Se laisser tomber sur la fin : contrôle jusqu'en bas.",
+      "repos_s": 180,
+      "demo": "Traction négative"
+    },
+    {
+      "id": "traction",
+      "nom": "Traction",
+      "compartiment": "tirage_v",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "arrière d'épaule",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 3,
+      "echelle": "phare",
+      "monte_vers": "traction_lestee",
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Départ bras tendus épaules basses, tire les coudes vers les hanches jusqu'au menton au-dessus de la barre, redescends complètement.",
+      "erreur": "Répétitions à moitié (bras jamais tendus) ou balancement des jambes.",
+      "repos_s": 180,
+      "demo": "Traction"
+    },
+    {
+      "id": "traction_lestee",
+      "nom": "Traction lestée",
+      "compartiment": "tirage_v",
+      "muscle": "dos (grand dorsal)",
+      "secondaires": [
+        "biceps",
+        "arrière d'épaule",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        4,
+        6
+      ],
+      "unilateral": false,
+      "consigne": "Ceinture de lest ou haltère entre les pieds, même geste strict que la traction, amplitude complète.",
+      "erreur": "Ajouter du lest avant 10 tractions strictes.",
+      "repos_s": 180,
+      "demo": "Traction lestée"
+    },
+    {
+      "id": "split_squat",
+      "nom": "Split squat statique",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "équilibre"
+      ],
+      "materiel": [
+        "poids du corps",
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "fente_arr",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Un pied devant l'autre écartés d'un grand pas, descends le genou arrière vers le sol, buste droit, remonte sur place.",
+      "erreur": "Pas trop court : le genou avant dépasse loin la pointe du pied.",
+      "repos_s": 120,
+      "demo": "Split squat statique"
+    },
+    {
+      "id": "fente_arr",
+      "nom": "Fentes arrière",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "équilibre"
+      ],
+      "materiel": [
+        "poids du corps",
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "fente",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Recule un pied, descends le genou arrière vers le sol, pousse dans le talon avant pour revenir.",
+      "erreur": "Se pencher en avant et tirer sur le genou arrière.",
+      "existant": "fente_arr",
+      "repos_s": 120,
+      "demo": "Fentes arrière"
+    },
+    {
+      "id": "stepup",
+      "nom": "Step-up sur banc",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "poids du corps",
+        "haltères",
+        "banc"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "fente",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Pied entier sur le banc, monte en poussant dans ce pied seulement, redescends contrôlé sans rebondir.",
+      "erreur": "Prendre l'élan avec la jambe du sol.",
+      "existant": "stepup",
+      "repos_s": 120,
+      "demo": "Step-up sur banc"
+    },
+    {
+      "id": "fente",
+      "nom": "Fentes marchées",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "gainage",
+        "équilibre"
+      ],
+      "materiel": [
+        "haltères",
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": "bulgare",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe.",
+      "erreur": "Pas trop court : le genou avant dépasse la pointe du pied et le talon décolle.",
+      "existant": "fente",
+      "repos_s": 120,
+      "demo": "Fentes marchées"
+    },
+    {
+      "id": "fente_laterale",
+      "nom": "Fente latérale",
+      "compartiment": "unilateral",
+      "muscle": "adducteurs",
+      "secondaires": [
+        "quadriceps",
+        "fessiers"
+      ],
+      "materiel": [
+        "poids du corps",
+        "haltères"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "bulgare",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Grand pas sur le côté, assieds-toi sur la jambe qui s'est déplacée, l'autre tendue, pointes vers l'avant.",
+      "erreur": "Genou qui part vers l'intérieur : il suit la pointe du pied.",
+      "repos_s": 120,
+      "demo": "Fente latérale"
+    },
+    {
+      "id": "bulgare",
+      "nom": "Fentes bulgares",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "équilibre",
+        "gainage"
+      ],
+      "materiel": [
+        "haltères",
+        "banc",
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "avance",
+      "monte_vers": "pistol_assiste",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Pied arrière posé sur un banc, descends verticalement jusqu'à la cuisse avant parallèle, remonte en poussant dans le talon.",
+      "erreur": "Banc trop loin : ça devient une fente vers l'avant et le genou souffre.",
+      "existant": "bulgare",
+      "repos_s": 120,
+      "demo": "Fentes bulgares"
+    },
+    {
+      "id": "pistol_assiste",
+      "nom": "Pistol squat assisté",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "équilibre",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps",
+        "élastique"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": true,
+      "consigne": "Tenu à un support ou un élastique, descends sur une jambe l'autre tendue devant, remonte sans t'aider des bras.",
+      "erreur": "Genou qui part vers l'intérieur ou talon qui décolle.",
+      "repos_s": 180,
+      "demo": "Pistol squat assisté"
+    },
+    {
+      "id": "planche_genoux",
+      "nom": "Planche sur les genoux",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "fessiers",
+        "épaules"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "planche",
+      "reps": null,
+      "unilateral": false,
+      "consigne": "Coudes sous les épaules, genoux au sol, ligne droite des genoux à la tête, ventre rentré.",
+      "erreur": "Fesses qui remontent pour soulager : serre-les.",
+      "duree_s": 30,
+      "repos_s": 45,
+      "demo": "Planche sur les genoux"
+    },
+    {
+      "id": "deadbug",
+      "nom": "Dead bug",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "fléchisseurs de hanche"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "hollow",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Sur le dos, bas du dos plaqué au sol, allonge lentement bras et jambe opposés sans que le dos se décolle.",
+      "erreur": "Le bas du dos qui se cambre pendant l'allongement.",
+      "existant": "deadbug",
+      "repos_s": 120,
+      "demo": "Dead bug"
+    },
+    {
+      "id": "planche",
+      "nom": "Planche",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "fessiers",
+        "épaules",
+        "lombaires"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": "planche_laterale",
+      "reps": null,
+      "unilateral": false,
+      "consigne": "Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire.",
+      "erreur": "Bassin qui s'affaisse ou fesses en l'air : on cherche la ligne droite.",
+      "duree_s": 40,
+      "existant": "planche",
+      "repos_s": 45,
+      "demo": "Planche"
+    },
+    {
+      "id": "planche_laterale",
+      "nom": "Planche latérale",
+      "compartiment": "gainage",
+      "muscle": "obliques",
+      "secondaires": [
+        "fessiers",
+        "épaules"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "roulette",
+      "reps": null,
+      "unilateral": true,
+      "consigne": "Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens.",
+      "erreur": "Hanche qui tombe vers le sol.",
+      "duree_s": 30,
+      "repos_s": 45,
+      "demo": "Planche latérale"
+    },
+    {
+      "id": "hollow",
+      "nom": "Hollow hold",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "fléchisseurs de hanche"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "releves",
+      "reps": null,
+      "unilateral": false,
+      "consigne": "Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens.",
+      "erreur": "Bas du dos qui se décolle : monte un peu les jambes.",
+      "duree_s": 20,
+      "existant": "hollow",
+      "repos_s": 45,
+      "demo": "Hollow hold"
+    },
+    {
+      "id": "releves",
+      "nom": "Relevés de jambes",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "fléchisseurs de hanche"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "roulette",
+      "reps": [
+        10,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Allongé ou suspendu, monte les jambes jusqu'à 90° en enroulant le bassin, redescends lentement sans toucher.",
+      "erreur": "Cambrer le dos sur la descente : arrête-toi avant.",
+      "existant": "releves",
+      "repos_s": 120,
+      "demo": "Relevés de jambes"
+    },
+    {
+      "id": "pallof",
+      "nom": "Pallof press",
+      "compartiment": "gainage",
+      "muscle": "obliques",
+      "secondaires": [
+        "abdominaux"
+      ],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "planche_laterale",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": true,
+      "consigne": "De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s.",
+      "erreur": "Tourner les épaules vers la poulie.",
+      "repos_s": 90,
+      "demo": "Pallof press"
+    },
+    {
+      "id": "roulette",
+      "nom": "Roulette abdominale (ab wheel)",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "grand dorsal",
+        "épaules"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        6,
+        10
+      ],
+      "unilateral": false,
+      "consigne": "À genoux, roule vers l'avant en gardant le bas du dos rond et le ventre serré, reviens sans cambrer.",
+      "erreur": "Cambrer le dos en bout de course : réduis l'amplitude.",
+      "repos_s": 180,
+      "demo": "Roulette abdominale (ab wheel)"
+    },
+    {
+      "id": "pont_sol",
+      "nom": "Pont fessier au sol",
+      "compartiment": "isolation",
+      "muscle": "fessiers",
+      "secondaires": [
+        "ischio-jambiers"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "hipthrust",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Sur le dos pieds à plat, monte les hanches en serrant les fesses jusqu'à l'alignement épaules-genoux, tiens une seconde.",
+      "erreur": "Pousser avec le bas du dos et cambrer en haut.",
+      "isolation": true,
+      "existant": "pont_sol",
+      "repos_s": 90,
+      "demo": "Pont fessier au sol"
+    },
+    {
+      "id": "pont",
+      "nom": "Pont fessier unilatéral",
+      "compartiment": "isolation",
+      "muscle": "fessiers",
+      "secondaires": [
+        "ischio-jambiers",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "hipthrust",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": true,
+      "consigne": "Même pont, une jambe tendue en l'air, hanches qui restent à l'horizontale.",
+      "erreur": "Bassin qui penche du côté de la jambe libre.",
+      "isolation": true,
+      "existant": "pont",
+      "repos_s": 90,
+      "demo": "Pont fessier unilatéral"
+    },
+    {
+      "id": "hipthrust_machine",
+      "nom": "Hip thrust machine",
+      "compartiment": "isolation",
+      "muscle": "fessiers",
+      "secondaires": [
+        "ischio-jambiers"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "hipthrust",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Dos calé, pieds sous les genoux, monte en serrant les fesses jusqu'à l'alignement, menton rentré.",
+      "erreur": "Aller trop haut en cambrant : on s'arrête aligné.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Hip thrust machine"
+    },
+    {
+      "id": "hipthrust",
+      "nom": "Hip thrust",
+      "compartiment": "isolation",
+      "muscle": "fessiers",
+      "secondaires": [
+        "ischio-jambiers",
+        "gainage"
+      ],
+      "materiel": [
+        "barre",
+        "banc"
+      ],
+      "difficulte": 2,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Omoplates sur le banc, barre sur les hanches, tibias verticaux en haut, monte en serrant fort les fesses, menton rentré.",
+      "erreur": "Cambrer en haut ou pousser avec les lombaires : le buste reste légèrement incliné.",
+      "isolation": true,
+      "existant": "hipthrust",
+      "repos_s": 90,
+      "demo": "Hip thrust"
+    },
+    {
+      "id": "kickback",
+      "nom": "Kickback à la poulie",
+      "compartiment": "isolation",
+      "muscle": "fessiers",
+      "secondaires": [],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "hipthrust",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": true,
+      "consigne": "Chevillère à la poulie basse, buste légèrement penché, pousse la jambe vers l'arrière en serrant la fesse.",
+      "erreur": "Cambrer le dos pour monter la jambe plus haut.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Kickback à la poulie"
+    },
+    {
+      "id": "abduction",
+      "nom": "Abduction machine",
+      "compartiment": "isolation",
+      "muscle": "abducteurs",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Buste légèrement penché en avant, écarte les genoux contre la résistance, tiens une seconde en fin de course.",
+      "erreur": "Aller vite en laissant la machine revenir seule.",
+      "isolation": true,
+      "existant": "abduction",
+      "repos_s": 90,
+      "demo": "Abduction machine"
+    },
+    {
+      "id": "abduction_elastique",
+      "nom": "Abduction à l'élastique",
+      "compartiment": "isolation",
+      "muscle": "abducteurs",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "abduction",
+      "reps": [
+        15,
+        20
+      ],
+      "unilateral": true,
+      "consigne": "Élastique au-dessus des genoux, debout ou en pas latéraux, écarte contre la résistance sans bouger le buste.",
+      "erreur": "Buste qui se penche pour aider.",
+      "isolation": true,
+      "repos_s": 60,
+      "demo": "Abduction à l'élastique"
+    },
+    {
+      "id": "clamshell",
+      "nom": "Clamshell (coquillage)",
+      "compartiment": "isolation",
+      "muscle": "abducteurs",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "poids du corps",
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "abduction",
+      "reps": [
+        15,
+        20
+      ],
+      "unilateral": true,
+      "consigne": "Sur le côté genoux pliés pieds joints, ouvre le genou du dessus sans que le bassin bascule en arrière.",
+      "erreur": "Bassin qui roule vers l'arrière pour ouvrir plus grand.",
+      "isolation": true,
+      "repos_s": 60,
+      "demo": "Clamshell (coquillage)"
+    },
+    {
+      "id": "legcurl",
+      "nom": "Leg curl allongé",
+      "compartiment": "isolation",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "mollets"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Hanches plaquées sur le banc, ramène les talons vers les fesses, redescends lentement.",
+      "erreur": "Décoller les hanches pour tricher sur la fin.",
+      "isolation": true,
+      "existant": "legcurl",
+      "approximatif": "sous-muscle « ischio-jambiers » ajouté à la liste des isolations",
+      "repos_s": 90,
+      "demo": "Leg curl allongé"
+    },
+    {
+      "id": "legcurl_ballon",
+      "nom": "Leg curl au ballon",
+      "compartiment": "isolation",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "fessiers",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "legcurl",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Sur le dos talons sur un ballon, hanches décollées, ramène le ballon vers les fesses sans laisser les hanches tomber.",
+      "erreur": "Hanches qui redescendent pendant le mouvement.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Leg curl au ballon"
+    },
+    {
+      "id": "nordic",
+      "nom": "Nordic curl",
+      "compartiment": "isolation",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        3,
+        6
+      ],
+      "unilateral": false,
+      "consigne": "Genoux au sol chevilles bloquées, laisse-toi descendre le plus lentement possible corps droit, remonte en t'aidant des mains.",
+      "erreur": "Casser les hanches pour ralentir : le corps reste d'une pièce.",
+      "isolation": true,
+      "repos_s": 180,
+      "demo": "Nordic curl"
+    },
+    {
+      "id": "curl",
+      "nom": "Curl biceps haltères",
+      "compartiment": "isolation",
+      "muscle": "biceps",
+      "secondaires": [
+        "avant-bras"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Coudes fixes le long du corps, monte les haltères en tournant les paumes vers le haut, descends contrôlé.",
+      "erreur": "Balancer le buste pour monter la charge.",
+      "isolation": true,
+      "existant": "curl",
+      "repos_s": 90,
+      "demo": "Curl biceps haltères"
+    },
+    {
+      "id": "curl_barre",
+      "nom": "Curl barre",
+      "compartiment": "isolation",
+      "muscle": "biceps",
+      "secondaires": [
+        "avant-bras"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 2,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Prise largeur d'épaules, coudes collés aux flancs, monte sans avancer les coudes, descends jusqu'aux bras tendus.",
+      "erreur": "Coudes qui partent vers l'avant en haut du mouvement.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Curl barre"
+    },
+    {
+      "id": "curl_marteau",
+      "nom": "Curl marteau",
+      "compartiment": "isolation",
+      "muscle": "biceps",
+      "secondaires": [
+        "avant-bras",
+        "brachial"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "curl",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Paumes face à face tout le mouvement, coudes fixes, monte et descends contrôlé.",
+      "erreur": "Tourner les poignets en haut.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Curl marteau"
+    },
+    {
+      "id": "curl_poulie",
+      "nom": "Curl à la poulie basse",
+      "compartiment": "isolation",
+      "muscle": "biceps",
+      "secondaires": [
+        "avant-bras"
+      ],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "curl",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Face à la poulie, coudes fixes, tension constante, contracte en haut une seconde.",
+      "erreur": "Reculer les coudes en montant.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Curl à la poulie basse"
+    },
+    {
+      "id": "triceps",
+      "nom": "Extension triceps à la poulie",
+      "compartiment": "isolation",
+      "muscle": "triceps",
+      "secondaires": [],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Coudes collés aux flancs, pousse la corde ou la barre vers le bas jusqu'aux bras tendus, remonte contrôlé.",
+      "erreur": "Coudes qui s'écartent ou épaules qui participent.",
+      "isolation": true,
+      "existant": "triceps",
+      "repos_s": 90,
+      "demo": "Extension triceps à la poulie"
+    },
+    {
+      "id": "dips_banc",
+      "nom": "Dips sur banc",
+      "compartiment": "isolation",
+      "muscle": "triceps",
+      "secondaires": [
+        "épaules",
+        "pectoraux"
+      ],
+      "materiel": [
+        "poids du corps",
+        "banc"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "triceps",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Mains sur le bord du banc, descends jusqu'à 90° au coude en gardant le dos près du banc, pousse.",
+      "erreur": "Descendre trop bas : douleur à l'avant de l'épaule.",
+      "isolation": true,
+      "existant": "dips_banc",
+      "repos_s": 90,
+      "demo": "Dips sur banc"
+    },
+    {
+      "id": "extension_nuque",
+      "nom": "Extension triceps au-dessus de la tête",
+      "compartiment": "isolation",
+      "muscle": "triceps",
+      "secondaires": [],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "triceps",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Un haltère à deux mains au-dessus de la tête, descends derrière la nuque coudes serrés, remonte.",
+      "erreur": "Coudes qui s'ouvrent sur les côtés.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Extension triceps au-dessus de la tête"
+    },
+    {
+      "id": "barre_front",
+      "nom": "Barre au front",
+      "compartiment": "isolation",
+      "muscle": "triceps",
+      "secondaires": [],
+      "materiel": [
+        "barre",
+        "haltères"
+      ],
+      "difficulte": 2,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Allongé, barre au-dessus du front, plie les coudes seulement pour descendre la barre vers le front, remonte.",
+      "erreur": "Bouger les épaules : seuls les coudes travaillent.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Barre au front"
+    },
+    {
+      "id": "lateral",
+      "nom": "Élévations latérales",
+      "compartiment": "isolation",
+      "muscle": "épaules latérales",
+      "secondaires": [
+        "trapèzes"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Haltères le long du corps, monte les bras sur les côtés jusqu'à l'horizontale, coudes à peine fléchis, descends lentement.",
+      "erreur": "Hausser les épaules et balancer le buste : allège.",
+      "isolation": true,
+      "existant": "lateral",
+      "repos_s": 90,
+      "demo": "Élévations latérales"
+    },
+    {
+      "id": "lateral_poulie",
+      "nom": "Élévation latérale à la poulie",
+      "compartiment": "isolation",
+      "muscle": "épaules latérales",
+      "secondaires": [],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "lateral",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": true,
+      "consigne": "Poulie basse de l'autre côté du corps, monte le bras sur le côté jusqu'à l'horizontale, tension constante.",
+      "erreur": "Monter au-dessus de l'horizontale.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Élévation latérale à la poulie"
+    },
+    {
+      "id": "lateral_machine",
+      "nom": "Élévation latérale machine",
+      "compartiment": "isolation",
+      "muscle": "épaules latérales",
+      "secondaires": [],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "lateral",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Coussinets contre les bras, monte jusqu'à l'horizontale sans hausser les épaules.",
+      "erreur": "Charge trop lourde et amplitude qui rétrécit.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Élévation latérale machine"
+    },
+    {
+      "id": "oiseau",
+      "nom": "Oiseau (élévations arrière)",
+      "compartiment": "isolation",
+      "muscle": "arrière d'épaule",
+      "secondaires": [
+        "haut du dos"
+      ],
+      "materiel": [
+        "haltères"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "tirage_ela",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Buste penché à l'horizontale, monte les haltères sur les côtés en serrant les omoplates, coudes à peine fléchis.",
+      "erreur": "Se redresser en montant les bras.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Oiseau (élévations arrière)"
+    },
+    {
+      "id": "tirage_ela",
+      "nom": "Face pull (poulie / élastique)",
+      "compartiment": "isolation",
+      "muscle": "arrière d'épaule",
+      "secondaires": [
+        "haut du dos",
+        "rotateurs"
+      ],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 1,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Corde à hauteur des yeux, tire vers le visage en écartant les mains, coudes hauts, serre les omoplates en fin de course.",
+      "erreur": "Tirer vers la poitrine coudes bas : ça devient un rowing.",
+      "isolation": true,
+      "existant": "tirage_ela",
+      "approximatif": "sous-muscle « arrière d'épaule » ajouté à la liste des isolations",
+      "repos_s": 90,
+      "demo": "Face pull (poulie / élastique)"
+    },
+    {
+      "id": "mollets",
+      "nom": "Mollets debout (machine)",
+      "compartiment": "isolation",
+      "muscle": "mollets",
+      "secondaires": [],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "phare",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Jambes tendues, monte sur la pointe le plus haut possible, tiens une seconde, redescends jusqu'à l'étirement complet.",
+      "erreur": "Répétitions courtes et rebondies.",
+      "isolation": true,
+      "existant": "mollets",
+      "repos_s": 90,
+      "demo": "Mollets debout (machine)"
+    },
+    {
+      "id": "mollets_marche",
+      "nom": "Mollets sur une marche",
+      "compartiment": "isolation",
+      "muscle": "mollets",
+      "secondaires": [],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "mollets",
+      "reps": [
+        15,
+        20
+      ],
+      "unilateral": false,
+      "consigne": "Avant-pieds sur le bord d'une marche, descends le talon sous le niveau, monte sur la pointe, tiens en haut.",
+      "erreur": "Aller vite sans passer par l'étirement en bas.",
+      "isolation": true,
+      "existant": "mollets_marche",
+      "repos_s": 60,
+      "demo": "Mollets sur une marche"
+    },
+    {
+      "id": "mollets_assis",
+      "nom": "Mollets assis (machine)",
+      "compartiment": "isolation",
+      "muscle": "mollets",
+      "secondaires": [],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "mollets",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Genoux sous le coussin, amplitude complète de l'étirement à la pointe, tiens en haut.",
+      "erreur": "Rebondir en bas.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Mollets assis (machine)"
+    },
+    {
+      "id": "mollets_presse",
+      "nom": "Mollets à la presse",
+      "compartiment": "isolation",
+      "muscle": "mollets",
+      "secondaires": [],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "mollets",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Avant-pieds en bas du plateau, jambes tendues, pousse sur la pointe puis laisse le talon descendre.",
+      "erreur": "Plier les genoux pour aider.",
+      "isolation": true,
+      "repos_s": 90,
+      "demo": "Mollets à la presse"
+    },
+    {
+      "id": "marche_inclinee",
+      "nom": "Marche inclinée",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "tapis / machine cardio"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 1200,
+      "unilateral": false,
+      "consigne": "Tapis à 8-12 % d'inclinaison, allure où tu peux encore parler par phrases courtes, sans tenir les barres.",
+      "erreur": "Se tenir aux barres : l'inclinaison ne sert plus à rien.",
+      "existant": "Marche inclinée",
+      "demo": "Marche inclinée",
+      "reps": null
+    },
+    {
+      "id": "escaliers",
+      "nom": "Escaliers / stairmaster",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "tapis / machine cardio"
+      ],
+      "difficulte": 2,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 900,
+      "unilateral": false,
+      "consigne": "Pied entier sur la marche, buste droit, allure régulière.",
+      "erreur": "Se pencher sur la console.",
+      "existant": "Escaliers / stairmaster",
+      "demo": "Escaliers / stairmaster",
+      "reps": null
+    },
+    {
+      "id": "rameur",
+      "nom": "Rameur",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "tapis / machine cardio"
+      ],
+      "difficulte": 2,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 900,
+      "unilateral": false,
+      "consigne": "Jambes d'abord, puis buste, puis bras ; retour dans l'ordre inverse. Cadence 24-28 coups/min.",
+      "erreur": "Tirer avec les bras avant d'avoir poussé les jambes.",
+      "existant": "Rameur",
+      "demo": "Rameur",
+      "reps": null
+    },
+    {
+      "id": "velo",
+      "nom": "Vélo",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "tapis / machine cardio"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 1200,
+      "unilateral": false,
+      "consigne": "Selle à hauteur de hanche, cadence 80-90 tours/min, résistance qui laisse respirer.",
+      "erreur": "Selle trop basse : les genoux souffrent.",
+      "existant": "Vélo",
+      "demo": "Vélo",
+      "reps": null
+    },
+    {
+      "id": "corde",
+      "nom": "Corde à sauter",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "aucun"
+      ],
+      "difficulte": 2,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 480,
+      "unilateral": false,
+      "consigne": "Petits sauts sur l'avant-pied, coudes près du corps, la corde tourne avec les poignets.",
+      "erreur": "Sauter trop haut et atterrir à plat.",
+      "existant": "Corde à sauter",
+      "demo": "Corde à sauter",
+      "reps": null
+    },
+    {
+      "id": "elliptique",
+      "nom": "Elliptique",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "tapis / machine cardio"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 1200,
+      "unilateral": false,
+      "consigne": "Buste droit, pousse et tire avec les bras, allure où tu peux parler.",
+      "erreur": "S'affaler sur les poignées.",
+      "demo": "Elliptique",
+      "reps": null
+    },
+    {
+      "id": "course_douce",
+      "nom": "Course douce",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "aucun",
+        "tapis / machine cardio"
+      ],
+      "difficulte": 2,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 1200,
+      "unilateral": false,
+      "consigne": "Allure de conversation, foulée courte, atterrissage sous le bassin.",
+      "erreur": "Partir trop vite et finir en marchant.",
+      "demo": "Course douce",
+      "reps": null
+    },
+    {
+      "id": "burpees",
+      "nom": "Burpees",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "aucun"
+      ],
+      "difficulte": 2,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 300,
+      "unilateral": false,
+      "consigne": "Descends en planche, pompe facultative, ramène les pieds, saute. Rythme régulier plutôt que vitesse.",
+      "erreur": "Dos qui s'arrondit quand les pieds reviennent.",
+      "existant": "burpees",
+      "approximatif": "conditionnement au poids du corps : rangé en cardio",
+      "demo": "Burpees",
+      "reps": null
+    },
+    {
+      "id": "montees",
+      "nom": "Montées de genoux",
+      "compartiment": "cardio_mobilite",
+      "type": "cardio",
+      "muscle": "cardio",
+      "secondaires": [],
+      "materiel": [
+        "aucun"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 180,
+      "unilateral": false,
+      "consigne": "Sur place, genoux à hauteur de hanche, bras qui accompagnent, sur l'avant-pied.",
+      "erreur": "Se pencher en arrière.",
+      "existant": "montees",
+      "approximatif": "conditionnement au poids du corps : rangé en cardio",
+      "demo": "Montées de genoux",
+      "reps": null
+    },
+    {
+      "id": "mobilite_hanches",
+      "nom": "Mobilité hanches (90/90)",
+      "compartiment": "cardio_mobilite",
+      "type": "mobilite",
+      "muscle": "hanches",
+      "secondaires": [],
+      "materiel": [
+        "aucun"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 240,
+      "unilateral": false,
+      "consigne": "Assis, une jambe à 90° devant, l'autre à 90° sur le côté, bascule d'un côté à l'autre en gardant le buste droit.",
+      "erreur": "Forcer avec les mains : on va où les hanches vont.",
+      "demo": "Mobilité hanches (90/90)",
+      "reps": null
+    },
+    {
+      "id": "flechisseurs",
+      "nom": "Étirement fléchisseurs de hanche (fente basse)",
+      "compartiment": "cardio_mobilite",
+      "type": "mobilite",
+      "muscle": "hanches",
+      "secondaires": [],
+      "materiel": [
+        "aucun"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 180,
+      "unilateral": false,
+      "consigne": "Genou arrière au sol, avance les hanches en serrant la fesse arrière, buste droit, 45 s par côté.",
+      "erreur": "Cambrer le dos au lieu d'avancer la hanche.",
+      "demo": "Étirement fléchisseurs de hanche (fente basse)",
+      "reps": null
+    },
+    {
+      "id": "ischios_etirement",
+      "nom": "Étirement ischio-jambiers",
+      "compartiment": "cardio_mobilite",
+      "type": "mobilite",
+      "muscle": "ischio-jambiers",
+      "secondaires": [],
+      "materiel": [
+        "aucun"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 180,
+      "unilateral": false,
+      "consigne": "Talon sur un support bas, jambe tendue, penche-toi depuis les hanches dos plat jusqu'à la tension, respire.",
+      "erreur": "Arrondir le dos pour toucher le pied.",
+      "demo": "Étirement ischio-jambiers",
+      "reps": null
+    },
+    {
+      "id": "ouverture_epaules",
+      "nom": "Ouverture d'épaules (bâton ou élastique)",
+      "compartiment": "cardio_mobilite",
+      "type": "mobilite",
+      "muscle": "épaules",
+      "secondaires": [],
+      "materiel": [
+        "élastique",
+        "aucun"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 180,
+      "unilateral": false,
+      "consigne": "Bâton ou élastique tenu large, passe-le devant-derrière bras tendus, lentement.",
+      "erreur": "Prise trop étroite : élargis.",
+      "demo": "Ouverture d'épaules (bâton ou élastique)",
+      "reps": null
+    },
+    {
+      "id": "thoracique",
+      "nom": "Extension thoracique au rouleau",
+      "compartiment": "cardio_mobilite",
+      "type": "mobilite",
+      "muscle": "dos (thoracique)",
+      "secondaires": [],
+      "materiel": [
+        "rouleau"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 180,
+      "unilateral": false,
+      "consigne": "Rouleau sous le haut du dos, mains derrière la tête, laisse le haut du dos s'étendre par-dessus, change de hauteur.",
+      "erreur": "Cambrer les lombaires : le bassin reste au sol.",
+      "demo": "Extension thoracique au rouleau",
+      "reps": null
+    },
+    {
+      "id": "chat_vache",
+      "nom": "Chat-vache",
+      "compartiment": "cardio_mobilite",
+      "type": "mobilite",
+      "muscle": "colonne",
+      "secondaires": [],
+      "materiel": [
+        "aucun"
+      ],
+      "difficulte": 1,
+      "echelle": null,
+      "monte_vers": null,
+      "duree_s": 120,
+      "unilateral": false,
+      "consigne": "À quatre pattes, arrondis le dos en expirant puis creuse-le en inspirant, lentement.",
+      "erreur": "Aller vite : c'est le souffle qui donne le rythme.",
+      "demo": "Chat-vache",
+      "reps": null
+    }
+  ]
+}
