@@ -31,7 +31,10 @@ lecture, pas de la structure de l'écran.
 - **PRIORITÉ HAUTE — Générateur incohérent** : exercices hors groupe musculaire
   (hip thrust dans poitrine/triceps), et même structure à 3 et 6 séances par
   semaine. Programme de référence fait main disponible (PDF A/B/C/D + gainage
-  + cardio). Chantier de conception à faire avec Léo.
+  + cardio). Chantier de conception à faire avec Léo — cadrage acté dans
+  `DECISIONS.md`, « Chantier Programmes — septembre 2026 ».
+- Relecture par un coach diplômé — prérequis avant ouverture hors du cercle
+  proche.
 
 ## Générateur de séances
 
@@ -42,6 +45,9 @@ lecture, pas de la structure de l'écran.
 
 ## Onglet Progrès
 
+- **PRIORITÉ HAUTE — Graphique d'évolution de la charge par exercice**, façon
+  balance connectée. Données déjà enregistrées par série : affichage
+  uniquement.
 - Appui long sur « tes preuves » / « tes badges » / carnet pour réorganiser
   les sections (haut/bas)
 
@@ -120,6 +126,9 @@ XP, pas de la structure de l'onglet.
 
 ## Idées business
 
+- Programmes signature de sportifs ou créateurs connus (templates nommés).
+  Obstacle : leurs programmes sont leur produit commercial — nécessite un
+  partenariat. Piste : le créateur comme coach pro de ses abonnés.
 - Sponsoring / réductions chez des partenaires comme récompenses. Risque de
   triche à traiter (validation coach, plafonds, preuve photo).
 
