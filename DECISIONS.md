@@ -91,6 +91,21 @@ montées de genoux en cardio ; « Développé haltères » des templates gardé 
 poussée verticale assis — à corriger en une ligne si un programme prouve le
 contraire.
 
+### Affichage des textes d'exercice
+
+- **Consigne visible dès l'exercice déployé**, une ligne sous le nom. **Erreur
+  fréquente à la demande** (un tap), jamais imposée. **Les deux en grand dans
+  la vue démo.** → La consigne doit être actionnable (ce qu'on fait) ; l'erreur
+  fréquente doit décrire ce qu'on voit faire de travers (ce qu'on corrige).
+
+### Arbitrages de relecture de la banque (étape 1)
+
+Validés par Léo : ischio-jambiers et arrière d'épaule ajoutés comme
+sous-muscles des isolations ; superman et extension lombaire rangés en hinge ;
+burpees et montées de genoux en cardio ; « développé haltères » des templates
+rangé en poussée verticale assis — à corriger en une ligne si un programme
+prouve le contraire.
+
 ### Squelettes par fréquence
 
 | Séances / semaine | Squelette |
