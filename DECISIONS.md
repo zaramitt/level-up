@@ -65,6 +65,31 @@ poitrine, même structure à 3 et à 6 séances par semaine.
     questions chaînées à l'onboarding : le sport, puis « pour progresser
     dans ce sport ou pour toi ? ».
 11. **Objectif = coloration des exercices** dans les cases du squelette.
+12. **Remplacement d'exercice** (« pas cette machine », « générer une
+    variante ») : candidats du **même compartiment ET même muscle principal**
+    d'abord, triés par difficulté la plus proche et matériel disponible. Si
+    aucun candidat : même muscle principal dans un autre compartiment,
+    signalé comme approximatif (« même muscle, geste différent »). → Deux
+    exercices d'un même compartiment travaillent les mêmes muscles par le
+    même geste : le compartiment est le critère d'interchangeabilité, le
+    muscle est la vérification.
+
+### Affichage des textes d'exercice
+
+- **Consigne visible dès l'exercice déployé**, une ligne sous le nom.
+- **Erreur fréquente à la demande** (un tap), jamais imposée.
+- **Les deux en grand dans la vue démo.**
+- La consigne doit être **actionnable** ; l'erreur fréquente doit **décrire ce
+  qu'on voit faire de travers**.
+
+### Banque d'exercices — arbitrages de relecture (étape 1)
+
+Relecture de Léo sans changement de contenu. Validés : ischio-jambiers et
+arrière d'épaule ajoutés comme sous-muscles des isolations ; superman et
+extension lombaire rangés en hinge (charnière sans charge) ; burpees et
+montées de genoux en cardio ; « Développé haltères » des templates gardé en
+poussée verticale assis — à corriger en une ligne si un programme prouve le
+contraire.
 
 ### Squelettes par fréquence
 
