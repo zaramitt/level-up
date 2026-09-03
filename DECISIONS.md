@@ -91,6 +91,74 @@ montées de genoux en cardio ; « Développé haltères » des templates gardé 
 poussée verticale assis — à corriger en une ligne si un programme prouve le
 contraire.
 
+### Moteur de génération — arbitrages de relecture (étape 2)
+
+Relecture de `MOTEUR.md` par Léo : les règles tenaient, la personnalisation
+était trop faible (quatre programmes qui se ressemblaient). Décisions :
+
+**L'objectif se voit dans les exercices.**
+- Objectif fessiers : hip thrust obligatoire dans chaque séance qui admet
+  les fessiers (c'est le phare), abductions en plus. L'obligatoire prend une
+  case d'isolation ; le suivant occupe une **case supplémentaire** ajoutée
+  seulement si le temps le permet (retirée en premier par la compression).
+  C'est la lecture retenue de la règle 11 : l'objectif colore les cases, et
+  peut en ajouter une quand il reste du temps. Au niveau 1 ou sans barre, le
+  hip thrust est remplacé selon la règle 12 (hip thrust machine, pont…) et
+  le moteur le dit.
+- Objectif force : gros mouvements à **3-6 reps, 180 s de repos**, 5 séries
+  sur les phares au niveau 3 (4 au niveau 2), **au plus une isolation par
+  muscle** par séance (dur en force, simple pénalité sinon), et un exercice
+  de moins au minimum de la règle 7 — les séries lourdes prennent la place.
+- L'objectif et le sport pèsent autant l'un que l'autre, et bien plus lourd
+  que le confort du choix (poids +40 sur un muscle prioritaire).
+
+**Le niveau se voit aussi.**
+- Niveau 3 : ni difficulté 1 ni **régression** (pompes genoux, traction
+  négative, pistol assisté — marquées dans la banque), sauf absence totale
+  d'alternative (mollets, abductions, élévations latérales n'existent qu'en
+  difficulté 1 : elles restent).
+- Niveau 1 : pas d'exercice marqué **coordination** (dead bug) ; planche
+  genoux ou bird-dog (ajouté à la banque) à la place.
+- Une variation ne descend jamais de deux crans de difficulté (règle 12).
+- Un **accessoire** (extension lombaire, superman, chaise, pull-through,
+  marqués dans la banque) n'ouvre jamais une séance et ne remplit une case de
+  polyarticulaire que faute de vrai mouvement ; il est alors rangé après.
+
+**Le sport se voit.** Pour un sport avec intention de progresser : une
+seconde case unilatérale au bas du corps (bulgares, step-up), les isolations
+du haut vont aux épaules plutôt qu'aux bras, un gainage anti-rotation
+(planche latérale, Pallof) en plus, et des exercices favoris par sport. Une
+entrée **jours de sport** : jamais de séance ce jour-là, séances jambes
+loin de la sortie longue (la veille et le lendemain pénalisés).
+
+**Placement** : l'espacement l'emporte sur les blocs collés (4× = lundi,
+mardi, jeudi, vendredi ; 3× = lundi, mercredi, vendredi), la semaine avant
+le week-end, et le gainage tourne d'une séance à l'autre.
+
+**Volume (règle 3), les cinq arbitrages :**
+1. À 1-2 séances/semaine, l'objectif est l'entretien, pas la progression
+   maximale ; le moteur le dit honnêtement (« programme d'entretien »).
+2. Le **plafond** ne compte que les séries **directes** ; les secondaires
+   (comptés ½) restent dans le **minimum**. Motif : le risque de
+   surentraînement vient des séries directes ; un dos rempli par les tirages
+   est bien travaillé, et c'est souhaité. L'arrière d'épaule reste « dos »
+   pour le placement (jour pull) mais ne compte pas dans son plafond.
+   Un groupe sous le minimum gagne une série sur son polyarticulaire
+   principal tant que la séance tient dans le temps ; la seconde case
+   unilatérale du sport peut descendre à 2 séries si le plafond l'exige.
+3. Full body 3× à 60 min au niveau 2 : priorité au temps, avertissement
+   sur le volume. Le programme tient toujours dans le temps donné.
+4. 30 min : compression avec l'étiquette « comprimé », cohérent avec
+   « Adapter ma séance » — une séance courte existe au lieu d'être sautée.
+5. Quatrième matériel **« rien du tout »** (maison sans équipement) : ni
+   barre de traction, ni dips, ni élastique ; le rowing inversé se fait sous
+   une table solide ; pas de tirage vertical possible, et le moteur le dit.
+   « Poids du corps » garde l'hypothèse barre de traction + dips.
+
+**Durée de séance** : le moteur accepte n'importe quel nombre entier de
+minutes (47, 33), pas seulement des multiples de 5. L'interface (étape 4)
+permettra de saisir la durée exacte au clavier, en plus d'un curseur.
+
 ### Squelettes par fréquence
 
 | Séances / semaine | Squelette |

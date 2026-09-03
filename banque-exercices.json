@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "genere": "programmes étape 1",
+  "genere": "programmes étape 1 (marqueurs étape 2 : accessoire, regression, coordination)",
   "regles": {
     "repos": "≤6 reps → 180 s ; 8-12 → 120 s ; 12+ et isolation → 60-90 s (règle 5)",
     "echelle": "simple → phare → avancé ; monte_vers = exercice proposé après plusieurs semaines stables (règle 9)",
@@ -89,6 +89,7 @@
       "erreur": "Se laisser glisser plus bas que 90° ou décoller les talons.",
       "duree_s": 40,
       "existant": "chaise",
+      "accessoire": true,
       "demo": "Chaise contre le mur"
     },
     {
@@ -295,6 +296,7 @@
       "consigne": "Allongé sur le ventre, décolle bras et jambes de quelques centimètres en serrant les fesses, tiens une seconde.",
       "erreur": "Cambrer le cou en regardant devant : regard au sol.",
       "existant": "superman",
+      "accessoire": true,
       "approximatif": "chaîne postérieure au sol : geste de hinge sans charge",
       "repos_s": 120,
       "demo": "Superman au sol"
@@ -323,6 +325,7 @@
       "consigne": "Bassin calé sur le coussin, descends en pliant la hanche pas le dos, remonte jusqu'à l'alignement — pas au-delà.",
       "erreur": "Hyperextension en haut : on s'arrête aligné.",
       "existant": "lombaire",
+      "accessoire": true,
       "repos_s": 90,
       "demo": "Extension lombaire 45°"
     },
@@ -479,6 +482,7 @@
       "unilateral": false,
       "consigne": "Élastique ancré bas derrière toi tenu entre les jambes, recule les hanches puis ouvre-les en serrant les fesses.",
       "erreur": "Se redresser avec le dos au lieu de pousser les hanches vers l'avant.",
+      "accessoire": true,
       "repos_s": 90,
       "demo": "Pull-through à l'élastique"
     },
@@ -533,6 +537,7 @@
       "consigne": "Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste.",
       "erreur": "Tête qui plonge en premier et bassin qui reste en l'air.",
       "existant": "pompes",
+      "regression": true,
       "repos_s": 120,
       "demo": "Pompes (genoux ok)"
     },
@@ -839,7 +844,7 @@
         12
       ],
       "unilateral": false,
-      "consigne": "Suspendu sous une barre basse corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates.",
+      "consigne": "Suspendu sous une barre basse (ou une table solide) corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates.",
       "erreur": "Bassin qui tombe : serre les fesses, plus la position est verticale, plus c'est facile.",
       "repos_s": 120,
       "demo": "Rowing inversé"
@@ -1081,6 +1086,7 @@
       "unilateral": false,
       "consigne": "Monte avec un saut ou un banc, puis descends le plus lentement possible (3 à 5 secondes) jusqu'aux bras tendus.",
       "erreur": "Se laisser tomber sur la fin : contrôle jusqu'en bas.",
+      "regression": true,
       "repos_s": 180,
       "demo": "Traction négative"
     },
@@ -1323,6 +1329,7 @@
       "unilateral": true,
       "consigne": "Tenu à un support ou un élastique, descends sur une jambe l'autre tendue devant, remonte sans t'aider des bras.",
       "erreur": "Genou qui part vers l'intérieur ou talon qui décolle.",
+      "regression": true,
       "repos_s": 180,
       "demo": "Pistol squat assisté"
     },
@@ -1371,8 +1378,34 @@
       "consigne": "Sur le dos, bas du dos plaqué au sol, allonge lentement bras et jambe opposés sans que le dos se décolle.",
       "erreur": "Le bas du dos qui se cambre pendant l'allongement.",
       "existant": "deadbug",
+      "coordination": true,
       "repos_s": 120,
       "demo": "Dead bug"
+    },
+    {
+      "id": "bird_dog",
+      "nom": "Bird-dog",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "fessiers",
+        "lombaires"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "planche_laterale",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens.",
+      "erreur": "Le bassin qui tourne ou le dos qui se creuse : le buste reste une table.",
+      "repos_s": 120,
+      "demo": "Bird-dog"
     },
     {
       "id": "planche",

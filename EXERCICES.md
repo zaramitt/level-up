@@ -1,6 +1,6 @@
 # Banque d'exercices — étape 1 du chantier Programmes
 
-Document de relecture. La source est `banque-exercices.json` (un seul fichier, 99 exercices, 10 compartiments) ; ce document en est la vue lisible, régénérée à partir de la même source.
+Document de relecture. La source est `banque-exercices.json` (un seul fichier, 100 exercices, 10 compartiments) ; ce document en est la vue lisible, régénérée à partir de la même source.
 
 Chaque exercice porte : compartiment, muscle principal et secondaires, matériel, difficulté (1 débutant / 2 intermédiaire / 3 avancé), place dans l'échelle (simple → **phare** → avancé, avec l'exercice vers lequel on « monte »), fourchette de reps et repos par défaut (règle 5), unilatéral ou non, une consigne et une erreur fréquente, et sa démo (recherche par nom, système existant).
 
@@ -60,7 +60,7 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 
 | Exercice | Muscle principal · secondaires | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
 |---|---|---|---|---|---|---|---|
-| Rowing inversé | dos (grand dorsal) · biceps, trapèzes, gainage | poids du corps, barre | 1 | simple → Rowing haltère un bras | 8-12 reps · repos 120 s | Suspendu sous une barre basse corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates. | Bassin qui tombe : serre les fesses, plus la position est verticale, plus c'est facile. |
+| Rowing inversé | dos (grand dorsal) · biceps, trapèzes, gainage | poids du corps, barre | 1 | simple → Rowing haltère un bras | 8-12 reps · repos 120 s | Suspendu sous une barre basse (ou une table solide) corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates. | Bassin qui tombe : serre les fesses, plus la position est verticale, plus c'est facile. |
 | Rowing à l'élastique | dos (grand dorsal) · biceps, trapèzes | élastique | 1 | simple → Tirage horizontal (poulie / machine) | 12-15 reps · repos 90 s | Assis ou debout, tire les coudes vers l'arrière le long du corps, omoplates qui se rapprochent en fin de mouvement. | Tirer avec les bras seulement : les coudes passent derrière le buste grâce aux omoplates. |
 | Tirage horizontal (poulie / machine) | dos (grand dorsal) · biceps, trapèzes, arrière d'épaule | poulie, machine | 1 | simple → Rowing barre | 8-12 reps · repos 120 s | Buste droit et stable, tire la poignée vers le nombril coudes le long du corps, laisse les omoplates s'ouvrir en revenant. | Se balancer d'avant en arrière avec le buste pour tirer plus lourd. |
 | Rowing haltère un bras (uni.) | dos (grand dorsal) · biceps, trapèzes | haltères, banc | 1 | simple → Rowing barre | 8-12 reps · repos 120 s | Main et genou sur le banc, dos plat, tire l'haltère vers la hanche coude près du corps, redescends jusqu'à l'étirement. | Tourner le buste pour monter l'haltère plus haut. |
@@ -96,6 +96,7 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 |---|---|---|---|---|---|---|---|
 | Planche sur les genoux | abdominaux · fessiers, épaules | poids du corps | 1 | simple → Planche | 30 s | Coudes sous les épaules, genoux au sol, ligne droite des genoux à la tête, ventre rentré. | Fesses qui remontent pour soulager : serre-les. |
 | Dead bug (uni.) | abdominaux · fléchisseurs de hanche | poids du corps | 1 | simple → Hollow hold | 8-12 reps · repos 120 s | Sur le dos, bas du dos plaqué au sol, allonge lentement bras et jambe opposés sans que le dos se décolle. | Le bas du dos qui se cambre pendant l'allongement. |
+| Bird-dog (uni.) | abdominaux · fessiers, lombaires | poids du corps | 1 | simple → Planche latérale | 8-12 reps · repos 120 s | À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens. | Le bassin qui tourne ou le dos qui se creuse : le buste reste une table. |
 | Planche | abdominaux · fessiers, épaules, lombaires | poids du corps | 2 | **phare** → Planche latérale | 40 s | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. | Bassin qui s'affaisse ou fesses en l'air : on cherche la ligne droite. |
 | Planche latérale (uni.) | obliques · fessiers, épaules | poids du corps | 2 | simple → Roulette abdominale (ab wheel) | 30 s | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. | Hanche qui tombe vers le sol. |
 | Hollow hold | abdominaux · fléchisseurs de hanche | poids du corps | 2 | simple → Relevés de jambes | 20 s | Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens. | Bas du dos qui se décolle : monte un peu les jambes. |
@@ -254,7 +255,13 @@ Les 45 exercices existants (36 des programmes et du catalogue, 4 de gainage, 5 c
 | `Vélo` | Vélo (`velo`) | Cardio et mobilité |
 | `Corde à sauter` | Corde à sauter (`corde`) | Cardio et mobilité |
 
-### Rangés de façon approximative — tranchés à la relecture (voir DECISIONS.md)
+## Marqueurs lus par le moteur (étape 2)
+
+- **accessoire** — jamais en ouverture de séance, et choisi seulement faute de mouvement principal : Chaise contre le mur, Superman au sol, Extension lombaire 45°, Pull-through à l'élastique.
+- **régression** — exclu au niveau 3 sauf absence totale d'alternative, comme les difficultés 1 : Pompes (genoux ok), Traction négative, Pistol squat assisté.
+- **coordination** — exclu au niveau 1 : Dead bug.
+
+### Rangés de façon approximative — à trancher
 
 - **Superman au sol** (`superman`) : chaîne postérieure au sol : geste de hinge sans charge
 - **Développé haltères assis** (`dev`) : « Développé haltères » des templates : rangé en poussée verticale (épaules). Si c'était un développé couché haltères, le déplacer vers dc_halteres.
