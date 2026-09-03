@@ -1,6 +1,6 @@
 # Banque d'exercices — étape 1 du chantier Programmes
 
-Document de relecture. La source est `banque-exercices.json` (un seul fichier, 116 exercices, 10 compartiments) ; ce document en est la vue lisible, régénérée à partir de la même source.
+Document de relecture. La source est `banque-exercices.json` (un seul fichier, 117 exercices, 10 compartiments) ; ce document en est la vue lisible, régénérée à partir de la même source.
 
 Chaque exercice porte : compartiment, muscle principal et secondaires, matériel (une liste d'**alternatives** : n'importe laquelle suffit ; « a + b » est une combinaison obligatoire, comme barre + banc), difficulté (1 débutant / 2 intermédiaire / 3 avancé), place dans l'échelle (simple → **phare** → avancé, avec l'exercice vers lequel on « monte »), fourchette de reps et repos par défaut (règle 5), unilatéral ou non, une consigne et une erreur fréquente, et sa démo (recherche par nom, système existant).
 
@@ -41,8 +41,9 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 
 | Exercice | Muscle principal · secondaires | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
 |---|---|---|---|---|---|---|---|
-| Pompes au mur / sur banc | pectoraux · triceps, épaules | poids du corps ou banc | 1 | simple → Pompes (genoux ok) | 8-12 reps · repos 120 s | Mains un peu plus larges que les épaules, corps droit comme une planche, poitrine vers le support, coudes à 45°. | Bassin qui casse : serre les fesses et le ventre. |
-| Pompes (genoux ok) | pectoraux · triceps, épaules, gainage | poids du corps | 2 | simple → Développé couché | 8-12 reps · repos 120 s | Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. | Tête qui plonge en premier et bassin qui reste en l'air. |
+| Pompes au mur / sur banc | pectoraux · triceps, épaules | poids du corps ou banc | 1 | simple → Pompes sur les genoux | 8-12 reps · repos 120 s | Mains un peu plus larges que les épaules, corps droit comme une planche, poitrine vers le support, coudes à 45°. | Bassin qui casse : serre les fesses et le ventre. |
+| Pompes sur les genoux | pectoraux · triceps, épaules | poids du corps | 1 | simple → Pompes | 8-12 reps · repos 120 s | Genoux au sol, corps droit des genoux à la tête, mains un peu plus larges que les épaules, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. | Casser à la hanche en montant : les fesses restent dans l'alignement. |
+| Pompes | pectoraux · triceps, épaules, gainage | poids du corps | 2 | simple → Développé couché | 8-12 reps · repos 120 s | Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. | Tête qui plonge en premier et bassin qui reste en l'air. |
 | Chest press machine | pectoraux · triceps, épaules | machine | 1 | simple → Développé couché | 8-12 reps · repos 120 s | Poignées à hauteur de poitrine, omoplates serrées contre le dossier, pousse sans verrouiller les coudes. | Épaules qui remontent vers les oreilles pendant la poussée. |
 | Développé couché haltères | pectoraux · triceps, épaules | haltères | 1 | simple → Développé couché | 8-12 reps · repos 120 s | Allongé, haltères au-dessus de la poitrine, descends coudes à 45° jusqu'à la hauteur du buste, remonte sans cogner les haltères. | Descendre coudes écartés à 90° : les épaules encaissent. |
 | Développé couché | pectoraux · triceps, épaules | barre | 2 | **phare** → Développé incliné haltères | 5-8 reps · repos 180 s | Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière. | Rebondir la barre sur la poitrine ou décoller les fesses du banc. |
@@ -92,7 +93,7 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 | Fentes marchées (uni.) | quadriceps · fessiers, gainage, équilibre | haltères ou poids du corps | 2 | **phare** → Fentes bulgares | 8-12 reps · repos 120 s | Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe. | Pas trop court : le genou avant dépasse la pointe du pied et le talon décolle. |
 | Fente latérale (uni.) | adducteurs · quadriceps, fessiers | poids du corps ou haltères | 2 | simple → Fentes bulgares | 8-12 reps · repos 120 s | Grand pas sur le côté, assieds-toi sur la jambe qui s'est déplacée, l'autre tendue, pointes vers l'avant. | Genou qui part vers l'intérieur : il suit la pointe du pied. |
 | Fentes bulgares (uni.) | quadriceps · fessiers, équilibre, gainage | haltères + banc ou poids du corps | 2 | avance → Fentes bulgares lestées | 8-12 reps · repos 120 s | Pied arrière posé sur un banc, descends verticalement jusqu'à la cuisse avant parallèle, remonte en poussant dans le talon. | Banc trop loin : ça devient une fente vers l'avant et le genou souffre. |
-| Pistol squat assisté (uni.) | quadriceps · fessiers, équilibre, gainage | poids du corps ou élastique | 3 | avance → Pistol squat | 5-8 reps · repos 180 s | Tenu à un support ou un élastique, descends sur une jambe l'autre tendue devant, remonte sans t'aider des bras. | Genou qui part vers l'intérieur ou talon qui décolle. |
+| Pistol squat assisté (uni.) | quadriceps · fessiers, équilibre, gainage | poids du corps ou élastique | 2 | avance → Pistol squat | 5-8 reps · repos 180 s | Tenu à un support ou un élastique, descends sur une jambe l'autre tendue devant, remonte sans t'aider des bras. | Genou qui part vers l'intérieur ou talon qui décolle. |
 | Step-up lesté (uni.) **(lot 1)** | quadriceps · fessiers, équilibre | haltères + banc ou barre + banc | 2 | simple → Fentes bulgares lestées | 8-12 reps · repos 120 s | Haltères le long du corps ou barre sur les épaules, pied entier sur le banc à hauteur de genou, monte en poussant dans ce seul pied, redescends lentement sans rebondir. | Se propulser avec la jambe au sol : elle ne fait que suivre. |
 | Fentes curtsy (révérence) (uni.) **(lot 1)** | fessiers · quadriceps, abducteurs, équilibre | poids du corps ou haltères | 2 | simple → Fentes bulgares | 8-12 reps · repos 120 s | Croise une jambe derrière l'autre comme pour une révérence, descends jusqu'à ce que le genou arrière frôle le sol, buste droit, remonte en poussant dans le pied avant. | Le genou avant qui rentre vers l'intérieur : il reste au-dessus du pied. |
 | Fentes bulgares lestées (uni.) **(lot 1)** | quadriceps · fessiers, équilibre, gainage | haltères + banc ou barre + banc | 3 | avance | 6-10 reps · repos 180 s | Pied arrière sur le banc, haltères en main ou barre sur les épaules, descends jusqu'à ce que le genou arrière frôle le sol, buste légèrement penché, remonte en poussant dans le talon avant. | Le pied avant trop près du banc, qui envoie le genou loin devant : recule-le d'une demi-foulée. |
@@ -107,15 +108,15 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 | Dead bug (uni.) | abdominaux · fléchisseurs de hanche | poids du corps | 1 | simple → Hollow hold | 8-12 reps · repos 120 s | Sur le dos, bas du dos plaqué au sol, allonge lentement bras et jambe opposés sans que le dos se décolle. | Le bas du dos qui se cambre pendant l'allongement. |
 | Bird-dog (uni.) | abdominaux · fessiers, lombaires | poids du corps | 1 | simple → Planche latérale | 8-12 reps · repos 120 s | À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens. | Le bassin qui tourne ou le dos qui se creuse : le buste reste une table. |
 | Planche | abdominaux · fessiers, épaules, lombaires | poids du corps | 2 | **phare** → Planche latérale | 40 s | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. | Bassin qui s'affaisse ou fesses en l'air : on cherche la ligne droite. |
-| Planche latérale (uni.) | obliques · fessiers, épaules | poids du corps | 2 | simple → Roulette abdominale (ab wheel) | 30 s | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. | Hanche qui tombe vers le sol. |
+| Planche latérale (uni.) | obliques · fessiers, épaules | poids du corps | 2 | simple → Pallof press | 30 s | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. | Hanche qui tombe vers le sol. |
 | Hollow hold | abdominaux · fléchisseurs de hanche | poids du corps | 2 | simple → Relevés de jambes | 20 s | Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens. | Bas du dos qui se décolle : monte un peu les jambes. |
 | Relevés de jambes | abdominaux · fléchisseurs de hanche | poids du corps | 2 | simple → Roulette abdominale (ab wheel) | 10-15 reps · repos 120 s | Allongé ou suspendu, monte les jambes jusqu'à 90° en enroulant le bassin, redescends lentement sans toucher. | Cambrer le dos sur la descente : arrête-toi avant. |
-| Pallof press (uni.) | obliques · abdominaux | poulie ou élastique | 2 | simple → Planche latérale | 12-15 reps · repos 90 s | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. | Tourner les épaules vers la poulie. |
+| Pallof press (uni.) | obliques · abdominaux | poulie ou élastique | 2 | **phare** → Pallof press à demi-genou | 12-15 reps · repos 90 s | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. | Tourner les épaules vers la poulie. |
 | Roulette abdominale (ab wheel) | abdominaux · grand dorsal, épaules | roulette | 3 | avance | 6-10 reps · repos 180 s | À genoux, roule vers l'avant en gardant le bas du dos rond et le ventre serré, reviens sans cambrer. | Cambrer le dos en bout de course : réduis l'amplitude. |
 | Relevé de genoux suspendu **(lot 1)** | abdominaux · fléchisseurs de hanche, avant-bras, grand dorsal | barre de traction | 2 | simple → Roulette abdominale (ab wheel) | 10-15 reps · repos 120 s | Suspendu à la barre bras tendus, épaules basses, ramène les genoux vers la poitrine en enroulant le bassin, redescends lentement sans balancer. | Se balancer pour lancer les genoux : c'est le ventre qui tire, pas l'élan. |
 | Farmer walk (marche du fermier) **(lot 1)** | abdominaux · avant-bras, trapèzes, obliques | haltères ou kettlebell ou trap bar | 1 | simple → Planche latérale | 40 s | Un haltère lourd dans chaque main, épaules basses et en arrière, marche à pas courts et rapides sur 20 à 30 m en gardant le buste parfaitement droit. | Les épaules qui roulent vers l'avant sous la charge : omoplates serrées, regard loin devant. |
-| Pallof press avec rotation lente (uni.) **(lot 1)** | obliques · abdominaux, fessiers | poulie ou élastique | 2 | simple → Pallof press à demi-genou | 12-15 reps · repos 90 s | Même départ que le Pallof, bras tendus devant, tourne lentement le buste de quelques degrés vers l'extérieur puis reviens face à la poulie, hanches immobiles. | Tourner avec les hanches : seul le buste pivote, le bassin reste face à l'avant. |
-| Pallof press à demi-genou (uni.) **(lot 1)** | obliques · abdominaux, fessiers | poulie ou élastique | 3 | avance | 8-12 reps · repos 120 s | Un genou au sol, l'autre pied devant, poulie sur le côté à hauteur de poitrine, pousse les mains devant toi et tiens deux secondes sans que le buste tourne. | Le buste qui bascule vers la poulie : serre la fesse du genou au sol et reste grand. |
+| Pallof press avec rotation lente (uni.) **(lot 1)** | obliques · abdominaux, fessiers | poulie ou élastique | 3 | avance | 12-15 reps · repos 90 s | Même départ que le Pallof, bras tendus devant, tourne lentement le buste de quelques degrés vers l'extérieur puis reviens face à la poulie, hanches immobiles. | Tourner avec les hanches : seul le buste pivote, le bassin reste face à l'avant. |
+| Pallof press à demi-genou (uni.) **(lot 1)** | obliques · abdominaux, fessiers | poulie ou élastique | 2 | simple → Pallof press avec rotation lente | 8-12 reps · repos 120 s | Un genou au sol, l'autre pied devant, poulie sur le côté à hauteur de poitrine, pousse les mains devant toi et tiens deux secondes sans que le buste tourne. | Le buste qui bascule vers la poulie : serre la fesse du genou au sol et reste grand. |
 
 ## 9. Isolations — phare : Hip thrust
 
@@ -236,8 +237,8 @@ Proposé après l'audit de la banque (`MOTEUR.md`, « Trous de la banque ») pou
 | Pistol squat (uni.) | Unilatéral jambes | quadriceps | 3 | avance | unilatéral niveau 3, suite du pistol assisté |
 | Relevé de genoux suspendu | Gainage | abdominaux | 2 | simple → Roulette abdominale (ab wheel) | gainage niveau 2 |
 | Farmer walk (marche du fermier) | Gainage | abdominaux | 1 | simple → Planche latérale | gainage avec charge, tous niveaux |
-| Pallof press avec rotation lente (uni.) | Gainage | obliques | 2 | simple → Pallof press à demi-genou | gainage anti-rotation niveau 2 (remplaçant de la planche latérale) |
-| Pallof press à demi-genou (uni.) | Gainage | obliques | 3 | avance | gainage anti-rotation niveau 3 |
+| Pallof press avec rotation lente (uni.) | Gainage | obliques | 3 | avance | gainage anti-rotation niveau 3 |
+| Pallof press à demi-genou (uni.) | Gainage | obliques | 2 | simple → Pallof press avec rotation lente | gainage anti-rotation niveau 2, position d'apprentissage du Pallof (remplaçant de la planche latérale) |
 | Leg curl assis | Isolations | ischio-jambiers | 1 | simple → Leg curl allongé | ischio-jambiers en salle, niveaux 1-2 |
 | Glute-ham raise (GHD) | Isolations | ischio-jambiers | 3 | avance | ischio-jambiers niveau 3 (remplaçant du nordic curl) |
 | Reverse pec deck (oiseau machine) | Isolations | arrière d'épaule | 1 | simple → Face pull (poulie / élastique) | arrière d'épaule en salle |
@@ -270,7 +271,7 @@ Les 45 exercices existants (36 des programmes et du catalogue, 4 de gainage, 5 c
 | `rowing2` | Tirage horizontal (poulie / machine) (`rowing`) | Tirage horizontal |
 | `swing` | Kettlebell swing (`swing`) | Hinge (charnière de hanche) |
 | `fente` | Fentes marchées (`fente`) | Unilatéral jambes |
-| `pompes` | Pompes (genoux ok) (`pompes`) | Poussée horizontale |
+| `pompes` | Pompes (`pompes`) | Poussée horizontale |
 | `dips_banc` | Dips sur banc (`dips_banc`) | Isolations |
 | `burpees` | Burpees (`burpees`) | Cardio et mobilité |
 | `tirage_ela` | Face pull (poulie / élastique) (`tirage_ela`) | Isolations |
@@ -297,7 +298,7 @@ Les 45 exercices existants (36 des programmes et du catalogue, 4 de gainage, 5 c
 ## Marqueurs lus par le moteur (étape 2)
 
 - **accessoire** — jamais en ouverture de séance, et choisi seulement faute de mouvement principal : Chaise contre le mur, Superman au sol, Extension lombaire 45°, Pull-through à l'élastique.
-- **régression** — exclu dès le niveau 2 sauf absence totale d'alternative (au niveau 3, les difficultés 1 aussi) : Pompes au mur / sur banc, Pompes (genoux ok), Traction négative, Pistol squat assisté, Planche sur les genoux.
+- **régression** — exclu dès le niveau 2 sauf absence totale d'alternative (au niveau 3, les difficultés 1 aussi) : Pompes au mur / sur banc, Pompes sur les genoux, Traction négative, Pistol squat assisté, Planche sur les genoux.
 - **coordination** — exclu au niveau 1 : Dead bug.
 - **hypertrophie** — jamais en objectif force (pas un mouvement à 3-6 reps) : Arnold press.
 
