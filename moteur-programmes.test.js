@@ -404,8 +404,10 @@ test("chaque combinaison compartiment × matériel × niveau est auditée ; les 
   assert.ok(audit.filter(l => l.nom === "Squat (s'accroupir)" && l.materiel === "salle").every(l => !l.trou));
   assert.ok(audit.filter(l => l.nom === "Tirage vertical" && l.materiel === "rien").every(l => l.disponibles === 0));
   // le remplaçant compté est bien celui de la règle 12 (même compartiment, même muscle, ≤ 1 cran)
-  const l = audit.find(x => x.nom === "Hinge (charnière de hanche)" && x.materiel === "salle" && x.niveau === 3);
-  assert.strictEqual(l.isole.id, "souleve_terre", "le soulevé de terre (difficulté 3) n'a aucun remplaçant à un cran");
+  for (const l of audit.filter(x => x.isole && x.compartiment !== "cardio_mobilite")) {
+    const r = remplacerExercice(banque, l.isole.id, { materiel: l.materiel, niveau: l.niveau });
+    assert.strictEqual(l.remplacants, r.approximatif === null ? r.candidats.length : 0, `${l.nom} ${l.materiel} n${l.niveau} : ${l.isole.id}`);
+  }
   // limites physiques : hors salle, aucun exercice à aucun niveau — signalées, pas comptées comme trous
   const limites = audit.filter(x => x.limite);
   assert.ok(limites.length && limites.every(x => !x.trou && x.disponibles === 0 && x.materiel !== "salle"));
