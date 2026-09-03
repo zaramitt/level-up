@@ -155,6 +155,26 @@ le week-end, et le gainage tourne d'une séance à l'autre.
    une table solide ; pas de tirage vertical possible, et le moteur le dit.
    « Poids du corps » garde l'hypothèse barre de traction + dips.
 
+**Finitions de la seconde relecture.** En force, le soulevé de terre
+conventionnel est présent une fois par semaine (mouvement roi du « soulever
+plus lourd » ; trap bar au niveau 2, et le moteur le dit), un seul rowing
+horizontal par séance pull (quatre exercices : deux tirages, deux
+isolations), et la poussée verticale est le militaire ou le push press,
+jamais l'Arnold press (marqué « hypertrophie » dans la banque). Le filtre
+des régressions s'applique **dès le niveau 2** quand le matériel permet
+mieux : en salle, pas de pompes genoux ni de planche sur les genoux pour un
+intermédiaire ; au poids du corps, la traction négative reste faute de
+mieux. Pour le coureur, les ischio-jambiers sont obligatoires (muscle
+protecteur) : nordic curl au niveau 3, leg curl sinon.
+
+**Matériel réel.** Les quatre situations (salle, haltères et banc, poids du
+corps, rien) ne sont que des raccourcis pré-cochés. À l'étape 3, le matériel
+sera une **liste à cocher** dans l'onboarding (haltères, élastique, barre de
+traction, banc, kettlebell…) et le moteur lit cette liste telle quelle : un
+exercice est faisable si l'une de ses alternatives est entièrement cochée,
+le poids du corps étant toujours disponible. Le raccourci « haltères » ne
+présume donc ni élastique ni barre de traction : c'est à cocher.
+
 **Durée de séance** : le moteur accepte n'importe quel nombre entier de
 minutes (47, 33), pas seulement des multiples de 5. L'interface (étape 4)
 permettra de saisir la durée exacte au clavier, en plus d'un curseur.

@@ -628,6 +628,7 @@
       "consigne": "Mains un peu plus larges que les épaules, corps droit comme une planche, poitrine vers le support, coudes à 45°.",
       "erreur": "Bassin qui casse : serre les fesses et le ventre.",
       "existant": "pompes_mur",
+      "regression": true,
       "repos_s": 120,
       "demo": "Pompes au mur / sur banc"
     },
@@ -883,6 +884,7 @@
       "unilateral": false,
       "consigne": "Départ paumes vers toi haltères devant le visage, tourne les paumes vers l'avant en poussant vers le haut.",
       "erreur": "Faire la rotation en bas seulement : elle se fait pendant la montée.",
+      "hypertrophie": true,
       "repos_s": 120,
       "demo": "Arnold press"
     },
@@ -1610,6 +1612,7 @@
       "consigne": "Coudes sous les épaules, genoux au sol, ligne droite des genoux à la tête, ventre rentré.",
       "erreur": "Fesses qui remontent pour soulager : serre-les.",
       "duree_s": 30,
+      "regression": true,
       "repos_s": 45,
       "demo": "Planche sur les genoux"
     },

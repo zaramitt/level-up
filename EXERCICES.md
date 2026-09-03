@@ -297,8 +297,9 @@ Les 45 exercices existants (36 des programmes et du catalogue, 4 de gainage, 5 c
 ## Marqueurs lus par le moteur (étape 2)
 
 - **accessoire** — jamais en ouverture de séance, et choisi seulement faute de mouvement principal : Chaise contre le mur, Superman au sol, Extension lombaire 45°, Pull-through à l'élastique.
-- **régression** — exclu au niveau 3 sauf absence totale d'alternative, comme les difficultés 1 : Pompes (genoux ok), Traction négative, Pistol squat assisté.
+- **régression** — exclu dès le niveau 2 sauf absence totale d'alternative (au niveau 3, les difficultés 1 aussi) : Pompes au mur / sur banc, Pompes (genoux ok), Traction négative, Pistol squat assisté, Planche sur les genoux.
 - **coordination** — exclu au niveau 1 : Dead bug.
+- **hypertrophie** — jamais en objectif force (pas un mouvement à 3-6 reps) : Arnold press.
 
 ### Rangés de façon approximative — à trancher
 

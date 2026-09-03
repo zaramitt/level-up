@@ -197,9 +197,9 @@ test("A — force : gros mouvements à 3-6 reps avec 180 s, au plus une isolatio
   assert.strictEqual(p.entrees.objectif, "force");
   for (const s of seances(p)) {
     const gros = s.exercices.filter(e => ["squat", "hinge", "poussee_h", "poussee_v", "tirage_h", "tirage_v", "unilateral"].includes(e.compartiment));
-    assert.ok(gros.length >= 3, `séance ${s.lettre} : ${gros.length} gros mouvements`);
+    assert.ok(gros.length >= (s.focus === "pull" ? 2 : 3), `séance ${s.lettre} : ${gros.length} gros mouvements`);
     for (const e of gros.filter(e => e.compartiment !== "unilateral")) { assert.ok(e.reps[1] <= 6, `${e.nom} ${e.reps.join("-")}`); assert.strictEqual(e.repos_s, 180, `${e.nom} repos ${e.repos_s}`); }
-    assert.ok(exosForce(s).length >= 5, `séance ${s.lettre} : ${exosForce(s).length} exercices (force : 5 au moins au niveau 3)`);
+    assert.ok(exosForce(s).length >= (s.focus === "pull" ? 4 : 5), `séance ${s.lettre} : ${exosForce(s).length} exercices (force : 5 au moins au niveau 3, 4 en pull)`);
     const muscles = s.exercices.filter(e => e.compartiment === "isolation").map(e => e.muscle);
     assert.strictEqual(new Set(muscles).size, muscles.length, `séance ${s.lettre} : deux isolations d'un même muscle (${muscles.join(", ")})`);
   }
@@ -272,9 +272,8 @@ test("D — coureur : programme visiblement différent (bulgares ou step-up, cha
   assert.ok(bras === 0 && brasTemoin > 0, `isolations bras : coureur ${bras}, témoin ${brasTemoin}`);
   // les séances bas du corps et les accessoires (isolations, gainage) sont là où la différence se voit
   const basT = seances(t).filter(s => s.focus === "bas").flatMap(s => s.exercices.map(e => e.id));
-  for (const s of seances(c).filter(s => s.focus === "bas")) { const propres = s.exercices.filter(e => !basT.includes(e.id)); assert.ok(propres.length >= 3, `séance ${s.lettre} : ${propres.length} exercice(s) propres au coureur seulement`); }
-  const accC = tous.filter(e => e.compartiment === "isolation" || e.compartiment === "gainage").map(e => e.id), accT = seances(t).flatMap(s => s.exercices).filter(e => e.compartiment === "isolation" || e.compartiment === "gainage").map(e => e.id);
-  assert.ok(accC.filter(x => accT.includes(x)).length < accC.length * 0.5, `accessoires : ${accC.join(", ")} contre ${accT.join(", ")}`);
+  const propres = seances(c).filter(s => s.focus === "bas").flatMap(s => s.exercices.filter(e => !basT.includes(e.id)).map(e => e.id));
+  assert.ok(propres.length >= 4, `bas du corps : ${propres.length} exercice(s) propres au coureur sur les deux séances (${propres.join(", ")})`);
   assert.deepStrictEqual(verifierRegles(c, banque), []);
 });
 test("D — jours de sport : jamais de séance ce jour-là, séances jambes loin de la sortie longue", () => {
@@ -302,6 +301,77 @@ test("F — le gainage tourne d'une séance à l'autre", () => {
     assert.ok(new Set(g).size >= Math.min(g.length, 3), `${f}× n${n} : ${g.join(", ")}`);
     for (let i = 1; i < g.length; i++) assert.notStrictEqual(g[i], g[i - 1], `${f}× n${n} : même gainage deux séances de suite (${g[i]})`);
   }
+});
+
+console.log("\n=== finitions de relecture (force, régressions niveau 2, ischios du coureur, matériel réel) ===");
+test("force — le soulevé de terre conventionnel est présent une fois par semaine (trap bar au niveau 2, et c'est dit)", () => {
+  for (const f of [3, 4, 6]) {
+    const p3 = genererProgramme({ frequence: f, objectif: "libre", objectifLibre: "plus fort", materiel: "salle", niveau: 3, tempsMin: 75 }, banque);
+    const sdt = seances(p3).flatMap(s => s.exercices).filter(e => e.id === "souleve_terre");
+    assert.strictEqual(sdt.length, 1, `${f}× niveau 3 : soulevé de terre ${sdt.length} fois`);
+    assert.strictEqual(sdt[0].role, "objectif");
+    assert.deepStrictEqual(verifierRegles(p3, banque), []);
+    const p2 = genererProgramme({ frequence: f, objectif: "libre", objectifLibre: "plus fort", materiel: "salle", niveau: 2, tempsMin: 75 }, banque);
+    assert.ok(seances(p2).flatMap(s => s.exercices).some(e => e.id === "trap_bar" && e.role === "objectif"), `${f}× niveau 2 : trap bar attendu`);
+    assert.ok(p2.avertissements.some(a => /Soulevé de terre remplacé par Soulevé de terre trap bar/.test(a)), p2.avertissements.join(" | "));
+  }
+});
+test("force — un seul rowing horizontal par séance pull, poussée verticale = militaire ou push press, jamais l'Arnold press", () => {
+  for (const n of [2, 3]) {
+    const p = genererProgramme({ frequence: 6, objectif: "libre", objectifLibre: "plus fort", materiel: "salle", niveau: n, tempsMin: 75 }, banque);
+    for (const s of seances(p)) {
+      if (s.focus === "pull") { assert.ok(s.exercices.filter(e => e.compartiment === "tirage_h").length <= 1, `séance ${s.lettre} : deux rowings`); assert.ok(s.exercices.filter(e => e.compartiment === "tirage_v").length <= 1); assert.ok(exosForce(s).length >= 4); }
+      for (const e of s.exercices) { assert.notStrictEqual(e.id, "arnold", `séance ${s.lettre} : Arnold press en force`); if (e.compartiment === "poussee_v" && n === 3) assert.ok(["militaire", "push_press"].includes(e.id), `${e.nom} en poussée verticale de force`); }
+    }
+    assert.deepStrictEqual(verifierRegles(p, banque), []);
+  }
+  // hors force, l'Arnold press reste disponible
+  const m = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau: 3, tempsMin: 75 }, banque);
+  assert.ok(seances(m).flatMap(s => s.exercices).some(e => e.id === "arnold"), "muscler 6× : Arnold press attendu quelque part");
+});
+test("régressions — dès le niveau 2 en salle : ni pompes genoux, ni pompes au mur, ni planche sur les genoux, ni traction négative", () => {
+  for (const o of ["tonifier", "muscler", "mieux", "poids"]) for (const f of [3, 4, 6]) {
+    const p = genererProgramme({ frequence: f, objectif: o, materiel: "salle", niveau: 2 }, banque);
+    for (const s of seances(p)) for (const e of s.exercices) assert.ok(!byId[e.id].regression, `${o} ${f}× séance ${s.lettre} : ${e.nom}`);
+    assert.deepStrictEqual(verifierRegles(p, banque), []);
+  }
+  // au poids du corps, la traction négative reste : rien de mieux n'existe
+  const pdc = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "pdc", niveau: 2 }, banque);
+  assert.ok(seances(pdc).flatMap(s => s.exercices).some(e => e.id === "traction_negative"), "pdc niveau 2 : traction négative attendue");
+  assert.deepStrictEqual(verifierRegles(pdc, banque), []);
+  // le vérificateur le voit : une planche sur les genoux glissée chez un intermédiaire en salle
+  const q = genererProgramme({ frequence: 3, objectif: "mieux", materiel: "salle", niveau: 2 }, banque);
+  const s0 = seances(q)[0]; s0.exercices[s0.exercices.length - 1] = M.exerciceProgramme(byId.planche_genoux, { series: 3, duree_s: 30, repos_s: 45 });
+  assert.ok(verifierRegles(q, banque).some(x => x.regle === 7 && /Planche sur les genoux/.test(x.message)));
+});
+test("coureur — les ischio-jambiers sont obligatoires : nordic curl au niveau 3, leg curl au niveau 2", () => {
+  for (const n of [2, 3]) {
+    const p = genererProgramme({ frequence: 4, objectif: "mieux", sport: "course", intention: "sport", materiel: "salle", niveau: n }, banque);
+    for (const s of seances(p).filter(s => s.focus === "bas")) {
+      const isch = s.exercices.find(e => e.compartiment === "isolation" && e.muscle === "ischio-jambiers");
+      assert.ok(isch && isch.role === "objectif", `niveau ${n} séance ${s.lettre} : ${s.exercices.map(e => e.id).join(", ")}`);
+      if (n === 3) assert.strictEqual(isch.id, "nordic"); else assert.ok(isch.id.startsWith("legcurl"), isch.id);
+    }
+    assert.ok(seances(p).flatMap(s => s.exercices).some(e => e.muscle === "mollets"), "mollets toujours là");
+    assert.deepStrictEqual(verifierRegles(p, banque), []);
+  }
+});
+test("matériel réel — une liste de tags cochés remplace les raccourcis, qui n'en sont que des pré-sélections", () => {
+  const a = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "halteres", niveau: 2 }, banque);
+  const b = genererProgramme({ frequence: 4, objectif: "muscler", materiel: ["haltères", "banc"], niveau: 2 }, banque);
+  assert.deepStrictEqual(ids(a), ids(b), "raccourci haltères = haltères + banc cochés");
+  assert.deepStrictEqual(b.entrees.materiel, ["haltères", "banc"]);
+  const c = genererProgramme({ frequence: 4, objectif: "muscler", materiel: ["haltères", "banc", "élastique", "barre de traction"], niveau: 2 }, banque);
+  const tousC = seances(c).flatMap(s => s.exercices);
+  assert.ok(tousC.some(e => e.id.startsWith("traction")), "barre de traction cochée : tractions");
+  assert.ok(tousC.every(e => M.faisable(byId[e.id], ["haltères", "banc", "élastique", "barre de traction"])), "tout est faisable avec la liste");
+  assert.ok(!tousC.some(e => byId[e.id].materiel.some(alt => alt.split(" + ").some(t => ["poulie", "machine", "barre"].includes(t)) && !byId[e.id].materiel.some(alt => alt.split(" + ").every(t => ["haltères", "banc", "élastique", "barre de traction", "poids du corps", "aucun"].includes(t))))), "rien qui exige poulie, machine ou barre");
+  assert.deepStrictEqual(verifierRegles(c, banque), []);
+  assert.strictEqual(M.nomMateriel(["haltères", "élastique"]), "matériel coché : haltères, élastique");
+  assert.deepStrictEqual(M.normaliserMateriel(["haltères", "sabre laser", "haltères"]), ["haltères"], "tag inconnu ignoré, doublon retiré");
+  const r = genererProgramme({ frequence: 3, objectif: "mieux", materiel: [], niveau: 2 }, banque);
+  assert.deepStrictEqual(ids(r), ids(genererProgramme({ frequence: 3, objectif: "mieux", materiel: "rien", niveau: 2 }, banque)), "liste vide = rien du tout");
+  for (const m of M.MATERIELS) assert.deepStrictEqual(ids(genererProgramme({ frequence: 3, objectif: "tonifier", materiel: m, niveau: 2 }, banque)), ids(genererProgramme({ frequence: 3, objectif: "tonifier", materiel: m === "salle" ? M.TAGS_MATERIEL : [...M.MATERIEL_OK[m]], niveau: 2 }, banque)), `raccourci ${m} = sa liste`);
 });
 
 console.log("\n=== cas demandés ===");
@@ -350,12 +420,12 @@ test("rien du tout (maison sans équipement) : ni barre de traction, ni dips, ni
   assert.ok(pdc.limites.some(l => /^Sans élastique ni haltères, pas de travail isolé des biceps, épaules latérales, arrière d'épaule : ces muscles ne travaillent que dans les gros mouvements\.$/.test(l.message)), JSON.stringify(pdc.limites));
 });
 test("convention du matériel : alternatives (n'importe laquelle suffit) et combinaisons « a + b »", () => {
-  assert.ok(M.faisable(byId.pallof, "halteres"), "Pallof : poulie OU élastique → faisable avec un élastique");
-  assert.ok(M.faisable(byId.tirage_ela, "halteres") && M.faisable(byId.traction_assistee, "halteres"), "face pull et traction assistée à l'élastique");
+  assert.ok(M.faisable(byId.pallof, ["élastique"]) && !M.faisable(byId.pallof, "halteres"), "Pallof : poulie OU élastique → faisable avec un élastique coché, pas avec le raccourci haltères");
+  assert.ok(M.faisable(byId.tirage_ela, ["élastique"]) && M.faisable(byId.traction_assistee, ["élastique"]), "face pull et traction assistée à l'élastique");
   assert.ok(!M.faisable(byId.pallof, "rien") && !M.faisable(byId.pallof, "pdc"));
   assert.ok(M.faisable(byId.hipthrust, "salle") && !M.faisable(byId.hipthrust, "halteres"), "hip thrust : barre + banc, les deux");
   assert.ok(M.faisable(byId.dc_incline, "halteres") && !M.faisable(byId.dc_incline, "pdc"), "développé incliné : haltères + banc");
-  assert.ok(M.faisable(byId.traction, "pdc") && M.faisable(byId.traction, "halteres") && !M.faisable(byId.traction, "rien"), "traction : barre de traction explicite");
+  assert.ok(M.faisable(byId.traction, "pdc") && !M.faisable(byId.traction, "halteres") && M.faisable(byId.traction, ["barre de traction"]) && !M.faisable(byId.traction, "rien"), "traction : barre de traction explicite");
   assert.ok(M.faisable(byId.dips, "pdc") && !M.faisable(byId.dips, "halteres") && !M.faisable(byId.dips, "rien"), "dips : barres de dips");
   assert.ok(!M.faisable(byId.roulette, "pdc") && !M.faisable(byId.legcurl_ballon, "rien"), "roulette et ballon sont du matériel");
   assert.ok(M.faisable(byId.bulgare, "rien") && M.faisable(byId.stepup, "rien"), "bulgares et step-up existent au poids du corps");
