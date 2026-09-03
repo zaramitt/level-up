@@ -210,6 +210,66 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.0 — septembre 2026
+
+Chantier Programmes, étape 3, passe 1 : **le moteur est branché**. Première
+étape qui change l'app pour les utilisatrices, d'où le saut de numéro.
+
+- **Le programme est produit par `genererProgramme()`**, dans l'app :
+  `moteur-programmes.js` et `banque-exercices.json` sont embarqués dans
+  `index.html` (synchronisés par `outils/sync.js`). → Génération
+  instantanée et hors ligne, aperçu de migration sans réseau, aucun quota, une
+  seule source de vérité testée à sec. Le worker ne fait plus tourner de
+  moteur. Choix de route : **`/generer` est supprimée** (404 « route
+  inconnue » comme toute route absente) et remplacée par **`/interpreter`**,
+  seul point d'extension IA prévu : l'objectif en texte libre → objectif de
+  base + muscles prioritaires (format garanti par l'API, quota 10/jour). Si
+  l'IA échoue, répond hors format ou n'est pas configurée : repli sur
+  « esthétique équilibré », et l'app le dit sur l'écran prénom et dans
+  l'onglet Séance. **Aucune génération de structure par l'IA** ; le prompt de
+  génération est retiré.
+- **Nouvelles questions d'onboarding**, dans l'ordre : fréquence 1 à 7 (le 7
+  présenté comme « 6 séances + 1 jour de récupération active »), objectif
+  (inchangé), deux questions factuelles, sport (14 + non, puis intention et
+  jours de sport), matériel à cocher (raccourcis salle complète / maison
+  équipée / poids du corps / rien du tout, « salle complète » coche tout),
+  temps par séance (curseur + saisie exacte au clavier, défaut 60).
+  Correspondance questions → niveau observé initial, jamais affiché :
+  « Jamais fait de muscu » → 1 quelle que soit la technique ; « Quelques
+  mois » → 2 si squat et pompe sûrs, sinon 1 ; « Plus d'un an
+  régulièrement » → 3 si sûrs, sinon 2. Le ressenti après exercice (passe 2)
+  recalera ensuite.
+- **Toutes les réponses sont modifiables dans les réglages** (section « Mon
+  programme »), chacune ouvrant le flux de régénération directement à cette
+  question, avec aperçu avant d'adopter.
+- **Migration des profils existants, option (b)** : rien ne change au
+  déploiement. Carte dans l'onglet Séance + accès dans les réglages ; les
+  questions sont **pré-remplies depuis le programme actuel** (fréquence =
+  nombre de séances, objectif déduit du template, matériel = salle ou rien),
+  parce que les anciens onboardings ne stockaient aucune réponse ; puis
+  aperçu complet, « Adopter ce programme » / « Garder l'ancien ». Refuser
+  masque la carte sans la supprimer des réglages. À l'adoption, l'historique
+  des charges est conservé (identifiants stables depuis l'étape 1) ; un
+  exercice jamais fait n'affiche pas de « dernier ». Cette carte est aussi
+  le chemin de « Changer de programme » pour tout le monde. L'écran
+  `ChoixProgramme` (templates + prompt) est retiré ; les templates
+  `PROGRAMMES` restent dans le code pour les profils qui les utilisent
+  encore.
+- **Affichage** : consigne visible sous le nom dès l'exercice déployé,
+  erreur fréquente sur un tap (exercices et gainage). Les avertissements du
+  moteur (« Sans barre de traction ni élastique, pas de tirage vertical : le
+  dos reste sous-travaillé », « programme d'entretien », lecture IA de
+  l'objectif) sont montrés dans l'onglet Séance et dans l'aperçu, en clair.
+  Le gainage d'un programme du moteur est une liste propre à la séance ;
+  les anciens programmes gardent la liste globale. Les cartes du carrousel
+  affichent la durée calculée par le moteur.
+- **Sécurité** : test automatique (`v2000.js`, harnais Playwright) qui
+  vérifie qu'un profil existant ne change pas de programme sans action
+  explicite, y compris après un aperçu refusé et un rechargement.
+- Hors de cette passe (passe 2) : ressenti après exercice, proposition
+  d'incrément, « pas cette machine », « générer une variante », « Adapter ma
+  séance ».
+
 ## v19.21 — août 2026
 
 - **Sons du chrono lus par un `<audio>` (canal média), pas par Web Audio.**

@@ -432,9 +432,20 @@
     // objectif : les 5 de l'onboarding, ou texte libre interprété (point d'extension)
     let objCle = entrees.objectif, prioritaires = [];
     if (!OBJECTIFS[objCle] || objCle === "libre") {
-      const i = interpreterObjectifLibre(entrees.objectifLibre);
-      objCle = i.base; prioritaires = i.prioritaires.slice();
-      if (entrees.objectifLibre) avertissements.push(`Objectif libre « ${entrees.objectifLibre} » interprété comme « ${OBJECTIFS[objCle].nom} » (point d'extension IA non implémenté).`);
+      const texte = String(entrees.objectifLibre || "").trim(), it = entrees.interpretation;
+      if (it && it.repli) {
+        // l'IA a échoué ou répondu hors format : esthétique équilibré, et on le dit
+        objCle = "mieux";
+        avertissements.push(`Je n'ai pas réussi à lire ton objectif « ${texte} » : programme esthétique équilibré. Tu peux le reformuler dans les réglages.`);
+      } else if (it && OBJECTIFS[it.base] && it.base !== "libre") {
+        // point d'extension IA : l'objectif en texte libre lu en muscles prioritaires
+        objCle = it.base; prioritaires = (it.prioritaires || []).map(String).slice(0, 6);
+        avertissements.push(`Ton objectif « ${texte} » a été lu comme « ${OBJECTIFS[objCle].nom} »${prioritaires.length ? ", priorité à " + prioritaires.join(", ") : ""}.`);
+      } else {
+        const i = interpreterObjectifLibre(texte);
+        objCle = i.base; prioritaires = i.prioritaires.slice();
+        if (texte) avertissements.push(`Objectif libre « ${texte} » interprété comme « ${OBJECTIFS[objCle].nom} » (mots-clés, sans IA).`);
+      }
     }
     const obj = OBJECTIFS[objCle];
     prioritaires.push(...obj.prioritaires);
@@ -618,6 +629,56 @@
   };
 
   /* ------------------------------------------------------------------ */
+  /* Étape 3 : ce que l'app donne au moteur, et ce qu'elle en reçoit     */
+  /* ------------------------------------------------------------------ */
+  // les deux questions factuelles de l'onboarding → niveau observé initial (règle 7) :
+  // jamais fait de muscu → 1 ; quelques mois → 2 si squat et pompe sont sûrs, sinon 1 ;
+  // plus d'un an régulièrement → 3 si sûrs, sinon 2. Le mot « niveau » n'apparaît jamais à l'écran.
+  const niveauDepuisQuestions = (muscu, technique) => muscu === "an" ? (technique === "oui" ? 3 : 2) : muscu === "mois" ? (technique === "oui" ? 2 : 1) : 1;
+  const REPONSES_DEFAUT = { frequence: 3, objectif: "mieux", objectifLibre: "", muscu: "jamais", technique: "pas_sur", sport: null, intention: "soi", joursSport: [], materiel: "salle", tempsMin: 60, interpretation: null };
+  const entreesDepuisReponses = r => {
+    const x = { ...REPONSES_DEFAUT, ...(r || {}) };
+    return { frequence: x.frequence, objectif: x.objectif, objectifLibre: x.objectifLibre || "", interpretation: x.interpretation || null, sport: x.sport || null, intention: x.intention || "soi", joursSport: x.joursSport || [], materiel: x.materiel, niveau: niveauDepuisQuestions(x.muscu, x.technique), tempsMin: x.tempsMin || 60 };
+  };
+  // forme attendue par l'écran Séance : lettres, exos {id, nom, dose, repos, charge}, gainage en liste
+  const PALETTE_APP = ["#FF5C4D", "#3D5AFE", "#2CE5A7", "#FFB020", "#7C5CFF", "#22D3EE", "#C2417A"];
+  const doseDe = x => x.compartiment === "cardio_mobilite" ? `${Math.round(x.duree_s / 60)} min` : x.duree_s ? `${x.series} × ${x.duree_s} s` : `${x.series} × ${x.reps[0]}-${x.reps[1]}${x.unilateral ? " / côté" : ""}`;
+  // « charge » = il y a une charge à noter en kg : une alternative faisable avec le matériel de la
+  // personne qui passe par des poids (haltères, barre, kettlebell, machine, poulie, trap bar)
+  const TAGS_CHARGE = new Set(["haltères", "barre", "kettlebell", "machine", "poulie", "trap bar", "rack"]);
+  const chargeDe = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.some(u => TAGS_CHARGE.has(u)); }); };
+  const presenterPourApp = prog => {
+    const seances = {};
+    prog.seances.forEach((s, i) => {
+      const exos = s.exercices.filter(x => x.compartiment !== "gainage").map(x => ({
+        id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
+        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
+      }));
+      const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
+        id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
+      }));
+      seances[s.lettre] = { nom: s.nom, couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
+    });
+    const obj = OBJECTIFS[prog.entrees.objectif] || OBJECTIFS.mieux;
+    const f = prog.entrees.frequence;
+    return {
+      nom: `${obj.nom} · ${f} séance${f > 1 ? "s" : ""}`,
+      emoji: "",
+      desc: `${prog.squelette.description}, ${prog.entrees.tempsMin} min par séance.`,
+      lieu: "perso",
+      moteur: {
+        version: 1, entrees: prog.entrees, squelette: prog.squelette,
+        semaine: prog.semaine.map(j => ({ jour: j.jour, lettre: j.seance ? j.seance.lettre : null, sport: !!j.sport })),
+        avertissements: prog.avertissements, limites: prog.limites, volume: prog.volume
+      },
+      seances
+    };
+  };
+  // le tout en un : réponses de l'onboarding → programme pour l'app
+  const programmePourApp = (reponses, banque) => presenterPourApp(genererProgramme(entreesDepuisReponses(reponses), banque));
+
+  /* ------------------------------------------------------------------ */
   /* Règle 12 : remplacement d'un exercice                              */
   /* ------------------------------------------------------------------ */
   const remplacerExercice = (banque, exoId, opts = {}) => {
@@ -721,5 +782,5 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
 });

@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v19.21**
+Version actuelle : **v20.0**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v19.21"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.0"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -20,7 +20,20 @@ régénérée à chaque livraison), et il n'y a pas de fichier de version dédi�
 Déploiement : **Cloudflare Worker** (pas Pages).
 
 - `worker.js` — serveur : routes API, stockage, crons, appels IA
-- `index.html` — front : React, JSX **précompilé** (plus de babel-standalone)
+- `index.html` — front : React, JSX **précompilé** (plus de babel-standalone).
+  Les composants ajoutés en v20.0 (questions du programme, aperçu,
+  régénération, section « Mon programme ») sont écrits à la main avec
+  `h = React.createElement`.
+- `moteur-programmes.js` — le **moteur de génération de programmes**
+  (fonction pure, règles 1-12 de `DECISIONS.md`, testé par
+  `moteur-programmes.test.js`) ; `banque-exercices.json` — la banque
+  d'exercices (vue lisible : `EXERCICES.md`). Tous deux sont **embarqués dans
+  `index.html`** (balises `<script id="moteur-programmes">` et
+  `<script id="banque-exercices">`) : la génération se fait dans l'app,
+  instantanément et hors ligne.
+- `outils/sync.js` — synchronise les copies embarquées : moteur + banque →
+  `index.html`, puis `index.html` → `worker.js` (ligne 5). **À lancer avant
+  chaque livraison** ; les copies ne s'éditent jamais à la main.
 - `wrangler.jsonc` — configuration de déploiement (Workers Builds) : nom, point
   d'entrée, liaison KV et crons ; le secret `ANTHROPIC_API_KEY` vit côté
   Cloudflare, pas dans ce fichier
@@ -35,10 +48,12 @@ Configuration Cloudflare :
 | Cron rappel du soir | `0 18 * * *` |
 | Cron compléments du matin | `0 6 * * *` |
 
-Génération de programmes et route `/idees` : appels à l'API Anthropic
-(modèle épinglé dans `worker.js`, `claude-haiku-4-5` à ce jour), réponses au
-format garanti par l'API (structured outputs). `/idees` accepte des **styles
-de récompenses combinés**.
+Routes `/idees` et `/interpreter` : appels à l'API Anthropic (modèle épinglé
+dans `worker.js`, `claude-haiku-4-5` à ce jour), réponses au format garanti
+par l'API (structured outputs). `/idees` accepte des **styles de récompenses
+combinés**. Depuis la v20.0, **l'IA ne génère plus de programme** : elle ne
+fait que lire un objectif en texte libre (`/interpreter`) ; la structure des
+séances vient du moteur, en code.
 
 ### Routes API
 
@@ -62,11 +77,35 @@ par le code duo (`<code>:etat`, `<code>:negos`…).
 | `/desabonner` | POST | retrait d'un abonnement push |
 | `/testpush` | POST | envoi d'une notification de test |
 | `/idees` | POST | idées de récompenses via l'API Anthropic (quota journalier par code) |
-| `/generer` | POST | génération de programme via l'API Anthropic |
+| `/interpreter` | POST | lecture IA d'un objectif en texte libre → `{base, prioritaires}` pour le moteur (quota 10/jour par code). Remplace `/generer` (v20.0) |
 | `/supprimer` | POST | purge de **toutes** les clés KV du code duo |
 
-`/idees` et `/generer` renvoient `503 {"erreur":"non_configure"}` quand
-`ANTHROPIC_API_KEY` n'est pas défini.
+`/idees` et `/interpreter` renvoient `503 {"erreur":"non_configure"}` quand
+`ANTHROPIC_API_KEY` n'est pas défini ; l'app se replie alors sur un programme
+« esthétique équilibré » et le dit.
+
+### Programme : onboarding, moteur, migration (v20.0)
+
+Les questions du programme, dans l'ordre : fréquence (1 à 7, le 7 présenté
+comme « 6 séances + 1 jour de récupération active »), objectif (5 + texte
+libre), deux questions factuelles (« déjà fait de la muscu ? », « squat et
+pompe corrects ? ») qui donnent le niveau observé initial sans jamais afficher
+le mot « niveau », sport (14 + non, puis intention et jours de sport),
+matériel (liste à cocher, 4 raccourcis en tête), temps par séance (curseur +
+saisie exacte, défaut 60). Le composant `QuestionsProgramme` est partagé par
+l'onboarding, la migration et les réglages ; les réponses vivent dans
+`st.reponses`, le programme généré dans `st.programmePerso` (avec
+`programme: "perso"` et un bloc `moteur` : entrées, semaine, avertissements,
+limites, volume).
+
+Migration, option (b) : un profil d'avant la v20.0 **garde son programme tel
+quel**. Une carte dans l'onglet Séance (« Nouveau moteur de programmes —
+veux-tu régénérer le tien ? ») ouvre les questions pré-remplies puis un
+aperçu complet ; « Adopter » remplace le programme (charges et historique
+conservés, identifiants d'exercices stables), « Garder l'ancien » masque la
+carte (`st.moteurRefuse`), qui reste accessible dans les réglages. Le même
+flux (`Regenerer`) sert à « Changer de programme » et à chaque réponse
+modifiée dans « Mon programme ».
 
 ## Structure de l'interface
 
@@ -101,18 +140,20 @@ sont masqués : négociations, paris, pot (y compris son réglage) et l'invitati
 du coach. Les récompenses restent, mais auto-définies — le coaché se les offre
 lui-même au niveau atteint.
 
-En revanche **restent actifs en solo** : `/generer` (l'écran `ChoixProgramme`
-s'affiche pour tout profil non-coach sans programme), `/idees`, et les
-notifications push (`/abonner`, `/desabonner`, `/testpush`, `/rappels`) — aucune
-de ces routes n'est derrière un garde `solo`. Un profil solo possède donc bien
+En revanche **restent actifs en solo** : `/interpreter` (lecture de
+l'objectif libre ; le programme lui-même se calcule dans l'app, sans réseau),
+`/idees`, et les notifications push (`/abonner`, `/desabonner`, `/testpush`,
+`/rappels`) — aucune de ces routes n'est derrière un garde `solo`. Un profil solo possède donc bien
 un code duo généré, utilisé comme préfixe KV ; il est simplement affiché
 « solo » au lieu du code dans la liste des profils, et jamais proposé au
 partage.
 
 ## Règles de livraison
 
-- `worker.js` et `index.html` sont **toujours livrés en paire**. Une
-  modification d'un seul des deux fichiers est presque toujours un bug.
+- `worker.js` et `index.html` sont **toujours livrés en paire**, via
+  `node outils/sync.js` (qui embarque aussi le moteur et la banque dans
+  `index.html`). Une modification d'un seul des deux fichiers est presque
+  toujours un bug.
 - En session, toute modification est vérifiée sur un worker mock local
   (Playwright) ; c'est Léo qui la valide sur l'URL Worker après déploiement.
   Une modification n'est « faite » qu'après cette seconde vérification.
