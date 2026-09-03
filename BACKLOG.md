@@ -26,6 +26,13 @@ lecture, pas de la structure de l'écran.
   (mesuré : bloc titre à 85 px avant, 88 px après). À reprendre lors de la
   refonte visuelle post-Vite.
 
+## Programmes
+
+- **PRIORITÉ HAUTE — Générateur incohérent** : exercices hors groupe musculaire
+  (hip thrust dans poitrine/triceps), et même structure à 3 et 6 séances par
+  semaine. Programme de référence fait main disponible (PDF A/B/C/D + gainage
+  + cardio). Chantier de conception à faire avec Léo.
+
 ## Générateur de séances
 
 - Mode « je construis ma séance du jour » : temps disponible, intensité (charge
@@ -83,9 +90,17 @@ XP, pas de la structure de l'onglet.
 
 ## Coach
 
+- Plusieurs coachs pour une même personne (partager sa séance avec plusieurs
+  amis). Décision produit à prendre : un coach principal + spectateurs, ou
+  plusieurs coachs égaux ?
 - **PRIORITÉ MOYENNE — Page d'accueil du coach à repenser comme un vrai tableau
   de bord** : aujourd'hui elle paraît vide à l'ouverture. Enjeu lié à la
   rétention du coach passif (cf. `DECISIONS.md`).
+
+## Onboarding
+
+- Demander le sport pratiqué et l'objectif (progresser dans son sport vs
+  esthétique) — dépend du chantier Programmes.
 
 ## Écran Choix de programme (atteint depuis l'onboarding et « changer de programme »)
 
@@ -102,8 +117,11 @@ XP, pas de la structure de l'onglet.
 - « Recharger les listes de ce style » : incompréhensible — clarifier, et
   évaluer son déplacement vers l'onglet Récompenses
 - Bouton réglages flottant, toujours accessible
-- Quitter les réglages : swipe gauche→droite ou bouton retour flottant
-  (aujourd'hui il faut défiler tout en bas)
+
+## Idées business
+
+- Sponsoring / réductions chez des partenaires comme récompenses. Risque de
+  triche à traiter (validation coach, plafonds, preuve photo).
 
 ## Idées produit (non planifiées)
 
