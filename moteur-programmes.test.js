@@ -232,8 +232,9 @@ test("B — niveau 1 : pas d'exercice marqué coordination (dead bug) ; planche 
   for (const o of ["tonifier", "mieux", "douce"]) for (const f of [2, 3, 4]) {
     const p = genererProgramme({ frequence: f, objectif: o, materiel: "salle", niveau: 1 }, banque);
     for (const s of seances(p)) for (const e of s.exercices) assert.ok(!byId[e.id].coordination, `${o} ${f}× séance ${s.lettre} : ${e.nom}`);
-    const gainages = seances(p).flatMap(s => s.exercices).filter(e => e.compartiment === "gainage").map(e => e.id);
-    assert.ok(gainages.every(g => ["planche_genoux", "bird_dog"].includes(g)), gainages.join(", "));
+    const gainages = seances(p).flatMap(s => s.exercices).filter(e => e.compartiment === "gainage");
+    assert.ok(gainages.every(g => g.difficulte === 1 && !byId[g.id].coordination), gainages.map(g => g.id).join(", "));
+    assert.ok(gainages.some(g => ["planche_genoux", "bird_dog"].includes(g.id)), gainages.map(g => g.id).join(", "));
   }
 });
 test("B — une variation ne descend jamais de deux crans de difficulté", () => {

@@ -301,6 +301,12 @@
       if (!extra.length) break;
       retirer(extra[extra.length - 1]); s._extraRetiree = true;
     }
+    // deux gainages (le sien + l'anti-rotation du sport) : le gainage ordinaire saute avant les isolations
+    while (!tient()) {
+      const g = s.exercices.filter(x => x.compartiment === "gainage");
+      if (g.length < 2 || !g.some(x => x.role === "sport")) break;
+      retirer(g.find(x => x.role !== "sport"));
+    }
     // l'isolation obligatoire de l'objectif (hip thrust) ne saute qu'en tout dernier recours
     while (!tient()) {
       const isos = s.exercices.filter(x => x.compartiment === "isolation" && x.role !== "objectif");
