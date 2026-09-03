@@ -5,6 +5,98 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ---
 
+## Chantier Programmes — septembre 2026
+
+> Cette section **remplace** la décision de fréquence de la v19.8 (2 à 5 +
+> option 6 « habitués », pas de 7) et tranche la question ouverte « templates
+> du moteur hybride : combien, lesquels ».
+
+### Architecture retenue
+
+**Squelettes faits main + banque d'exercices étiquetée + règles en code + IA
+cantonnée à l'habillage** (choix dans la banque selon objectif et sport,
+phrases d'accompagnement). **L'IA ne décide plus la structure.** → Le
+générateur actuel produit des séances incohérentes : hip thrust en jour
+poitrine, même structure à 3 et à 6 séances par semaine.
+
+### Fondement de la qualité
+
+- Les règles ci-dessous sont le **consensus établi de l'entraînement en
+  force** : surcharge progressive, 10-20 séries par muscle et par semaine,
+  fréquence ≥ 2× par muscle, polyarticulaires d'abord, autorégulation. C'est
+  LA fondation.
+- Les squelettes sont des **déclinaisons de structures classiques, publiques
+  et éprouvées** — full body type Starting Strength / StrongLifts, haut/bas,
+  push-pull-legs type r/Fitness — pas des créations.
+- **PRÉREQUIS avant ouverture hors du cercle proche : relecture des
+  squelettes, de la banque et des règles par un coach diplômé.**
+- `docs/programme-reference.pdf` (quand déposé) : référence de **ton et de
+  présentation** (explications, variantes, adresse à une débutante), pas
+  d'exactitude — généré par IA sans relecture professionnelle.
+
+### Règles du générateur — à implémenter en code, pas en prompt
+
+1. **Focus par séance** ; tout exercice appartient au focus.
+2. **Ordre** : polyarticulaires d'abord, isolations ensuite, gainage en fin.
+3. **Volume par muscle borné** ; chaque gros groupe ≥ 2× par semaine dès
+   4 séances.
+4. **Jamais le même gros groupe deux jours consécutifs.**
+5. **Repos par fourchette de reps** : ≤ 6 → 3 min ; 8-12 → 2 min ; 12+ et
+   isolation → 60-90 s. Ajusté par temps disponible (avec planchers) et
+   niveau.
+6. **Durée calculée** depuis séries et repos, jamais devinée.
+7. **Niveau OBSERVÉ, jamais demandé** : deux questions factuelles à
+   l'onboarding (déjà fait de la muscu ? sait faire squat et pompe ?), puis
+   ressenti d'effort après chaque exercice (facile / juste / trop dur) qui
+   recale en continu. Ce ressenti mesure l'effort, pas la technique. Le
+   niveau est un état qui bouge.
+8. **Double progression** : reps dans une fourchette, puis charge. L'app
+   PROPOSE l'incrément (+2,5 kg haut du corps, +5 kg bas du corps et
+   machines, bornés) quand toutes les séries touchent le haut de la
+   fourchette avec ressenti facile / juste.
+9. **Variantes** : ≥ 4 par exercice dont l'exercice phare connu de tous,
+   étiquetées matériel (barre / haltères / machine / poids du corps) et
+   difficulté. Chaque schéma de mouvement a une échelle simple → phare →
+   avancé ; après plusieurs semaines stables, l'app propose de monter d'un
+   cran, sans imposer. C'est ainsi que la technique progresse sans que l'app
+   la voie.
+10. **Sport pratiqué = modificateur du squelette** (muscles prioritaires,
+    charges, placement vs jours de sport), pas un squelette à part. Deux
+    questions chaînées à l'onboarding : le sport, puis « pour progresser
+    dans ce sport ou pour toi ? ».
+11. **Objectif = coloration des exercices** dans les cases du squelette.
+
+### Squelettes par fréquence
+
+| Séances / semaine | Squelette |
+|---|---|
+| 1× | full body |
+| 2× | full body A-B |
+| 3× | full body A-B-C |
+| 4× | haut / bas × 2 |
+| 5× | haut / bas × 2 + jour focus (objectif ou sport) |
+| 6× | push-pull-legs × 2 |
+| 7× | 6× + 1 jour de récupération active (mobilité, cardio léger) |
+
+**Pas de 7e séance de force** : crédibilité auprès des avancés et prévention
+des blessures.
+
+### Séance du jour : « Adapter ma séance »
+
+Bouton au lancement (« Pas assez de temps ou d'énergie aujourd'hui ? On
+ajuste. »). Deux curseurs : **temps disponible** (défaut = dernière fois) et
+**énergie** (à fond / normal / petite forme). Compression dans l'ordre :
+retirer les isolations, réduire les séries, raccourcir les repos jusqu'aux
+planchers, supersets en dernier. **Jamais retirer les polyarticulaires.**
+Temps en plus → proposer un complément. Petite forme → charges et séries
+réduites : la séance existe au lieu d'être sautée.
+
+### Sports couverts au lancement
+
+Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
+handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
+préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
+
 ## v19.21 — août 2026
 
 - **Sons du chrono lus par un `<audio>` (canal média), pas par Web Audio.**
@@ -223,8 +315,9 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
   douceur→Remise douce) : chaque réponse a son programme, aucun template
   orphelin.
 
-- **Fréquence : 2 à 5 + option 6 « habitués »**. Pas de 7 (repos non
-  négociable). Modifiable dans les réglages (via « changer de programme »).
+- ~~**Fréquence : 2 à 5 + option 6 « habitués »**. Pas de 7 (repos non
+  négociable).~~ **Remplacée** par le Chantier Programmes (septembre 2026) :
+  squelettes de 1× à 7×, le 7e jour étant de la récupération active. Modifiable dans les réglages (via « changer de programme »).
   → Les templates plafonnant à 4 séances, 5-6 et l'objectif libre basculent
   sur la génération IA (le worker accepte jusqu'à 7), avec repli sur le
   template le plus proche si la génération échoue. Statut : à confirmer après
@@ -299,7 +392,9 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 Sur le moteur de programmes (discuté, pas arbitré) :
 
-- Templates du moteur hybride : combien au lancement, et lesquels ?
+- ~~Templates du moteur hybride : combien au lancement, et lesquels ?~~
+  Tranché : voir « Chantier Programmes — septembre 2026 » (squelettes par
+  fréquence).
 - Quels types de salle couvrir en priorité ?
 - Quels objectifs construire en premier ? (fessiers / bas du corps,
   recomposition, débutant, esthétique équilibrée, force pure, santé-posture,
