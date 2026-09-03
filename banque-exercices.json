@@ -619,7 +619,7 @@
       ],
       "difficulte": 1,
       "echelle": "simple",
-      "monte_vers": "pompes",
+      "monte_vers": "pompes_genoux",
       "reps": [
         8,
         12
@@ -633,8 +633,34 @@
       "demo": "Pompes au mur / sur banc"
     },
     {
+      "id": "pompes_genoux",
+      "nom": "Pompes sur les genoux",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "pompes",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Genoux au sol, corps droit des genoux à la tête, mains un peu plus larges que les épaules, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste.",
+      "erreur": "Casser à la hanche en montant : les fesses restent dans l'alignement.",
+      "regression": true,
+      "repos_s": 120,
+      "demo": "Pompes sur les genoux"
+    },
+    {
       "id": "pompes",
-      "nom": "Pompes (genoux ok)",
+      "nom": "Pompes",
       "compartiment": "poussee_h",
       "muscle": "pectoraux",
       "secondaires": [
@@ -656,9 +682,8 @@
       "consigne": "Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste.",
       "erreur": "Tête qui plonge en premier et bassin qui reste en l'air.",
       "existant": "pompes",
-      "regression": true,
       "repos_s": 120,
-      "demo": "Pompes (genoux ok)"
+      "demo": "Pompes"
     },
     {
       "id": "chest_press",
@@ -1436,7 +1461,7 @@
         "poids du corps",
         "élastique"
       ],
-      "difficulte": 3,
+      "difficulte": 2,
       "echelle": "avance",
       "monte_vers": "pistol",
       "reps": [
@@ -1706,7 +1731,7 @@
       ],
       "difficulte": 2,
       "echelle": "simple",
-      "monte_vers": "roulette",
+      "monte_vers": "pallof",
       "reps": null,
       "unilateral": true,
       "consigne": "Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens.",
@@ -1776,8 +1801,8 @@
         "élastique"
       ],
       "difficulte": 2,
-      "echelle": "simple",
-      "monte_vers": "planche_laterale",
+      "echelle": "phare",
+      "monte_vers": "pallof_demi_genou",
       "reps": [
         12,
         15
@@ -1882,9 +1907,9 @@
         "poulie",
         "élastique"
       ],
-      "difficulte": 2,
-      "echelle": "simple",
-      "monte_vers": "pallof_demi_genou",
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
       "reps": [
         12,
         15
@@ -1893,7 +1918,7 @@
       "consigne": "Même départ que le Pallof, bras tendus devant, tourne lentement le buste de quelques degrés vers l'extérieur puis reviens face à la poulie, hanches immobiles.",
       "erreur": "Tourner avec les hanches : seul le buste pivote, le bassin reste face à l'avant.",
       "lot": 1,
-      "trou": "gainage anti-rotation niveau 2 (remplaçant de la planche latérale)",
+      "trou": "gainage anti-rotation niveau 3",
       "repos_s": 90,
       "demo": "Pallof press avec rotation lente"
     },
@@ -1910,9 +1935,9 @@
         "poulie",
         "élastique"
       ],
-      "difficulte": 3,
-      "echelle": "avance",
-      "monte_vers": null,
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "pallof_rotation",
       "reps": [
         8,
         12
@@ -1921,7 +1946,7 @@
       "consigne": "Un genou au sol, l'autre pied devant, poulie sur le côté à hauteur de poitrine, pousse les mains devant toi et tiens deux secondes sans que le buste tourne.",
       "erreur": "Le buste qui bascule vers la poulie : serre la fesse du genou au sol et reste grand.",
       "lot": 1,
-      "trou": "gainage anti-rotation niveau 3",
+      "trou": "gainage anti-rotation niveau 2, position d'apprentissage du Pallof (remplaçant de la planche latérale)",
       "repos_s": 120,
       "demo": "Pallof press à demi-genou"
     },

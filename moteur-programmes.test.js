@@ -514,8 +514,8 @@ test("accessoire en ouverture, pompes genoux chez un avancé, deux isolations du
   assert.ok(verifierRegles(p, banque).some(x => x.regle === 2 && /accessoire/.test(x.message)));
   const p3 = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "salle", niveau: 3, tempsMin: 75 }, banque);
   const haut = seances(p3).find(s => s.focus === "haut");
-  haut.exercices[0] = M.exerciceProgramme(byId.pompes, { series: 4, reps: [8, 12], repos_s: 120 });
-  assert.ok(verifierRegles(p3, banque).some(x => x.regle === 7 && /Pompes/.test(x.message)), JSON.stringify(verifierRegles(p3, banque)));
+  haut.exercices[0] = M.exerciceProgramme(byId.pompes_genoux, { series: 4, reps: [8, 12], repos_s: 120 });
+  assert.ok(verifierRegles(p3, banque).some(x => x.regle === 7 && /Pompes sur les genoux/.test(x.message)), JSON.stringify(verifierRegles(p3, banque)));
   const p2 = genererProgramme({ frequence: 4, objectif: "libre", objectifLibre: "force", materiel: "salle", niveau: 2, tempsMin: 90 }, banque);
   const h2 = seances(p2).find(s => s.focus === "haut");
   const iso = h2.exercices.find(e => e.compartiment === "isolation");
