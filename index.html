@@ -5106,6 +5106,10 @@ function SeanceView({
   // changer de séance referme tout : l'exercice ouvert n'existe plus
   useEffect(() => setDeploye(null), [cle]);
   const basculer = id => setDeploye(o => o === id ? null : id);
+  // même logique pour le gainage : un cadre déployé à la fois, détails et
+  // bouton de lancement dans le corps
+  const [gainOuvert, setGainOuvert] = useState(null);
+  useEffect(() => setGainOuvert(null), [cle]);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14
@@ -5618,53 +5622,55 @@ function SeanceView({
     }
   }, "3 tours · 45 s entre les tours")), GAINAGE.map(g => {
     const ok = J.gainage.includes(g.id);
-    const tours = (J.gainTours || {})[g.id] || 0;
+    const tours = Math.min(3, (J.gainTours || {})[g.id] || 0);
+    const ouvertG = gainOuvert === g.id;
+    const enCours = !!(timer && timer.gainId === g.id && timer.mode !== "depasse" && timer.mode !== "fini");
+    const prochain = Math.min(tours + 1, 3);
     return /*#__PURE__*/React.createElement("div", {
       key: g.id,
-      // tap n'importe où sur le cadre = lancer la série (les boutons internes
-      // stoppent la propagation)
-      onClick: () => !ok && onGainSerie(g),
+      style: {
+        background: ok ? "rgba(124,92,255,.16)" : GLASSBG,
+        border: `1.5px solid ${ok || ouvertG || enCours ? COL.G : LINE}`,
+        borderRadius: 14,
+        padding: ouvertG ? "12px 14px 14px" : "10px 14px",
+        marginTop: 7,
+        transition: "border-color .2s, padding .22s ease"
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGainOuvert(o => o === g.id ? null : g.id),
+      "aria-expanded": ouvertG,
       style: {
         display: "flex",
         width: "100%",
         alignItems: "center",
         gap: 12,
-        cursor: ok ? "default" : "pointer",
-        touchAction: "manipulation",
-        background: ok ? "rgba(124,92,255,.16)" : GLASSBG,
-        border: `1.5px solid ${ok ? COL.G : LINE}`,
-        borderRadius: 12,
-        padding: "10px 14px",
-        marginTop: 7
+        textAlign: "left",
+        background: "none",
+        border: "none",
+        padding: 0,
+        color: INK,
+        userSelect: "none",
+        WebkitUserSelect: "none"
       }
     }, ok ? /*#__PURE__*/React.createElement(Coche, {
       ok: true,
       couleur: COL.G
-    }) : /*#__PURE__*/React.createElement("button", {
-      onClick: e => {
-        e.stopPropagation();
-        onGainSerie(g);
-      },
-      title: g.duree ? `Lancer ${g.duree} s` : "Série finie",
+    }) : /*#__PURE__*/React.createElement("span", {
       style: {
-        width: 40,
-        height: 40,
+        width: 34,
+        height: 34,
         borderRadius: "50%",
         flexShrink: 0,
-        border: `2px solid ${COL.G}`,
-        background: tintCss(COL.G),
-        color: COL.G,
+        border: `2px solid ${enCours ? COL.G : LINE}`,
+        background: enCours ? tintCss(COL.G) : GLASSBG,
+        color: enCours ? COL.G : SUB,
         display: "grid",
         placeItems: "center",
-        padding: 0,
-        userSelect: "none",
-        WebkitUserSelect: "none"
+        fontSize: 11,
+        fontWeight: 800,
+        fontVariantNumeric: "tabular-nums"
       }
-    }, /*#__PURE__*/React.createElement(Ic, {
-      n: g.duree ? "play" : "check",
-      s: 16,
-      w: 2.6
-    })), /*#__PURE__*/React.createElement("div", {
+    }, tours, "/3"), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0
@@ -5679,112 +5685,151 @@ function SeanceView({
     }, g.nom), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11,
-        color: SUB
+        color: enCours ? COL.G : SUB,
+        marginTop: 2
       }
-    }, g.dose, " · tour ", Math.min(tours, 3), "/3", "  ", /*#__PURE__*/React.createElement("a", {
+    }, g.dose, " · ", ok ? "bouclé" : enCours ? "en cours" : tours ? `tour ${tours}/3 fait` : "pas commencé")), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flexShrink: 0,
+        display: "grid",
+        placeItems: "center",
+        width: 26,
+        height: 26,
+        borderRadius: 999,
+        background: ouvertG ? tintCss(COL.G) : "rgba(255,255,255,.06)",
+        color: ouvertG ? COL.G : SUB,
+        transform: ouvertG ? "rotate(90deg)" : "rotate(-90deg)",
+        transition: "transform .22s ease, background .2s"
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      n: "chevron",
+      s: 14,
+      w: 2.4
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        maxHeight: ouvertG ? 420 : 0,
+        opacity: ouvertG ? 1 : 0,
+        overflow: "hidden",
+        transition: "max-height .26s ease, opacity .18s ease",
+        pointerEvents: ouvertG ? "auto" : "none"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        paddingTop: 12,
+        marginTop: 12,
+        borderTop: `1px solid ${LINE}`,
+        animation: ouvertG ? "deploie .24s ease-out" : "none"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        marginBottom: 8
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: "inline-flex",
+        gap: 5
+      }
+    }, [0, 1, 2].map(k => /*#__PURE__*/React.createElement("span", {
+      key: k,
+      style: {
+        width: 22,
+        height: 8,
+        borderRadius: 999,
+        background: k < tours ? COL.G : "rgba(255,255,255,.12)",
+        transition: "background .3s"
+      }
+    }))), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12.5,
+        fontWeight: 700
+      }
+    }, ok ? "3 tours sur 3 — bouclé" : `Tour ${prochain} sur 3`)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: SUB,
+        lineHeight: 1.5,
+        marginBottom: 12
+      }
+    }, g.duree ? `${g.duree} s de travail par tour · ${g.repos} s de repos entre les tours · 3 s de mise en place avant chaque tour, enchaînement automatique.` : `${g.dose} par tour · ${g.repos} s de repos entre les tours. Touche « tour fini » quand tes répétitions sont faites.`), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        alignItems: "center"
+      }
+    }, !ok ? /*#__PURE__*/React.createElement("button", {
+      onClick: () => onGainSerie(g),
+      title: g.duree ? `Lancer ${g.duree} s` : "Série finie",
+      disabled: enCours,
+      style: {
+        flex: 1,
+        background: enCours ? "rgba(124,92,255,.35)" : COL.G,
+        color: "#fff",
+        border: "none",
+        borderRadius: 12,
+        padding: "12px 12px",
+        fontWeight: 800,
+        fontSize: 13
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      n: g.duree ? "play" : "check",
+      s: 14,
+      w: 2.6
+    }), enCours ? "En cours…" : g.duree ? `Lancer le tour ${prochain} · ${g.duree} s` : `Tour ${prochain} fini`)) : /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 12.5,
+        fontWeight: 700,
+        color: COL.G
+      }
+    }, "Bouclé ✔ · +", XP.gainageItem, " XP"), /*#__PURE__*/React.createElement("a", {
       href: yt(g.nom),
-      onClick: e => e.stopPropagation(),
       target: "_blank",
       rel: "noreferrer",
       style: {
         textDecoration: "none",
         display: "inline-flex",
         alignItems: "center",
-        gap: 4,
-        verticalAlign: "middle",
-        margin: "0 6px",
+        gap: 6,
         color: INK,
         background: "rgba(255,255,255,.08)",
         border: `1px solid ${LINE}`,
         borderRadius: 999,
-        padding: "2px 8px",
-        fontSize: 10,
-        fontWeight: 700
-      }
-    }, /*#__PURE__*/React.createElement(Ic, {
-      n: "play",
-      s: 9,
-      w: 2.4
-    }), "démo"))), !ok ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6,
-        alignItems: "center",
+        padding: "9px 12px",
+        fontSize: 11.5,
+        fontWeight: 700,
         flexShrink: 0
       }
-    }, tours > 0 && !J.gainValide && /*#__PURE__*/React.createElement("button", {
-      onClick: e => {
-        e.stopPropagation();
-        onAnnulerGain(g);
-      },
-      title: "Remettre à zéro",
-      style: {
-        background: "none",
-        border: `1px solid ${LINE}`,
-        borderRadius: 999,
-        width: 26,
-        height: 26,
-        color: SUB,
-        fontSize: 13,
-        lineHeight: 1,
-        display: "grid",
-        placeItems: "center",
-        padding: 0
-      }
-    }, "↩"), /*#__PURE__*/React.createElement("button", {
-      onClick: e => {
-        e.stopPropagation();
-        onGainSerie(g);
-      },
-      style: {
-        background: COL.G,
-        color: "#fff",
-        border: "none",
-        borderRadius: 999,
-        padding: "8px 12px",
-        fontWeight: 800,
-        fontSize: 11.5
-      }
-    }, g.duree ? /*#__PURE__*/React.createElement("span", {
-      style: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5
-      }
     }, /*#__PURE__*/React.createElement(Ic, {
       n: "play",
-      s: 10,
-      w: 2.4
-    }), g.duree, " s") : /*#__PURE__*/React.createElement("span", {
-      style: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5
-      }
-    }, /*#__PURE__*/React.createElement(Ic, {
-      n: "check",
       s: 11,
       w: 2.4
-    }), "Série finie"))) : !J.gainValide && /*#__PURE__*/React.createElement("button", {
-      onClick: e => {
-        e.stopPropagation();
-        onAnnulerGain(g);
-      },
-      title: "Annuler",
+    }), "démo"), (ok || tours > 0) && !J.gainValide && /*#__PURE__*/React.createElement("button", {
+      onClick: () => onAnnulerGain(g),
+      title: ok ? "Annuler" : "Remettre à zéro",
       style: {
         background: "none",
         border: `1px solid ${LINE}`,
         borderRadius: 999,
-        width: 28,
-        height: 28,
+        width: 34,
+        height: 34,
         color: SUB,
-        fontSize: 14,
+        fontSize: 15,
         lineHeight: 1,
         display: "grid",
         placeItems: "center",
-        padding: 0
+        padding: 0,
+        flexShrink: 0
       }
-    }, "↩"));
+    }, "↩")))));
   }), !J.gainValide && gainFait && /*#__PURE__*/React.createElement("button", {
     onClick: onValiderGain,
     style: {
