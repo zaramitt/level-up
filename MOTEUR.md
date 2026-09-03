@@ -35,7 +35,7 @@ Lecture : la semaine indique où tombent les séances (règle 4 : jamais le mêm
 | 6 | **Abduction machine** | Isolations (abducteurs) | 2 × 12-15 · repos 90 s | objectif, case en plus | Buste légèrement penché en avant, écarte les genoux contre la résistance, tiens une seconde en fin de course. |
 | 7 | **Bird-dog** | Gainage | 3 × 8-12 / côté · repos 45 s |  | À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens. |
 
-### Séance C — Full body C · 50 min
+### Séance C — Full body C · 51 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
@@ -45,7 +45,7 @@ Lecture : la semaine indique où tombent les séances (règle 4 : jamais le mêm
 | 4 | **Step-up sur banc** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s |  | Pied entier sur le banc, monte en poussant dans ce pied seulement, redescends contrôlé sans rebondir. |
 | 5 | **Hip thrust machine** | Isolations (fessiers) | 2 × 12-15 · repos 90 s | objectif | Dos calé, pieds sous les genoux, monte en serrant les fesses jusqu'à l'alignement, menton rentré. |
 | 6 | **Abduction machine** | Isolations (abducteurs) | 2 × 12-15 · repos 90 s | objectif, case en plus | Buste légèrement penché en avant, écarte les genoux contre la résistance, tiens une seconde en fin de course. |
-| 7 | **Planche sur les genoux** | Gainage | 3 × 30 s · repos 45 s |  | Coudes sous les épaules, genoux au sol, ligne droite des genoux à la tête, ventre rentré. |
+| 7 | **Farmer walk (marche du fermier)** | Gainage | 3 × 40 s · repos 45 s |  | Un haltère lourd dans chaque main, épaules basses et en arrière, marche à pas courts et rapides sur 20 à 30 m en gardant le buste parfaitement droit. |
 
 **Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 12 / 12 · fessiers 12 / 21 · ischio-jambiers 6 / 9 · pectoraux 6 / 7.5 · dos 9 / 9 · épaules 3 / 6 — bornes du niveau 1 : 6-12.
 
@@ -127,7 +127,7 @@ Vérification des règles : aucune violation.
 | 3 | **Développé militaire** | Poussée verticale | 5 × 3-6 · repos 180 s |  | Debout, barre sur le haut de la poitrine, fesses et ventre serrés, pousse la barre au-dessus de la tête en reculant légèrement le menton. |
 | 4 | **Barre au front** | Isolations (triceps) | 3 × 8-12 · repos 90 s |  | Allongé, barre au-dessus du front, plie les coudes seulement pour descendre la barre vers le front, remonte. |
 | 5 | **Élévations latérales** | Isolations (épaules latérales) | 3 × 8-12 · repos 90 s |  | Haltères le long du corps, monte les bras sur les côtés jusqu'à l'horizontale, coudes à peine fléchis, descends lentement. |
-| 6 | **Roulette abdominale (ab wheel)** | Gainage | 3 × 6-10 · repos 45 s |  | À genoux, roule vers l'avant en gardant le bas du dos rond et le ventre serré, reviens sans cambrer. |
+| 6 | **Pallof press à demi-genou** | Gainage | 3 × 8-12 / côté · repos 45 s |  | Un genou au sol, l'autre pied devant, poulie sur le côté à hauteur de poitrine, pousse les mains devant toi et tiens deux secondes sans que le buste tourne. |
 
 ### Séance B — Pull (tirage) · 54 min
 
@@ -138,9 +138,9 @@ Vérification des règles : aucune violation.
 | 3 | **Traction** | Tirage vertical | 4 × 3-6 · repos 180 s |  | Départ bras tendus épaules basses, tire les coudes vers les hanches jusqu'au menton au-dessus de la barre, redescends complètement. |
 | 4 | **Curl barre** | Isolations (biceps) | 3 × 8-12 · repos 90 s |  | Prise largeur d'épaules, coudes collés aux flancs, monte sans avancer les coudes, descends jusqu'aux bras tendus. |
 | 5 | **Face pull (poulie / élastique)** | Isolations (arrière d'épaule) | 3 × 8-12 · repos 90 s |  | Corde à hauteur des yeux, tire vers le visage en écartant les mains, coudes hauts, serre les omoplates en fin de course. |
-| 6 | **Planche** | Gainage | 3 × 40 s · repos 45 s |  | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. |
+| 6 | **Roulette abdominale (ab wheel)** | Gainage | 3 × 6-10 · repos 45 s |  | À genoux, roule vers l'avant en gardant le bas du dos rond et le ventre serré, reviens sans cambrer. |
 
-### Séance C — Legs (jambes) · 73 min
+### Séance C — Legs (jambes) · 72 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
@@ -148,11 +148,11 @@ Vérification des règles : aucune violation.
 | 2 | **Soulevé de terre roumain** | Hinge (charnière de hanche) | 5 × 3-6 · repos 180 s |  | Barre collée aux cuisses, hanches qui reculent, dos plat, descends jusqu'à mi-tibia ou l'étirement, remonte en serrant les fesses. |
 | 3 | **Fentes marchées** | Unilatéral jambes | 4 × 5-8 / côté · repos 120 s |  | Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe. |
 | 4 | **Hip thrust** | Isolations (fessiers) | 3 × 8-12 · repos 90 s |  | Omoplates sur le banc, barre sur les hanches, tibias verticaux en haut, monte en serrant fort les fesses, menton rentré. |
-| 5 | **Nordic curl** | Isolations (ischio-jambiers) | 3 × 3-6 · repos 180 s |  | Genoux au sol chevilles bloquées, laisse-toi descendre le plus lentement possible corps droit, remonte en t'aidant des mains. |
+| 5 | **Glute-ham raise (GHD)** | Isolations (ischio-jambiers) | 3 × 8-12 · repos 90 s |  | Chevilles bloquées, genoux sur le coussin, corps droit des genoux à la tête, descends en contrôlant jusqu'à l'horizontale, remonte en tirant avec l'arrière des cuisses. |
 | 6 | **Abduction machine** | Isolations (abducteurs) | 3 × 8-12 · repos 90 s |  | Buste légèrement penché en avant, écarte les genoux contre la résistance, tiens une seconde en fin de course. |
-| 7 | **Hollow hold** | Gainage | 3 × 20 s · repos 45 s |  | Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens. |
+| 7 | **Planche** | Gainage | 3 × 40 s · repos 45 s |  | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. |
 
-### Séance D — Push (poussée) · 72 min
+### Séance D — Push (poussée) · 71 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
@@ -161,7 +161,7 @@ Vérification des règles : aucune violation.
 | 3 | **Arnold press** | Poussée verticale | 5 × 3-6 · repos 180 s |  | Départ paumes vers toi haltères devant le visage, tourne les paumes vers l'avant en poussant vers le haut. |
 | 4 | **Barre au front** | Isolations (triceps) | 3 × 8-12 · repos 90 s |  | Allongé, barre au-dessus du front, plie les coudes seulement pour descendre la barre vers le front, remonte. |
 | 5 | **Élévation latérale machine** | Isolations (épaules latérales) | 3 × 8-12 · repos 90 s |  | Coussinets contre les bras, monte jusqu'à l'horizontale sans hausser les épaules. |
-| 6 | **Relevés de jambes** | Gainage | 3 × 10-15 · repos 45 s |  | Allongé ou suspendu, monte les jambes jusqu'à 90° en enroulant le bassin, redescends lentement sans toucher. |
+| 6 | **Hollow hold** | Gainage | 3 × 20 s · repos 45 s |  | Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens. |
 
 ### Séance E — Pull (tirage) · 55 min
 
@@ -172,21 +172,21 @@ Vérification des règles : aucune violation.
 | 3 | **Traction lestée** | Tirage vertical | 3 × 4-6 · repos 180 s |  | Ceinture de lest ou haltère entre les pieds, même geste strict que la traction, amplitude complète. |
 | 4 | **Curl barre** | Isolations (biceps) | 3 × 8-12 · repos 90 s |  | Prise largeur d'épaules, coudes collés aux flancs, monte sans avancer les coudes, descends jusqu'aux bras tendus. |
 | 5 | **Oiseau (élévations arrière)** | Isolations (arrière d'épaule) | 3 × 8-12 · repos 90 s |  | Buste penché à l'horizontale, monte les haltères sur les côtés en serrant les omoplates, coudes à peine fléchis. |
-| 6 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s |  | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
+| 6 | **Relevés de jambes** | Gainage | 3 × 10-15 · repos 45 s |  | Allongé ou suspendu, monte les jambes jusqu'à 90° en enroulant le bassin, redescends lentement sans toucher. |
 
-### Séance F — Legs (jambes) · 74 min
+### Séance F — Legs (jambes) · 75 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
 | 1 | **Squat avant (front squat)** | Squat (s'accroupir) | 5 × 3-6 · repos 180 s |  | Barre posée sur les épaules devant, coudes hauts tout le mouvement, buste vertical, descends profond. |
-| 2 | **Soulevé de terre** | Hinge (charnière de hanche) | 5 × 3-6 · repos 180 s |  | Barre au-dessus du milieu du pied, dos plat, pousse le sol avec les jambes puis ouvre les hanches — la barre reste collée aux tibias. |
-| 3 | **Fentes bulgares** | Unilatéral jambes | 4 × 5-8 / côté · repos 120 s |  | Pied arrière posé sur un banc, descends verticalement jusqu'à la cuisse avant parallèle, remonte en poussant dans le talon. |
+| 2 | **Rack pull (soulevé partiel depuis le rack)** | Hinge (charnière de hanche) | 5 × 3-6 · repos 180 s |  | Barre posée sur les supports juste sous les genoux, prise comme au soulevé, tire en ouvrant les hanches et en serrant les omoplates en haut, repose contrôlé. |
+| 3 | **Fentes bulgares lestées** | Unilatéral jambes | 4 × 5-8 / côté · repos 120 s |  | Pied arrière sur le banc, haltères en main ou barre sur les épaules, descends jusqu'à ce que le genou arrière frôle le sol, buste légèrement penché, remonte en poussant dans le talon avant. |
 | 4 | **Hip thrust** | Isolations (fessiers) | 3 × 8-12 · repos 90 s |  | Omoplates sur le banc, barre sur les hanches, tibias verticaux en haut, monte en serrant fort les fesses, menton rentré. |
 | 5 | **Nordic curl** | Isolations (ischio-jambiers) | 3 × 3-6 · repos 180 s |  | Genoux au sol chevilles bloquées, laisse-toi descendre le plus lentement possible corps droit, remonte en t'aidant des mains. |
 | 6 | **Mollets debout (machine)** | Isolations (mollets) | 3 × 8-12 · repos 90 s |  | Jambes tendues, monte sur la pointe le plus haut possible, tiens une seconde, redescends jusqu'à l'étirement complet. |
-| 7 | **Planche latérale** | Gainage | 3 × 30 s · repos 45 s |  | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. |
+| 7 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s |  | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
 
-**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 18 / 20.5 · fessiers 9 / 26 · ischio-jambiers 16 / 19 · pectoraux 20 / 22.5 · dos 20 / 32 · épaules 16 / 26 — bornes du niveau 3 : 10-20.
+**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 18 / 18 · fessiers 9 / 26 · ischio-jambiers 16 / 19 · pectoraux 20 / 22.5 · dos 20 / 34.5 · épaules 16 / 26 — bornes du niveau 3 : 10-20.
 
 **Avertissements du moteur** :
 - Objectif libre « je veux être plus fort, soulever plus lourd » interprété comme « Force » (point d'extension IA non implémenté).
@@ -212,20 +212,19 @@ Vérification des règles : aucune violation.
 | 7 | **Planche latérale** | Gainage | 3 × 30 s · repos 45 s |  | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. |
 | 8 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s | sport | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
 
-### Séance B — Bas du corps · 60 min
+### Séance B — Bas du corps · 58 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
 | 1 | **Squat barre** | Squat (s'accroupir) | 3 × 5-8 · repos 120 s |  | Barre sur les trapèzes, inspire et bloque, descends genoux dans l'axe des pieds jusqu'aux cuisses parallèles, remonte en poussant le sol. |
 | 2 | **Soulevé de terre roumain** | Hinge (charnière de hanche) | 4 × 8-12 · repos 120 s |  | Barre collée aux cuisses, hanches qui reculent, dos plat, descends jusqu'à mi-tibia ou l'étirement, remonte en serrant les fesses. |
-| 3 | **Step-up sur banc** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s |  | Pied entier sur le banc, monte en poussant dans ce pied seulement, redescends contrôlé sans rebondir. |
-| 4 | **Fentes bulgares** | Unilatéral jambes | 2 × 8-12 / côté · repos 120 s | sport | Pied arrière posé sur un banc, descends verticalement jusqu'à la cuisse avant parallèle, remonte en poussant dans le talon. |
+| 3 | **Fentes curtsy (révérence)** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s |  | Croise une jambe derrière l'autre comme pour une révérence, descends jusqu'à ce que le genou arrière frôle le sol, buste droit, remonte en poussant dans le pied avant. |
+| 4 | **Step-up sur banc** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s | sport | Pied entier sur le banc, monte en poussant dans ce pied seulement, redescends contrôlé sans rebondir. |
 | 5 | **Abduction machine** | Isolations (abducteurs) | 3 × 12-15 · repos 90 s |  | Buste légèrement penché en avant, écarte les genoux contre la résistance, tiens une seconde en fin de course. |
 | 6 | **Mollets debout (machine)** | Isolations (mollets) | 3 × 12-15 · repos 90 s |  | Jambes tendues, monte sur la pointe le plus haut possible, tiens une seconde, redescends jusqu'à l'étirement complet. |
-| 7 | **Planche** | Gainage | 3 × 40 s · repos 45 s |  | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. |
-| 8 | **Planche latérale** | Gainage | 3 × 30 s · repos 45 s | sport | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. |
+| 7 | **Pallof press avec rotation lente** | Gainage | 3 × 12-15 / côté · repos 45 s | sport | Même départ que le Pallof, bras tendus devant, tourne lentement le buste de quelques degrés vers l'extérieur puis reviens face à la poulie, hanches immobiles. |
 
-### Séance C — Haut du corps · 54 min
+### Séance C — Haut du corps · 60 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
@@ -234,23 +233,24 @@ Vérification des règles : aucune violation.
 | 3 | **Développé militaire** | Poussée verticale | 3 × 5-8 · repos 120 s |  | Debout, barre sur le haut de la poitrine, fesses et ventre serrés, pousse la barre au-dessus de la tête en reculant légèrement le menton. |
 | 4 | **Tirage vertical poulie** | Tirage vertical | 3 × 8-12 · repos 120 s |  | Prise un peu plus large que les épaules, tire la barre vers le haut de la poitrine coudes vers le bas et l'arrière, buste à peine incliné. |
 | 5 | **Élévation latérale à la poulie** | Isolations (épaules latérales) | 3 × 12-15 / côté · repos 90 s |  | Poulie basse de l'autre côté du corps, monte le bras sur le côté jusqu'à l'horizontale, tension constante. |
-| 6 | **Bird-dog** | Gainage | 3 × 8-12 / côté · repos 45 s |  | À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens. |
-| 7 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s | sport | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
+| 6 | **Face pull (poulie / élastique)** | Isolations (arrière d'épaule) | 3 × 12-15 · repos 90 s |  | Corde à hauteur des yeux, tire vers le visage en écartant les mains, coudes hauts, serre les omoplates en fin de course. |
+| 7 | **Bird-dog** | Gainage | 3 × 8-12 / côté · repos 45 s |  | À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens. |
+| 8 | **Planche latérale** | Gainage | 3 × 30 s · repos 45 s | sport | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. |
 
-### Séance D — Bas du corps · 56 min
+### Séance D — Bas du corps · 60 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
 | 1 | **Squat barre** | Squat (s'accroupir) | 3 × 5-8 · repos 120 s |  | Barre sur les trapèzes, inspire et bloque, descends genoux dans l'axe des pieds jusqu'aux cuisses parallèles, remonte en poussant le sol. |
 | 2 | **Soulevé de terre roumain** | Hinge (charnière de hanche) | 3 × 8-12 · repos 120 s |  | Barre collée aux cuisses, hanches qui reculent, dos plat, descends jusqu'à mi-tibia ou l'étirement, remonte en serrant les fesses. |
-| 3 | **Fentes marchées** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s |  | Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe. |
-| 4 | **Step-up sur banc** | Unilatéral jambes | 2 × 8-12 / côté · repos 120 s | sport | Pied entier sur le banc, monte en poussant dans ce pied seulement, redescends contrôlé sans rebondir. |
+| 3 | **Fentes bulgares** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s |  | Pied arrière posé sur un banc, descends verticalement jusqu'à la cuisse avant parallèle, remonte en poussant dans le talon. |
+| 4 | **Fentes marchées** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s | sport | Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe. |
 | 5 | **Clamshell (coquillage)** | Isolations (abducteurs) | 3 × 12-15 / côté · repos 90 s |  | Sur le côté genoux pliés pieds joints, ouvre le genou du dessus sans que le bassin bascule en arrière. |
 | 6 | **Hip thrust** | Isolations (fessiers) | 3 × 12-15 · repos 90 s |  | Omoplates sur le banc, barre sur les hanches, tibias verticaux en haut, monte en serrant fort les fesses, menton rentré. |
 | 7 | **Planche sur les genoux** | Gainage | 3 × 30 s · repos 45 s |  | Coudes sous les épaules, genoux au sol, ligne droite des genoux à la tête, ventre rentré. |
-| 8 | **Planche latérale** | Gainage | 3 × 30 s · repos 45 s | sport | Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens. |
+| 8 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s | sport | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
 
-**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 16 / 16 · fessiers 9 / 20.5 · ischio-jambiers 7 / 8.5 · pectoraux 6 / 9 · dos 12 / 18.5 · épaules 12 / 15 — bornes du niveau 2 : 8-16.
+**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 15 / 16.5 · fessiers 12 / 23 · ischio-jambiers 7 / 8.5 · pectoraux 6 / 9 · dos 12 / 20 · épaules 12 / 15 — bornes du niveau 2 : 8-16.
 
 Vérification des règles : aucune violation.
 
@@ -260,27 +260,27 @@ Vérification des règles : aucune violation.
 
 **Semaine** : lundi **A** full body a · mardi repos · mercredi **B** full body b · jeudi repos · vendredi **C** full body c · samedi repos · dimanche repos
 
-### Séance A — Full body A · 45 min
+### Séance A — Full body A · 47 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
 | 1 | **Squats sautés** | Squat (s'accroupir) | 3 × 8-12 · repos 120 s |  | Descends à mi-hauteur, saute en extension complète, atterris en douceur genoux fléchis, enchaîne. |
-| 2 | **Pompes (genoux ok)** | Poussée horizontale | 3 × 8-12 · repos 120 s |  | Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. |
-| 3 | **Rowing inversé** | Tirage horizontal | 3 × 8-12 · repos 120 s |  | Suspendu sous une barre basse (ou une table solide) corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates. |
-| 4 | **Superman au sol** | Hinge (charnière de hanche) | 3 × 10-15 · repos 120 s |  | Allongé sur le ventre, décolle bras et jambes de quelques centimètres en serrant les fesses, tiens une seconde. |
-| 5 | **Pont fessier unilatéral** | Isolations (fessiers) | 2 × 12-15 / côté · repos 90 s |  | Même pont, une jambe tendue en l'air, hanches qui restent à l'horizontale. |
+| 2 | **Soulevé de terre roumain une jambe** | Hinge (charnière de hanche) | 3 × 8-12 / côté · repos 120 s |  | Debout sur une jambe, haltère dans la main opposée, penche le buste en envoyant la jambe libre vers l'arrière, dos plat, jusqu'à sentir l'étirement derrière la cuisse, remonte en serrant la fesse. |
+| 3 | **Pompes (genoux ok)** | Poussée horizontale | 3 × 8-12 · repos 120 s |  | Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. |
+| 4 | **Rowing inversé** | Tirage horizontal | 3 × 8-12 · repos 120 s |  | Suspendu sous une barre basse (ou une table solide) corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates. |
+| 5 | **Pont fessier unilatéral** | Isolations (fessiers) | 3 × 12-15 / côté · repos 90 s |  | Même pont, une jambe tendue en l'air, hanches qui restent à l'horizontale. |
 | 6 | **Planche** | Gainage | 2 × 40 s · repos 45 s |  | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. |
 
-### Séance B — Full body B · 46 min
+### Séance B — Full body B · 47 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
-| 1 | **Pompes piquées (épaules)** | Poussée verticale | 3 × 8-12 · repos 120 s |  | Fesses hautes en V inversé, descends le sommet du crâne vers le sol entre les mains, pousse pour revenir. |
-| 2 | **Fentes marchées** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s |  | Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe. |
-| 3 | **Superman au sol** | Hinge (charnière de hanche) | 3 × 10-15 · repos 120 s |  | Allongé sur le ventre, décolle bras et jambes de quelques centimètres en serrant les fesses, tiens une seconde. |
+| 1 | **Soulevé de terre roumain une jambe** | Hinge (charnière de hanche) | 3 × 8-12 / côté · repos 120 s |  | Debout sur une jambe, haltère dans la main opposée, penche le buste en envoyant la jambe libre vers l'arrière, dos plat, jusqu'à sentir l'étirement derrière la cuisse, remonte en serrant la fesse. |
+| 2 | **Pompes piquées (épaules)** | Poussée verticale | 3 × 8-12 · repos 120 s |  | Fesses hautes en V inversé, descends le sommet du crâne vers le sol entre les mains, pousse pour revenir. |
+| 3 | **Fentes marchées** | Unilatéral jambes | 3 × 8-12 / côté · repos 120 s |  | Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe. |
 | 4 | **Pont fessier au sol** | Isolations (fessiers) | 3 × 12-15 · repos 90 s |  | Sur le dos pieds à plat, monte les hanches en serrant les fesses jusqu'à l'alignement épaules-genoux, tiens une seconde. |
 | 5 | **Mollets sur une marche** | Isolations (mollets) | 3 × 12-15 · repos 90 s |  | Avant-pieds sur le bord d'une marche, descends le talon sous le niveau, monte sur la pointe, tiens en haut. |
-| 6 | **Hollow hold** | Gainage | 2 × 20 s · repos 45 s |  | Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens. |
+| 6 | **Hollow hold** | Gainage | 3 × 20 s · repos 45 s |  | Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens. |
 
 ### Séance C — Full body C · 47 min
 
@@ -293,7 +293,7 @@ Vérification des règles : aucune violation.
 | 5 | **Clamshell (coquillage)** | Isolations (abducteurs) | 3 × 12-15 / côté · repos 90 s |  | Sur le côté genoux pliés pieds joints, ouvre le genou du dessus sans que le bassin bascule en arrière. |
 | 6 | **Relevés de jambes** | Gainage | 2 × 10-15 · repos 45 s |  | Allongé ou suspendu, monte les jambes jusqu'à 90° en enroulant le bassin, redescends lentement sans toucher. |
 
-**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 12 / 12 · fessiers 8 / 17 · ischio-jambiers 6 / 8.5 · pectoraux 6 / 6 · dos 6 / 6 · épaules 3 / 6 — bornes du niveau 2 : 8-16.
+**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 12 / 12 · fessiers 9 / 18 · ischio-jambiers 6 / 9 · pectoraux 6 / 6 · dos 6 / 6 · épaules 3 / 6 — bornes du niveau 2 : 8-16.
 
 **Avertissements du moteur** :
 - Sans barre de traction ni élastique, pas de tirage vertical : le dos reste sous-travaillé.
@@ -307,7 +307,7 @@ Vérification des règles : aucune violation.
 
 Audit mécanique (`auditerBanque`, lancé par les tests) : pour chaque compartiment (isolations par muscle, cardio et mobilité par type), chaque matériel et chaque niveau, combien d'exercices sont disponibles et combien de remplaçants exacts la règle 12 trouve pour le plus isolé d'entre eux (même compartiment, même muscle, un cran de difficulté au plus). Un trou = aucun exercice disponible, ou moins de 2 remplaçants. **Rien n'est comblé ici** : Léo décide quels exercices ajouter, ils passeront par `EXERCICES.md` comme les autres.
 
-**108 trous sur 216 combinaisons**, dont 7 sans aucun exercice à ce niveau ; 21 combinaisons sont des **limites physiques** (listées après le tableau), pas des trous. Chaque cellule : exercices disponibles, remplaçants trouvés, et l'exercice le plus isolé (celui qui a le moins de remplaçants). « — » : pas un trou.
+**99 trous sur 216 combinaisons**, dont 7 sans aucun exercice à ce niveau ; 21 combinaisons sont des **limites physiques** (listées après le tableau), pas des trous. Chaque cellule : exercices disponibles, remplaçants trouvés, et l'exercice le plus isolé (celui qui a le moins de remplaçants). « — » : pas un trou.
 
 Une chose à savoir pour lire le tableau. Certains trous viennent du **muscle principal déclaré** plus que du nombre d'exercices : la fente latérale est seule sur les adducteurs dans l'unilatéral, le soulevé de terre est seul sur la chaîne postérieure à un cran de difficulté, la planche latérale n'a que le Pallof sur les obliques — la réponse peut être un exercice de plus ou un muscle principal différent, c'est à trancher dans la banque.
 
@@ -315,10 +315,10 @@ Une chose à savoir pour lire le tableau. Certains trous viennent du **muscle pr
 |---|---|---|---|---|
 | Squat (s'accroupir) | poids du corps | 2 exos, 1 rempl. · Chaise contre le mur | — | — |
 | Squat (s'accroupir) | rien | 2 exos, 1 rempl. · Chaise contre le mur | — | — |
-| Hinge (charnière de hanche) | salle | 4 exos, 0 rempl. · Soulevé de terre roumain haltères | 7 exos, 1 rempl. · Superman au sol | 8 exos, 0 rempl. · Soulevé de terre |
-| Hinge (charnière de hanche) | haltères | 3 exos, 0 rempl. · Superman au sol | 4 exos, 0 rempl. · Superman au sol | 4 exos, 0 rempl. · Superman au sol |
-| Hinge (charnière de hanche) | poids du corps | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol |
-| Hinge (charnière de hanche) | rien | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol | 1 exo, 0 rempl. · Superman au sol |
+| Hinge (charnière de hanche) | salle | 4 exos, 0 rempl. · Soulevé de terre roumain haltères | 9 exos, 1 rempl. · Kettlebell swing | 12 exos, 1 rempl. · Kettlebell swing |
+| Hinge (charnière de hanche) | haltères | 3 exos, 0 rempl. · Superman au sol | 5 exos, 0 rempl. · Superman au sol | 5 exos, 0 rempl. · Superman au sol |
+| Hinge (charnière de hanche) | poids du corps | 1 exo, 0 rempl. · Superman au sol | 2 exos, 0 rempl. · Superman au sol | 2 exos, 0 rempl. · Superman au sol |
+| Hinge (charnière de hanche) | rien | 1 exo, 0 rempl. · Superman au sol | 2 exos, 0 rempl. · Superman au sol | 2 exos, 0 rempl. · Superman au sol |
 | Poussée horizontale | haltères | 2 exos, 1 rempl. · Pompes au mur / sur banc | — | — |
 | Poussée horizontale | poids du corps | 1 exo, 0 rempl. · Pompes au mur / sur banc | 2 exos, 1 rempl. · Pompes au mur / sur banc | 3 exos, 1 rempl. · Pompes au mur / sur banc |
 | Poussée horizontale | rien | 1 exo, 0 rempl. · Pompes au mur / sur banc | 2 exos, 1 rempl. · Pompes au mur / sur banc | 2 exos, 1 rempl. · Pompes au mur / sur banc |
@@ -330,27 +330,24 @@ Une chose à savoir pour lire le tableau. Certains trous viennent du **muscle pr
 | Tirage horizontal | rien | 1 exo, 0 rempl. · Rowing inversé | 1 exo, 0 rempl. · Rowing inversé | 1 exo, 0 rempl. · Rowing inversé |
 | Tirage vertical | haltères | 2 exos, 1 rempl. · Tirage vertical à l'élastique | — | — |
 | Tirage vertical | poids du corps | **aucun exercice** | 1 exo, 0 rempl. · Traction négative | — |
-| Unilatéral jambes | salle | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
-| Unilatéral jambes | haltères | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
-| Unilatéral jambes | poids du corps | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
-| Unilatéral jambes | rien | — | 6 exos, 0 rempl. · Fente latérale | 7 exos, 0 rempl. · Fente latérale |
-| Gainage | salle | — | 8 exos, 1 rempl. · Planche latérale | 9 exos, 1 rempl. · Planche latérale |
-| Gainage | haltères | — | 8 exos, 1 rempl. · Planche latérale | 8 exos, 1 rempl. · Planche latérale |
-| Gainage | poids du corps | — | 7 exos, 0 rempl. · Planche latérale | 7 exos, 0 rempl. · Planche latérale |
+| Unilatéral jambes | salle | — | 8 exos, 0 rempl. · Fente latérale | 12 exos, 0 rempl. · Fente latérale |
+| Unilatéral jambes | haltères | — | 8 exos, 0 rempl. · Fente latérale | 11 exos, 0 rempl. · Fente latérale |
+| Unilatéral jambes | poids du corps | — | 7 exos, 0 rempl. · Fente latérale | 9 exos, 0 rempl. · Fente latérale |
+| Unilatéral jambes | rien | — | 7 exos, 0 rempl. · Fente latérale | 9 exos, 0 rempl. · Fente latérale |
+| Gainage | poids du corps | — | 8 exos, 0 rempl. · Planche latérale | 8 exos, 0 rempl. · Planche latérale |
 | Gainage | rien | — | 7 exos, 0 rempl. · Planche latérale | 7 exos, 0 rempl. · Planche latérale |
 | Isolations · fessiers | poids du corps | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol |
 | Isolations · fessiers | rien | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol | 2 exos, 1 rempl. · Pont fessier au sol |
 | Isolations · abducteurs | haltères | 2 exos, 1 rempl. · Abduction à l'élastique | 2 exos, 1 rempl. · Abduction à l'élastique | 2 exos, 1 rempl. · Abduction à l'élastique |
 | Isolations · abducteurs | poids du corps | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) |
 | Isolations · abducteurs | rien | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) | 1 exo, 0 rempl. · Clamshell (coquillage) |
-| Isolations · ischio-jambiers | salle | 2 exos, 1 rempl. · Leg curl allongé | 2 exos, 1 rempl. · Leg curl allongé | 3 exos, 0 rempl. · Nordic curl |
+| Isolations · ischio-jambiers | salle | — | — | 5 exos, 1 rempl. · Nordic curl |
 | Isolations · ischio-jambiers | haltères | **aucun exercice** | **aucun exercice** | 1 exo, 0 rempl. · Nordic curl |
 | Isolations · ischio-jambiers | poids du corps | **aucun exercice** | **aucun exercice** | 1 exo, 0 rempl. · Nordic curl |
 | Isolations · ischio-jambiers | rien | **aucun exercice** | **aucun exercice** | 1 exo, 0 rempl. · Nordic curl |
 | Isolations · triceps | poids du corps | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc |
 | Isolations · triceps | rien | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc | 1 exo, 0 rempl. · Dips sur banc |
 | Isolations · épaules latérales | haltères | 2 exos, 1 rempl. · Élévations latérales | 2 exos, 1 rempl. · Élévations latérales | 2 exos, 1 rempl. · Élévations latérales |
-| Isolations · arrière d'épaule | salle | 2 exos, 1 rempl. · Oiseau (élévations arrière) | 2 exos, 1 rempl. · Oiseau (élévations arrière) | 2 exos, 1 rempl. · Oiseau (élévations arrière) |
 | Isolations · arrière d'épaule | haltères | 2 exos, 1 rempl. · Oiseau (élévations arrière) | 2 exos, 1 rempl. · Oiseau (élévations arrière) | 2 exos, 1 rempl. · Oiseau (élévations arrière) |
 | Isolations · mollets | haltères | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche |
 | Isolations · mollets | poids du corps | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche | 1 exo, 0 rempl. · Mollets sur une marche |

@@ -434,6 +434,123 @@
       "demo": "Good morning"
     },
     {
+      "id": "rdl_une_jambe",
+      "nom": "Soulevé de terre roumain une jambe",
+      "compartiment": "hinge",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "fessiers",
+        "équilibre",
+        "gainage"
+      ],
+      "materiel": [
+        "haltères",
+        "kettlebell",
+        "poids du corps"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "rdl",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Debout sur une jambe, haltère dans la main opposée, penche le buste en envoyant la jambe libre vers l'arrière, dos plat, jusqu'à sentir l'étirement derrière la cuisse, remonte en serrant la fesse.",
+      "erreur": "Le bassin qui s'ouvre vers le plafond : les deux hanches restent face au sol.",
+      "lot": 1,
+      "trou": "charnière unilatérale, niveau 2 (remplaçant du RDL haltères)",
+      "repos_s": 120,
+      "demo": "Soulevé de terre roumain une jambe"
+    },
+    {
+      "id": "trap_bar",
+      "nom": "Soulevé de terre trap bar",
+      "compartiment": "hinge",
+      "muscle": "chaîne postérieure",
+      "secondaires": [
+        "quadriceps",
+        "fessiers",
+        "haut du dos",
+        "avant-bras"
+      ],
+      "materiel": [
+        "trap bar"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "souleve_terre",
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Au centre de la barre hexagonale, poignées hautes, dos plat, pousse le sol avec les jambes puis ouvre les hanches, épaules au-dessus des poignées.",
+      "erreur": "Transformer le mouvement en squat en gardant les hanches trop basses : c'est une charnière, le buste s'incline.",
+      "lot": 1,
+      "trou": "charnière lourde de niveau 2, marche vers le soulevé de terre",
+      "repos_s": 180,
+      "demo": "Soulevé de terre trap bar"
+    },
+    {
+      "id": "souleve_sumo",
+      "nom": "Soulevé de terre sumo",
+      "compartiment": "hinge",
+      "muscle": "chaîne postérieure",
+      "secondaires": [
+        "fessiers",
+        "adducteurs",
+        "quadriceps",
+        "haut du dos"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        5,
+        8
+      ],
+      "unilateral": false,
+      "consigne": "Pieds larges pointes ouvertes, mains à l'intérieur des genoux, buste plus droit qu'au soulevé classique, pousse les genoux vers l'extérieur et le sol avec les pieds, hanches et épaules montent ensemble.",
+      "erreur": "Les hanches qui montent avant les épaules : le buste garde son angle jusqu'à ce que la barre passe les genoux.",
+      "lot": 1,
+      "trou": "charnière niveau 3 (remplaçant du soulevé de terre)",
+      "repos_s": 180,
+      "demo": "Soulevé de terre sumo"
+    },
+    {
+      "id": "rack_pull",
+      "nom": "Rack pull (soulevé partiel depuis le rack)",
+      "compartiment": "hinge",
+      "muscle": "chaîne postérieure",
+      "secondaires": [
+        "haut du dos",
+        "trapèzes",
+        "fessiers",
+        "avant-bras"
+      ],
+      "materiel": [
+        "barre + rack"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        3,
+        6
+      ],
+      "unilateral": false,
+      "consigne": "Barre posée sur les supports juste sous les genoux, prise comme au soulevé, tire en ouvrant les hanches et en serrant les omoplates en haut, repose contrôlé.",
+      "erreur": "Se pencher en arrière en haut : on termine debout, pas cambré.",
+      "lot": 1,
+      "trou": "charnière niveau 3 (remplaçant du soulevé de terre)",
+      "repos_s": 180,
+      "demo": "Rack pull (soulevé partiel depuis le rack)"
+    },
+    {
       "id": "souleve_terre",
       "nom": "Soulevé de terre",
       "compartiment": "hinge",
@@ -1291,7 +1408,7 @@
       ],
       "difficulte": 2,
       "echelle": "avance",
-      "monte_vers": "pistol_assiste",
+      "monte_vers": "bulgare_lestee",
       "reps": [
         8,
         12
@@ -1319,7 +1436,7 @@
       ],
       "difficulte": 3,
       "echelle": "avance",
-      "monte_vers": null,
+      "monte_vers": "pistol",
       "reps": [
         5,
         8
@@ -1330,6 +1447,148 @@
       "regression": true,
       "repos_s": 180,
       "demo": "Pistol squat assisté"
+    },
+    {
+      "id": "stepup_leste",
+      "nom": "Step-up lesté",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "équilibre"
+      ],
+      "materiel": [
+        "haltères + banc",
+        "barre + banc"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "bulgare_lestee",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Haltères le long du corps ou barre sur les épaules, pied entier sur le banc à hauteur de genou, monte en poussant dans ce seul pied, redescends lentement sans rebondir.",
+      "erreur": "Se propulser avec la jambe au sol : elle ne fait que suivre.",
+      "lot": 1,
+      "trou": "unilatéral niveau 2",
+      "repos_s": 120,
+      "demo": "Step-up lesté"
+    },
+    {
+      "id": "curtsy",
+      "nom": "Fentes curtsy (révérence)",
+      "compartiment": "unilateral",
+      "muscle": "fessiers",
+      "secondaires": [
+        "quadriceps",
+        "abducteurs",
+        "équilibre"
+      ],
+      "materiel": [
+        "poids du corps",
+        "haltères"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "bulgare",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Croise une jambe derrière l'autre comme pour une révérence, descends jusqu'à ce que le genou arrière frôle le sol, buste droit, remonte en poussant dans le pied avant.",
+      "erreur": "Le genou avant qui rentre vers l'intérieur : il reste au-dessus du pied.",
+      "lot": 1,
+      "trou": "unilatéral niveau 2, second muscle principal du compartiment",
+      "repos_s": 120,
+      "demo": "Fentes curtsy (révérence)"
+    },
+    {
+      "id": "bulgare_lestee",
+      "nom": "Fentes bulgares lestées",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "équilibre",
+        "gainage"
+      ],
+      "materiel": [
+        "haltères + banc",
+        "barre + banc"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        6,
+        10
+      ],
+      "unilateral": true,
+      "consigne": "Pied arrière sur le banc, haltères en main ou barre sur les épaules, descends jusqu'à ce que le genou arrière frôle le sol, buste légèrement penché, remonte en poussant dans le talon avant.",
+      "erreur": "Le pied avant trop près du banc, qui envoie le genou loin devant : recule-le d'une demi-foulée.",
+      "lot": 1,
+      "trou": "unilatéral niveau 3",
+      "repos_s": 180,
+      "demo": "Fentes bulgares lestées"
+    },
+    {
+      "id": "fente_barre",
+      "nom": "Fentes barre",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "gainage",
+        "équilibre"
+      ],
+      "materiel": [
+        "barre"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        6,
+        10
+      ],
+      "unilateral": true,
+      "consigne": "Barre sur les trapèzes comme au squat, grand pas en avant, genou arrière qui frôle le sol, buste vertical, pousse dans le talon avant pour revenir.",
+      "erreur": "Le pas trop court qui envoie le genou loin devant le pied : allonge la foulée.",
+      "lot": 1,
+      "trou": "unilatéral niveau 3",
+      "repos_s": 180,
+      "demo": "Fentes barre"
+    },
+    {
+      "id": "pistol",
+      "nom": "Pistol squat",
+      "compartiment": "unilateral",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers",
+        "équilibre",
+        "gainage"
+      ],
+      "materiel": [
+        "poids du corps"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        4,
+        8
+      ],
+      "unilateral": true,
+      "consigne": "Debout sur une jambe, l'autre tendue devant, bras devant pour l'équilibre, descends jusqu'en bas sans t'aider des mains, remonte sans que le talon décolle.",
+      "erreur": "Tomber en arrière au bas du mouvement : le poids reste sur le milieu du pied, le buste penché vers l'avant.",
+      "lot": 1,
+      "trou": "unilatéral niveau 3, suite du pistol assisté",
+      "repos_s": 180,
+      "demo": "Pistol squat"
     },
     {
       "id": "planche_genoux",
@@ -1550,6 +1809,118 @@
       "erreur": "Cambrer le dos en bout de course : réduis l'amplitude.",
       "repos_s": 180,
       "demo": "Roulette abdominale (ab wheel)"
+    },
+    {
+      "id": "releve_genoux_suspendu",
+      "nom": "Relevé de genoux suspendu",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "fléchisseurs de hanche",
+        "avant-bras",
+        "grand dorsal"
+      ],
+      "materiel": [
+        "barre de traction"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "roulette",
+      "reps": [
+        10,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Suspendu à la barre bras tendus, épaules basses, ramène les genoux vers la poitrine en enroulant le bassin, redescends lentement sans balancer.",
+      "erreur": "Se balancer pour lancer les genoux : c'est le ventre qui tire, pas l'élan.",
+      "lot": 1,
+      "trou": "gainage niveau 2",
+      "repos_s": 120,
+      "demo": "Relevé de genoux suspendu"
+    },
+    {
+      "id": "farmer_walk",
+      "nom": "Farmer walk (marche du fermier)",
+      "compartiment": "gainage",
+      "muscle": "abdominaux",
+      "secondaires": [
+        "avant-bras",
+        "trapèzes",
+        "obliques"
+      ],
+      "materiel": [
+        "haltères",
+        "kettlebell",
+        "trap bar"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "planche_laterale",
+      "reps": null,
+      "unilateral": false,
+      "consigne": "Un haltère lourd dans chaque main, épaules basses et en arrière, marche à pas courts et rapides sur 20 à 30 m en gardant le buste parfaitement droit.",
+      "erreur": "Les épaules qui roulent vers l'avant sous la charge : omoplates serrées, regard loin devant.",
+      "duree_s": 40,
+      "lot": 1,
+      "trou": "gainage avec charge, tous niveaux",
+      "repos_s": 45,
+      "demo": "Farmer walk (marche du fermier)"
+    },
+    {
+      "id": "pallof_rotation",
+      "nom": "Pallof press avec rotation lente",
+      "compartiment": "gainage",
+      "muscle": "obliques",
+      "secondaires": [
+        "abdominaux",
+        "fessiers"
+      ],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "pallof_demi_genou",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": true,
+      "consigne": "Même départ que le Pallof, bras tendus devant, tourne lentement le buste de quelques degrés vers l'extérieur puis reviens face à la poulie, hanches immobiles.",
+      "erreur": "Tourner avec les hanches : seul le buste pivote, le bassin reste face à l'avant.",
+      "lot": 1,
+      "trou": "gainage anti-rotation niveau 2 (remplaçant de la planche latérale)",
+      "repos_s": 90,
+      "demo": "Pallof press avec rotation lente"
+    },
+    {
+      "id": "pallof_demi_genou",
+      "nom": "Pallof press à demi-genou",
+      "compartiment": "gainage",
+      "muscle": "obliques",
+      "secondaires": [
+        "abdominaux",
+        "fessiers"
+      ],
+      "materiel": [
+        "poulie",
+        "élastique"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": true,
+      "consigne": "Un genou au sol, l'autre pied devant, poulie sur le côté à hauteur de poitrine, pousse les mains devant toi et tiens deux secondes sans que le buste tourne.",
+      "erreur": "Le buste qui bascule vers la poulie : serre la fesse du genou au sol et reste grand.",
+      "lot": 1,
+      "trou": "gainage anti-rotation niveau 3",
+      "repos_s": 120,
+      "demo": "Pallof press à demi-genou"
     },
     {
       "id": "pont_sol",
@@ -1834,6 +2205,61 @@
       "isolation": true,
       "repos_s": 180,
       "demo": "Nordic curl"
+    },
+    {
+      "id": "legcurl_assis",
+      "nom": "Leg curl assis",
+      "compartiment": "isolation",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "mollets"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "legcurl",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Dos calé, coussin au-dessus des chevilles, ramène les talons sous le siège en gardant les cuisses plaquées, remonte lentement.",
+      "erreur": "Décoller les fesses du siège pour tirer plus lourd : la charge est trop haute.",
+      "isolation": true,
+      "lot": 1,
+      "trou": "ischio-jambiers en salle, niveaux 1-2",
+      "repos_s": 90,
+      "demo": "Leg curl assis"
+    },
+    {
+      "id": "glute_ham_raise",
+      "nom": "Glute-ham raise (GHD)",
+      "compartiment": "isolation",
+      "muscle": "ischio-jambiers",
+      "secondaires": [
+        "fessiers",
+        "lombaires"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 3,
+      "echelle": "avance",
+      "monte_vers": null,
+      "reps": [
+        6,
+        10
+      ],
+      "unilateral": false,
+      "consigne": "Chevilles bloquées, genoux sur le coussin, corps droit des genoux à la tête, descends en contrôlant jusqu'à l'horizontale, remonte en tirant avec l'arrière des cuisses.",
+      "erreur": "Casser les hanches pour remonter : le corps reste une planche, on plie seulement les genoux.",
+      "isolation": true,
+      "lot": 1,
+      "trou": "ischio-jambiers niveau 3 (remplaçant du nordic curl)",
+      "repos_s": 90,
+      "demo": "Glute-ham raise (GHD)"
     },
     {
       "id": "curl",
@@ -2164,6 +2590,34 @@
       "approximatif": "sous-muscle « arrière d'épaule » ajouté à la liste des isolations",
       "repos_s": 90,
       "demo": "Face pull (poulie / élastique)"
+    },
+    {
+      "id": "reverse_pec_deck",
+      "nom": "Reverse pec deck (oiseau machine)",
+      "compartiment": "isolation",
+      "muscle": "arrière d'épaule",
+      "secondaires": [
+        "haut du dos",
+        "trapèzes"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "tirage_ela",
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Poitrine contre le dossier, bras presque tendus, écarte les poignées vers l'arrière en serrant les omoplates, reviens sans laisser la charge retomber.",
+      "erreur": "Plier les coudes pour tirer avec les bras : ce sont les épaules qui reculent, coudes fixes.",
+      "isolation": true,
+      "lot": 1,
+      "trou": "arrière d'épaule en salle",
+      "repos_s": 90,
+      "demo": "Reverse pec deck (oiseau machine)"
     },
     {
       "id": "mollets",
