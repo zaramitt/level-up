@@ -419,6 +419,78 @@ test("interprétation IA de l'objectif libre : appliquée quand elle est fournie
   assert.deepStrictEqual(verifierRegles(genererProgramme(M.entreesDepuisReponses({ ...base, interpretation: { base: "force", prioritaires: [] } }), banque), banque), []);
 });
 
+console.log("\n=== v20.1 : la séance vivante (incrément, niveau, remplaçants, adapter) ===");
+const progApp = M.programmePourApp({ frequence: 4, objectif: "muscler", muscu: "mois", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+const exoDe = id => Object.values(progApp.seances).flatMap(s => s.exos).find(e => e.id === id);
+test("règle 8 — incrément proposé seulement si haut de fourchette partout + ressenti facile/juste ; +2,5 haut, +5 bas et machines ; « trop dur » l'annule", () => {
+  const dc = exoDe("developpe_couche"), sq = exoDe("squat"), lat = exoDe("lateral");
+  assert.ok(dc && sq && lat, "exercices attendus dans le programme");
+  assert.strictEqual(M.incrementDe(dc, "salle"), 2.5); assert.strictEqual(M.incrementDe(sq, "salle"), 5); assert.strictEqual(M.incrementDe(lat, "salle"), 2.5);
+  const presse = banque.exercices.find(e => e.id === "presse");
+  assert.strictEqual(M.incrementDe({ ...presse, compartiment: "squat" }, "salle"), 5);
+  const tirageV = banque.exercices.find(e => e.id === "tirage_v");
+  assert.strictEqual(M.incrementDe(tirageV, "salle"), 5, "tirage vertical à la machine : +5 même pour le haut");
+  const h = [{ date: "2026-09-01", series: [40, 40, 40], hautFourchette: true, ressenti: "juste" }];
+  const s1 = M.suggererCharge(dc, h, "salle");
+  assert.ok(s1 && s1.kg === 42.5 && s1.plus === 2.5 && /\+2,5 kg, tu as tenu 8 reps partout/.test(s1.raison), JSON.stringify(s1));
+  assert.strictEqual(M.suggererCharge(dc, [{ ...h[0], hautFourchette: false }], "salle"), null, "reps pas atteintes → rien");
+  assert.strictEqual(M.suggererCharge(dc, [{ ...h[0], ressenti: "dur" }], "salle"), null, "trop dur → rien");
+  assert.strictEqual(M.suggererCharge(dc, [{ ...h[0], ressenti: undefined }], "salle"), null, "sans ressenti → rien (on ne devine pas)");
+  assert.strictEqual(M.suggererCharge(dc, [], "salle"), null);
+  assert.strictEqual(M.suggererCharge({ ...dc, charge: false }, h, "salle"), null, "exercice sans charge → rien");
+  const s2 = M.suggererCharge(sq, [{ date: "2026-09-01", series: [60, 62.5, 62.5], hautFourchette: true, ressenti: "facile" }], "salle");
+  assert.ok(s2 && s2.kg === 67.5 && s2.plus === 5, JSON.stringify(s2));
+});
+test("règle 7 — le niveau observé se recale : 4 « facile » d'affilée sur les gros exercices → +1 proposé ; 3 « trop dur » sur 6 → −1 ; bornes 1 et 3", () => {
+  const f = (r, compose = true) => ({ date: "2026-09-01", r, compose });
+  assert.strictEqual(M.recalerNiveau([f("facile"), f("facile"), f("facile")], 2), null, "trois seulement");
+  const plus = M.recalerNiveau([f("juste"), f("facile"), f("facile"), f("facile"), f("facile")], 2);
+  assert.ok(plus && plus.sens === 1 && /On monte d'un cran/.test(plus.message), JSON.stringify(plus));
+  assert.strictEqual(M.recalerNiveau([f("facile"), f("facile"), f("facile"), f("facile")], 3), null, "déjà au niveau 3");
+  assert.strictEqual(M.recalerNiveau([f("facile"), f("facile"), f("facile", false), f("facile"), f("facile")], 2) && true, true, "les isolations ne comptent pas");
+  assert.strictEqual(M.recalerNiveau([f("facile", false), f("facile", false), f("facile", false), f("facile", false)], 1), null, "que des isolations → rien");
+  const moins = M.recalerNiveau([f("dur"), f("juste"), f("dur"), f("facile"), f("dur")], 2);
+  assert.ok(moins && moins.sens === -1, JSON.stringify(moins));
+  assert.strictEqual(M.recalerNiveau([f("dur"), f("dur"), f("dur")], 1), null, "déjà au niveau 1");
+  const e = M.entreesDepuisReponses({ muscu: "mois", technique: "oui", niveauAjuste: 1 });
+  assert.strictEqual(e.niveau, 3); assert.strictEqual(M.entreesDepuisReponses({ muscu: "jamais", niveauAjuste: -1 }).niveau, 1); assert.strictEqual(M.entreesDepuisReponses({ muscu: "an", technique: "oui", niveauAjuste: 5 }).niveau, 3);
+});
+test("règle 12 côté app — 2 à 3 remplaçants, le phare en premier, muscle et matériel, dose de l'original conservée, historique sous l'ancien id", () => {
+  const goblet = exoDe("goblet") || { ...banque.exercices.find(e => e.id === "goblet"), series: 3, reps: [8, 12], repos: 120, charge: true };
+  const r = M.remplacantsPour(banque, goblet, { materiel: "salle", niveau: 2, motif: "prefere" });
+  assert.ok(r.candidats.length >= 2 && r.candidats.length <= 3, r.candidats.length);
+  assert.ok(r.candidats[0].phare, "le phare (squat barre) en premier : " + r.candidats.map(c => c.exo.id).join(","));
+  for (const c of r.candidats) { assert.ok(c.muscle && c.materiel && c.exo.id !== "goblet" && c.exo.remplace === "goblet"); assert.strictEqual(c.exo.series, goblet.series); if (c.exo.duree) assert.ok(/^3 × \d+ s$/.test(c.exo.dose), "isométrie : dose en secondes"); else { assert.deepStrictEqual(c.exo.reps, goblet.reps); assert.ok(/^3 × 8-12/.test(c.exo.dose)); } }
+  const m = M.remplacantsPour(banque, goblet, { materiel: "salle", niveau: 2, motif: "materiel" });
+  assert.ok(!m.candidats[0].exo.id.includes("goblet") && !m.candidats[0].materiel.includes("haltères"), "matériel indisponible : d'abord un candidat sans haltères ni kettlebell — " + m.candidats.map(c => c.exo.id + " (" + c.materiel + ")").join(", "));
+  const sq = exoDe("squat");
+  const rs = M.remplacantsPour(banque, sq, { materiel: "salle", niveau: 2, motif: "prefere", exclure: ["goblet"] });
+  assert.ok(rs.candidats.every(c => c.exo.id !== "goblet" && c.exo.id !== "squat"), "exclusions respectées");
+  const chaise = M.remplacantPourApp(exoDe("goblet") || goblet, banque.exercices.find(e => e.id === "chaise"), "salle");
+  assert.ok(/^3 × 40 s$/.test(chaise.dose) && chaise.duree === 40 && chaise.reps === null && chaise.charge === false, JSON.stringify([chaise.dose, chaise.charge]));
+  assert.ok(M.remplacantsPour(banque, { id: "rowing2" }, {}).inconnu, "ancien identifiant hors banque → inconnu");
+  const pdc = M.remplacantsPour(banque, exoDe("developpe_couche"), { materiel: ["banc"], niveau: 2, motif: "materiel" });
+  assert.ok(pdc.candidats.every(c => M.faisable(banque.exercices.find(e => e.id === c.exo.id), ["banc"])), "faisables avec le matériel réel");
+});
+test("« Adapter ma séance » — recompression dans l'ordre (isolations, séries, repos), jamais les polyarticulaires ; petite forme = −1 série, charges −10 %, repos préservés", () => {
+  const S = progApp.seances.A;
+  const a30 = M.adapterSeance(S, { tempsMin: 30, energie: "normal" });
+  assert.ok(a30.dureeMin <= 30, `30 min demandées : ${a30.dureeMin}`);
+  assert.ok(a30.adaptee.tempsMin === 30 && a30.adaptee.energie === "normal" && a30.adaptee.chargeFacteur === 1);
+  const composes = S.exos.filter(e => e.compartiment !== "isolation").map(e => e.id);
+  assert.ok(composes.every(id => a30.exos.some(e => e.id === id)), "les polyarticulaires restent");
+  assert.ok(a30.exos.length < S.exos.length || a30.exos.some((e, i) => e.series < S.exos.find(x => x.id === e.id).series), "des isolations ou des séries en moins");
+  for (const e of a30.exos) { const o = S.exos.find(x => x.id === e.id); assert.ok(e.consigne === o.consigne && e.nom === o.nom && parseInt(e.dose) === e.series, e.id); }
+  const petite = M.adapterSeance(S, { tempsMin: S.dureeMin, energie: "petite" });
+  for (const e of petite.exos) { const o = S.exos.find(x => x.id === e.id); assert.strictEqual(e.series, Math.max(2, o.series - 1), e.id); assert.strictEqual(e.repos, o.repos, e.id + " repos préservé"); }
+  assert.strictEqual(petite.adaptee.chargeFacteur, 0.9);
+  assert.ok(petite.gainage.length === S.gainage.length, "le gainage reste à énergie basse si le temps le permet");
+  const fond = M.adapterSeance(S, { tempsMin: 200, energie: "fond" });
+  assert.deepStrictEqual(fond.exos.map(e => [e.id, e.series, e.repos]), S.exos.map(e => [e.id, e.series, e.repos]), "à fond et sans contrainte de temps : rien ne bouge");
+  const vieux = M.adapterSeance({ nom: "Bas", couleur: "#fff", exos: [{ id: "goblet", nom: "Goblet squat", dose: "3 × 10", repos: 120, charge: true }], gainage: true }, { tempsMin: 20 });
+  assert.ok(vieux.exos.length === 1 && vieux.exos[0].dose, "un ancien programme (sans compartiment) ne casse pas");
+});
+
 console.log("\n=== cas demandés ===");
 test("débutant à 6× : PPL, difficulté 1 seulement, 4-5 exercices par séance", () => {
   const p = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau: 1 }, banque);

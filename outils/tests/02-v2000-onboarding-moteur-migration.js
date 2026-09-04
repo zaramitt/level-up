@@ -83,7 +83,7 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
   console.log('\n=== A/B. Onboarding solo de bout en bout : questions → programme du moteur ===');
   { const { ctx, p } = await ouvrir(null);
     let t = await texte(p);
-    check('écran promesse, version v20.0', /v20\.0/.test(t) && /C'est parti/.test(t));
+    check('écran promesse, version v20.x', /v20\.\d/.test(t) && /C'est parti/.test(t));
     await tap(p, "C'est parti"); await tap(p, 'En solo');
     t = await texte(p);
     check('première question : la fréquence, 1 à 7, le 7 présenté honnêtement', /Combien de séances par semaine/.test(t) && /1 séance/.test(t) && /7 jours : 6 séances \+ 1 jour de récupération active/.test(t) && !/niveau/i.test(t));

@@ -638,7 +638,9 @@
   const REPONSES_DEFAUT = { frequence: 3, objectif: "mieux", objectifLibre: "", muscu: "jamais", technique: "pas_sur", sport: null, intention: "soi", joursSport: [], materiel: "salle", tempsMin: 60, interpretation: null };
   const entreesDepuisReponses = r => {
     const x = { ...REPONSES_DEFAUT, ...(r || {}) };
-    return { frequence: x.frequence, objectif: x.objectif, objectifLibre: x.objectifLibre || "", interpretation: x.interpretation || null, sport: x.sport || null, intention: x.intention || "soi", joursSport: x.joursSport || [], materiel: x.materiel, niveau: niveauDepuisQuestions(x.muscu, x.technique), tempsMin: x.tempsMin || 60 };
+    // niveauAjuste : ±1 accepté par la personne quand ses ressentis le suggèrent (v20.1), jamais à son insu
+    const niveau = Math.max(1, Math.min(3, niveauDepuisQuestions(x.muscu, x.technique) + (parseInt(x.niveauAjuste) || 0)));
+    return { frequence: x.frequence, objectif: x.objectif, objectifLibre: x.objectifLibre || "", interpretation: x.interpretation || null, sport: x.sport || null, intention: x.intention || "soi", joursSport: x.joursSport || [], materiel: x.materiel, niveau, tempsMin: x.tempsMin || 60 };
   };
   // forme attendue par l'écran Séance : lettres, exos {id, nom, dose, repos, charge}, gainage en liste
   const PALETTE_APP = ["#FF5C4D", "#3D5AFE", "#2CE5A7", "#FFB020", "#7C5CFF", "#22D3EE", "#C2417A"];
@@ -656,7 +658,7 @@
         consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
-        id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
+        id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
       }));
       seances[s.lettre] = { nom: s.nom, couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
     });
@@ -677,6 +679,90 @@
   };
   // le tout en un : réponses de l'onboarding → programme pour l'app
   const programmePourApp = (reponses, banque) => presenterPourApp(genererProgramme(entreesDepuisReponses(reponses), banque));
+
+  /* ------------------------------------------------------------------ */
+  /* Étape 3 passe 2 (v20.1) : la séance vivante                          */
+  /* ------------------------------------------------------------------ */
+  // règle 8, double progression : quand toutes les séries de la dernière fois ont touché le haut de
+  // la fourchette avec un ressenti facile ou juste, on PROPOSE l'incrément — +2,5 kg haut du corps,
+  // +5 kg bas du corps et machines — jamais plus, jamais imposé. Un « trop dur » annule la proposition suivante.
+  const HAUT = new Set(["poussee_h", "poussee_v", "tirage_h", "tirage_v"]), ISO_HAUT_M = new Set(ISO_HAUT);
+  const surMachine = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.includes("machine"); }); };
+  const incrementDe = (x, materiel) => (x.compartiment === "isolation" ? ISO_HAUT_M.has(x.muscle) : HAUT.has(x.compartiment)) && !surMachine(x, materiel) ? 2.5 : 5;
+  const chargeDeSerie = e => e == null ? 0 : e.kg != null ? Number(e.kg) : Math.max(0, ...(e.series || []).filter(v => v != null && v !== "").map(Number));
+  const suggererCharge = (x, histo, materiel) => {
+    if (!x || !x.charge || !x.reps || !histo || !histo.length) return null;
+    const der = histo[histo.length - 1];
+    if (!der || !der.hautFourchette) return null;
+    if (der.ressenti === "dur" || der.ressenti == null) return null;
+    const base = chargeDeSerie(der);
+    if (!(base > 0)) return null;
+    const plus = incrementDe(x, materiel);
+    return { kg: base + plus, plus, base, reps: x.reps[1], raison: `+${String(plus).replace(".", ",")} kg, tu as tenu ${x.reps[1]} reps partout` };
+  };
+  // règle 7, niveau observé qui bouge : ressentis sur les GROS exercices (polyarticulaires), du plus ancien au
+  // plus récent. Quatre « facile » d'affilée → proposer +1 ; trois « trop dur » sur les six derniers → proposer −1.
+  const recalerNiveau = (ressentis, niveau) => {
+    const gros = (ressentis || []).filter(r => r && r.compose).slice(-6).map(r => r.r);
+    const fin = gros.slice(-4);
+    if (niveau < 3 && fin.length === 4 && fin.every(r => r === "facile")) return { sens: 1, message: "On dirait que tu progresses : les gros exercices te paraissent faciles depuis plusieurs séances. On monte d'un cran ?" };
+    if (niveau > 1 && gros.filter(r => r === "dur").length >= 3) return { sens: -1, message: "Plusieurs gros exercices t'ont paru trop durs ces derniers temps. On redescend d'un cran, le temps de consolider ?" };
+    return null;
+  };
+  // règle 12 côté app : un exercice remplaçant garde la dose de l'original (séries, reps, repos), sauf
+  // si la banque impose la sienne (isométrie, fourchette courte comme les négatives)
+  const remplacantPourApp = (orig, cand, materiel) => {
+    const iso = !cand.reps && cand.duree_s;
+    const reps = iso ? null : cand.reps && cand.reps[1] <= 6 ? cand.reps : orig.reps || cand.reps || [8, 12];
+    const x = { compartiment: cand.compartiment, series: orig.series || 3, reps, duree_s: iso ? cand.duree_s : null, unilateral: !!cand.unilateral };
+    return {
+      id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel),
+      series: x.series, reps, duree: x.duree_s, unilateral: x.unilateral, consigne: cand.consigne || "", erreur: cand.erreur || "",
+      compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id
+    };
+  };
+  // les 2 à 3 candidats proposés à l'écran : le phare en premier, chacun avec son muscle et son matériel.
+  // motif « materiel » : d'abord ceux qui ne demandent pas le matériel de l'original
+  const remplacantsPour = (banque, exoApp, opts = {}) => {
+    const o = banque.exercices.find(e => e.id === exoApp.id);
+    if (!o) return { candidats: [], approximatif: null, inconnu: true };
+    const materiel = opts.materiel || "salle";
+    const r = remplacerExercice(banque, o.id, { materiel, niveau: opts.niveau || 2, exclure: opts.exclure || [] });
+    let cands = r.candidats.slice();
+    if (opts.motif === "materiel") {
+      const tagsO = new Set(o.materiel.flatMap(tagsDe).filter(t => !TOUJOURS.includes(t)));
+      const autres = cands.filter(c => !c.materiel.some(alt => tagsDe(alt).some(t => tagsO.has(t))));
+      if (autres.length >= 1) cands = autres.concat(cands.filter(c => !autres.includes(c)));
+    }
+    cands.sort((a, b) => (b.echelle === "phare" ? 1 : 0) - (a.echelle === "phare" ? 1 : 0));
+    return {
+      approximatif: r.approximatif,
+      candidats: cands.slice(0, 3).map(c => ({ exo: remplacantPourApp(exoApp, c, materiel), muscle: c.muscle, materiel: c.materiel.join(" ou "), phare: c.echelle === "phare", difficulte: c.difficulte }))
+    };
+  };
+  // « Adapter ma séance » : moins de temps ou d'énergie → la séance existe au lieu d'être sautée.
+  // Ordre de DECISIONS.md : isolations, séries, repos jusqu'aux planchers, jamais les polyarticulaires.
+  // Petite forme : une série de moins, charges suggérées −10 %, repos préservés.
+  const adapterSeance = (S, opts = {}) => {
+    const tempsMin = Math.max(10, Math.round(Number(opts.tempsMin)) || S.dureeMin || 60);
+    const energie = ["fond", "normal", "petite"].includes(opts.energie) ? opts.energie : "normal";
+    // un ancien programme n'a ni reps ni durée structurées : on les lit dans la dose (« 3 × 10 », « 3 × 30-45 s »)
+    const lireDose = x => { const m = /×\s*(\d+)(?:-(\d+))?\s*(s\b)?/.exec(x.dose || ""); if (!m) return { reps: [8, 12], duree_s: null }; return m[3] ? { reps: null, duree_s: parseInt(m[2] || m[1]) } : { reps: [parseInt(m[1]), parseInt(m[2] || m[1])], duree_s: null }; };
+    const interne = (x, gainage) => { const d = x.reps || x.duree ? { reps: x.reps || null, duree_s: x.duree || null } : lireDose(x); return { ...x, compartiment: gainage ? "gainage" : x.compartiment || "inconnu", series: x.series || parseInt(x.dose) || 3, reps: d.reps, duree_s: d.duree_s, repos_s: x.repos || 0, role: x.role || null, _app: x }; };
+    const s = { exercices: [...S.exos.map(x => interne(x, false)), ...(Array.isArray(S.gainage) ? S.gainage : []).map(g => interne(g, true))] };
+    if (energie === "petite") for (const x of s.exercices) if (estForce(x) && x.compartiment !== "cardio_mobilite") x.series = Math.max(2, x.series - 1);
+    const avant = dureeSeance(s);
+    const nbMin = Math.min(3, s.exercices.filter(estForce).length);
+    const tient = comprimer(s, tempsMin, nbMin);
+    const retour = x => ({ ...x._app, series: x.series, repos: x.repos_s, dose: doseDe({ ...x, reps: x.reps, duree_s: x.duree_s }) });
+    return {
+      ...S,
+      exos: s.exercices.filter(x => x.compartiment !== "gainage").map(retour),
+      gainage: s.exercices.filter(x => x.compartiment === "gainage").map(retour),
+      dureeMin: dureeSeance(s),
+      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, avantMin: avant, tient, retires: S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - s.exercices.length }
+    };
+  };
 
   /* ------------------------------------------------------------------ */
   /* Règle 12 : remplacement d'un exercice                              */
@@ -782,5 +868,5 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
 });

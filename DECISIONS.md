@@ -210,6 +210,92 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.3 — septembre 2026
+
+Chantier Programmes, étape 3 passe 2, commit 3 : **les textes des bulles
+d'aide**. Les six bulles (Séance, Habitudes, Progrès, Récompenses côté
+coachée et côté coach, Suivi) sont réécrites : simples, chaleureuses, une
+idée par bulle, dans la voix de l'app, et **accordées à la préférence
+elle/il/neutre** à l'affichage (`bulleTexte` → `accorde`). Elles expliquent
+l'onglet à quelqu'un qui ouvre l'app pour la première fois, y compris
+l'accordéon, le ressenti et « On ajuste » arrivés en v20.1, et la courbe de
+charge de la v20.2. La bulle Récompenses a une **variante solo** (pas de
+négos, de paris ni de cagnotte à expliquer à qui se coache seul·e). Les
+bulles du coach parlent de la personne coachée sans la genrer (l'app ne
+connaît que la préférence de la personne qui lit).
+
+## v20.2 — septembre 2026
+
+Chantier Programmes, étape 3 passe 2, commit 2 : **le suivi**.
+
+- **Graphique de charge par exercice** dans l'onglet Progrès, façon balance
+  connectée : une carte par exercice pratiqué au moins deux fois, avec la
+  charge de travail par séance (la meilleure série, comme la progression et
+  les badges) dans le temps, courbe et aire, axe des kg (min / max), dates aux
+  extrémités, badge PR quand la dernière séance bat toutes les autres. Les
+  séances ressenties « trop dur » (entrée de charge ou ressenti du jour) sont
+  marquées d'un cercle pointillé discret. Liste triée par récence. Un
+  exercice pratiqué une seule fois est listé à part (« la courbe viendra à la
+  deuxième »). Inline SVG, sans bibliothèque.
+- **Le carnet de charges est remplacé, pas dupliqué** : chaque carte reprend
+  ce qu'il montrait (nombre de notes, dernière date, dernière charge, record)
+  et y ajoute la courbe. Motif : deux listes des mêmes exercices l'une sous
+  l'autre auraient doublé la page.
+- **Les exercices remplacés apparaissent sous leur propre nom** : `nomDe`
+  cherche dans le programme courant, puis dans la banque embarquée. Leur
+  historique reste sous leur identifiant, il n'est jamais fusionné avec celui
+  du remplaçant.
+
+## v20.1 — septembre 2026
+
+Chantier Programmes, étape 3 passe 2, commit 1 : **la séance vivante**.
+
+- **Ressenti après exercice (règle 7)** : trois boutons Facile / Juste / Trop
+  dur à la validation, un tap, facultatif, modifiable, jamais bloquant. Stocké
+  par exercice et par séance (`ressentis`), et reporté sur l'entrée de charge
+  du jour. Le niveau observé se recale **sur les gros exercices seulement**
+  (polyarticulaires) : quatre « facile » d'affilée → l'app propose de monter
+  d'un cran ; trois « trop dur » sur les six derniers → de redescendre.
+  Jamais à l'insu : une carte dans l'onglet Séance (« On dirait que tu
+  progresses… On monte d'un cran ? ») avec « Oui » (aperçu direct du
+  programme recalculé, puis adoption) ou « Pas maintenant » (refus mémorisé
+  deux semaines). Le cran accepté vit dans `reponses.niveauAjuste` (±1, borné
+  1-3) ; après une adoption, seuls les ressentis postérieurs comptent. Le mot
+  « niveau » n'apparaît toujours pas : « relevé / abaissé d'un cran ».
+- **Incrément proposé (règle 8)** : condition = toutes les séries de la
+  dernière fois au haut de la fourchette **et** ressenti facile ou juste. Les
+  reps par série n'étaient pas notées : une seule case « J'ai tenu N reps sur
+  toutes les séries » sous la saisie des charges (arbitrage : une case plutôt
+  qu'un champ de reps par série, pour rester à un tap). +2,5 kg haut du
+  corps, +5 kg bas du corps et machines (le tirage vertical à la poulie est
+  « machine »), jamais plus. Suggestion pré-remplie et expliquée (« +2,5 kg,
+  tu as tenu 12 reps partout »), modifiable. Un « trop dur » annule la
+  proposition suivante ; un jour de petite forme aussi (les charges baissent,
+  elles ne montent pas).
+- **Remplacer (règle 12)** : deux motifs (matériel indisponible / je préfère
+  autre chose), 2 à 3 candidats via `remplacerExercice`, le phare en premier,
+  chacun avec muscle, matériel et dose. Le remplaçant garde la dose de
+  l'original (séries, fourchette, repos) sauf isométrie ou fourchette courte
+  imposée par la banque (négatives, nordic). Pour aujourd'hui
+  (`J.remplacements`), ou « pour toutes les prochaines séances aussi » (le
+  programme est réécrit, dans chaque séance qui avait l'exercice). Les charges
+  restent sous l'ancien identifiant ; un exercice d'un ancien programme, hors
+  banque, renvoie vers la migration.
+- **Adapter ma séance** : bouton sous la carte tant que rien n'est validé.
+  Temps (curseur + saisie exacte, défaut = dernière adaptation, sinon la durée
+  prévue) et énergie (à fond / normal / petite forme). Recompression par le
+  moteur dans l'ordre de « Adapter ma séance » : isolations, séries, repos
+  jusqu'aux planchers, jamais les polyarticulaires. Petite forme : une série
+  de moins (jamais sous 2), charges suggérées −10 % arrondies à 2,5 kg, repos
+  préservés. La séance adaptée compte comme une séance normale et l'entrée
+  d'historique porte `adaptee: true`. Annulable tant que rien n'est validé.
+- **Jour de récupération active (7×)** : écran dédié (`RecupView`), ton
+  différent, pas de charge, pas de repos, des durées ; 5 XP par activité et
+  15 si tout est bouclé (au lieu de 15 et 40), pas de barre « Fin de
+  séance », pas de photo demandée. L'historique porte `recup: true`.
+- Ressenti, remplacement, adaptation : tous de vrais `<button>` avec
+  `touch-action: manipulation` (tap franc sur iOS, comme v19.6 / v19.10).
+
 ## v20.0 — septembre 2026
 
 Chantier Programmes, étape 3, passe 1 : **le moteur est branché**. Première
