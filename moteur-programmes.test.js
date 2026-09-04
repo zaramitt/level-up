@@ -374,6 +374,51 @@ test("matériel réel — une liste de tags cochés remplace les raccourcis, qui
   for (const m of M.MATERIELS) assert.deepStrictEqual(ids(genererProgramme({ frequence: 3, objectif: "tonifier", materiel: m, niveau: 2 }, banque)), ids(genererProgramme({ frequence: 3, objectif: "tonifier", materiel: m === "salle" ? M.TAGS_MATERIEL : [...M.MATERIEL_OK[m]], niveau: 2 }, banque)), `raccourci ${m} = sa liste`);
 });
 
+console.log("\n=== étape 3 : questions → niveau, réponses → programme pour l'app, interprétation IA ===");
+test("les deux questions factuelles donnent le niveau observé initial (1, 2 ou 3)", () => {
+  const n = M.niveauDepuisQuestions;
+  assert.strictEqual(n("jamais", "oui"), 1); assert.strictEqual(n("jamais", "pas_sur"), 1);
+  assert.strictEqual(n("mois", "oui"), 2); assert.strictEqual(n("mois", "pas_sur"), 1);
+  assert.strictEqual(n("an", "oui"), 3); assert.strictEqual(n("an", "pas_sur"), 2);
+  assert.strictEqual(n(undefined, undefined), 1, "sans réponse : débutant");
+});
+test("réponses de l'onboarding → programme pour l'app : lettres, doses lisibles, gainage en liste, durée, avertissements", () => {
+  const rep = { frequence: 4, objectif: "tonifier", muscu: "mois", technique: "oui", sport: "course", intention: "sport", joursSport: [7], materiel: ["haltères", "banc", "élastique"], tempsMin: 47 };
+  const p = M.programmePourApp(rep, banque);
+  assert.deepStrictEqual(Object.keys(p.seances), ["A", "B", "C", "D"]);
+  assert.strictEqual(p.lieu, "perso"); assert.ok(p.nom.includes("4 séances"));
+  assert.strictEqual(p.moteur.entrees.niveau, 2); assert.deepStrictEqual(p.moteur.entrees.materiel, ["haltères", "banc", "élastique"]); assert.strictEqual(p.moteur.entrees.tempsMin, 47);
+  assert.strictEqual(p.moteur.semaine.length, 7); assert.ok(p.moteur.semaine[6].sport && !p.moteur.semaine[6].lettre);
+  for (const [l, s] of Object.entries(p.seances)) {
+    assert.ok(s.nom && s.couleur && s.dureeMin <= 47, l);
+    assert.ok(Array.isArray(s.gainage) && s.gainage.length >= 1 && s.gainage.every(g => g.id && g.dose && g.repos && (g.duree === null || g.duree > 0)), l + " gainage");
+    for (const e of s.exos) {
+      assert.ok(/^\d × \d+-\d+( \/ côté)?$|^\d × \d+ s$/.test(e.dose), `${e.id} : dose « ${e.dose} »`);
+      assert.strictEqual(parseInt(e.dose), e.series, "nbSeries(ex) = parseInt(dose)");
+      assert.ok(typeof e.repos === "number" && e.repos >= 45 && e.consigne.length > 20 && e.erreur.length > 10, e.id);
+      assert.ok(e.compartiment !== "gainage");
+    }
+    assert.ok(s.exos.filter(e => e.charge).length >= 1, l + " : des exercices avec charge");
+  }
+  const p7 = M.programmePourApp({ frequence: 7, objectif: "muscler", muscu: "an", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  assert.ok(p7.seances.G && p7.seances.G.exos.every(e => !e.charge && /min$/.test(e.dose)) && p7.seances.G.gainage.length === 0, "7e jour : récupération active, en minutes, sans charge");
+  const rien = M.programmePourApp({ frequence: 3, objectif: "mieux", muscu: "jamais", technique: "pas_sur", materiel: [], tempsMin: 40 }, banque);
+  assert.ok(rien.moteur.avertissements.some(a => /barre de traction/.test(a)) && rien.moteur.limites.length, "sans matériel : la limite est dite");
+  assert.ok(rien.seances.A.exos.every(e => !e.charge), "sans matériel : pas de charge à noter");
+});
+test("interprétation IA de l'objectif libre : appliquée quand elle est fournie, repli « esthétique équilibré » dit clairement", () => {
+  const base = { frequence: 4, objectif: "libre", objectifLibre: "des jambes solides pour le ski", muscu: "an", technique: "oui", materiel: "salle" };
+  const ia = M.programmePourApp({ ...base, interpretation: { base: "tonifier", prioritaires: ["quadriceps", "fessiers"] } }, banque);
+  assert.strictEqual(ia.moteur.entrees.objectif, "tonifier");
+  assert.ok(ia.moteur.avertissements.some(a => /lu comme « Me tonifier », priorité à quadriceps, fessiers/.test(a)), ia.moteur.avertissements.join(" | "));
+  const repli = M.programmePourApp({ ...base, interpretation: { repli: true } }, banque);
+  assert.strictEqual(repli.moteur.entrees.objectif, "mieux");
+  assert.ok(repli.moteur.avertissements.some(a => /pas réussi à lire ton objectif/.test(a) && /esthétique équilibré/.test(a)), repli.moteur.avertissements.join(" | "));
+  const horsFormat = M.programmePourApp({ ...base, interpretation: { base: "n'importe quoi", prioritaires: [] } }, banque);
+  assert.ok(horsFormat.moteur.avertissements.some(a => /mots-clés, sans IA/.test(a)), "hors format sans repli explicite : mots-clés");
+  assert.deepStrictEqual(verifierRegles(genererProgramme(M.entreesDepuisReponses({ ...base, interpretation: { base: "force", prioritaires: [] } }), banque), banque), []);
+});
+
 console.log("\n=== cas demandés ===");
 test("débutant à 6× : PPL, difficulté 1 seulement, 4-5 exercices par séance", () => {
   const p = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau: 1 }, banque);

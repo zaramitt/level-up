@@ -69,6 +69,799 @@
 </head>
 <body>
 <div id="root"></div>
+<script id="moteur-programmes">
+/* copie de moteur-programmes.js — ne pas éditer ici : node outils/sync.js */
+/* Moteur de génération de programmes — chantier Programmes, étape 2.
+   Fonction pure, sans IA, sans réseau, sans état : mêmes entrées → même
+   programme. NON branché à l'interface ni à /generer (étape 3).
+   Implémente les squelettes 1× à 7× et les règles 1 à 12 de DECISIONS.md,
+   plus les arbitrages de relecture de l'étape 2 (personnalisation, volume
+   direct, matériel « rien », jours de sport, durée exacte).
+   Chargeable en Node (module.exports) et dans le navigateur (window.Moteur). */
+(function (racine, fabrique) {
+  if (typeof module === "object" && module.exports) module.exports = fabrique();
+  else racine.Moteur = fabrique();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  /* ------------------------------------------------------------------ */
+  /* Vocabulaire                                                        */
+  /* ------------------------------------------------------------------ */
+  const R = { force: [3, 6], lourd: [5, 8], moyen: [8, 12], leger: [12, 15], long: [15, 20] };
+  // règle 5 : repos par fourchette de reps
+  const reposDe = (reps, isolation) => reps[1] <= 6 ? 180 : reps[0] >= 12 || isolation ? (reps[0] >= 15 ? 60 : 90) : 120;
+  const PLANCHER_REPOS = { compose: 90, isolation: 45 };
+
+  // gros groupes (règles 3 et 4)
+  // fessiers et ischio-jambiers comptés séparément, comme le fait le consensus 10-20 séries/muscle
+  const GROS_GROUPES = ["quadriceps", "fessiers", "ischio-jambiers", "pectoraux", "dos", "épaules"];
+  const MUSCLE_VERS_GROS = {
+    quadriceps: "quadriceps", adducteurs: "quadriceps",
+    fessiers: "fessiers", abducteurs: "fessiers", "ischio-jambiers": "ischio-jambiers", "chaîne postérieure": "ischio-jambiers",
+    pectoraux: "pectoraux", "haut des pectoraux": "pectoraux",
+    "dos (grand dorsal)": "dos", "haut du dos": "dos", trapèzes: "dos", "arrière d'épaule": "dos",
+    épaules: "épaules", "épaules latérales": "épaules", "avant d'épaule": "épaules"
+  };
+  const COMP_VERS_GROS = { squat: "quadriceps", unilateral: "quadriceps", hinge: "ischio-jambiers", poussee_h: "pectoraux", poussee_v: "épaules", tirage_h: "dos", tirage_v: "dos" };
+  // le muscle principal de la banque d'abord, le compartiment en repli ; ni le gainage
+  // ni le cardio / la mobilité ne sont des gros groupes (règles 3 et 4 = force)
+  const grosGroupe = e => e.compartiment === "cardio_mobilite" || e.compartiment === "gainage" ? null : MUSCLE_VERS_GROS[e.muscle] || COMP_VERS_GROS[e.compartiment] || null;
+  const grosSecondaires = e => e.compartiment === "cardio_mobilite" || e.compartiment === "gainage" ? [] : (e.secondaires || []).map(m => MUSCLE_VERS_GROS[m]).filter(Boolean);
+  // pour le volume (règle 3), l'arrière d'épaule est un petit muscle à part : il pèse dans le
+  // placement (règle 4, jour pull) mais pas dans le plafond du dos
+  const grosGroupeVolume = e => e.muscle === "arrière d'épaule" ? null : grosGroupe(e);
+  // groupes « travaillés » par un exercice : principal + secondaires (un squat travaille les fessiers)
+  const groupesDe = e => new Set([grosGroupe(e), ...grosSecondaires(e)].filter(Boolean));
+  const COMPOSES = ["squat", "hinge", "poussee_h", "poussee_v", "tirage_h", "tirage_v", "unilateral"];
+  const estForce = x => x.compartiment !== "gainage" && x.compartiment !== "cardio_mobilite";
+  // règle 2 : gros exercices d'abord ; un accessoire (extension lombaire, superman…) passe après les vrais polyarticulaires
+  const ORDRE_COMP = { squat: 0, hinge: 1, poussee_h: 2, tirage_h: 3, poussee_v: 4, tirage_v: 5, unilateral: 6, isolation: 10, gainage: 20, cardio_mobilite: 30 };
+  const rangOrdre = x => (x.accessoire && COMPOSES.includes(x.compartiment) ? 9 : ORDRE_COMP[x.compartiment]);
+
+  // Le matériel est une LISTE de tags réellement disponibles (à l'étape 3 : cases à cocher dans
+  // l'onboarding). Les quatre situations ci-dessous ne sont que des raccourcis pré-cochés :
+  // « salle » (tout), « halteres » (haltères et banc), « pdc » (poids du corps, avec barre de traction
+  // et barres de dips), « rien » (maison sans équipement). Le poids du corps est toujours disponible.
+  const TAGS_MATERIEL = ["haltères", "barre", "banc", "élastique", "kettlebell", "poulie", "machine", "barre de traction", "barres de dips", "roulette", "ballon", "rouleau", "trap bar", "rack", "tapis / machine cardio"];
+  const TOUJOURS = ["poids du corps", "aucun"];
+  const MATERIEL_OK = {
+    salle: null,
+    halteres: new Set(["haltères", "banc", ...TOUJOURS]),
+    pdc: new Set(["barre de traction", "barres de dips", ...TOUJOURS]),
+    rien: new Set(TOUJOURS)
+  };
+  const MATERIEL_NOM = { salle: "salle complète", halteres: "haltères et banc", pdc: "poids du corps (barre de traction, barres de dips)", rien: "rien du tout (maison sans équipement)" };
+  // un raccourci (chaîne) ou une liste de tags → l'ensemble disponible (null = tout)
+  const okDe = materiel => Array.isArray(materiel) ? new Set([...materiel.map(String), ...TOUJOURS]) : MATERIEL_OK.hasOwnProperty(materiel) ? MATERIEL_OK[materiel] : null;
+  const nomMateriel = materiel => Array.isArray(materiel) ? `matériel coché : ${materiel.join(", ")}` : MATERIEL_NOM[materiel] || MATERIEL_NOM.salle;
+  const normaliserMateriel = m => Array.isArray(m) ? [...new Set(m.map(String).filter(t => TAGS_MATERIEL.includes(t)))] : MATERIEL_OK.hasOwnProperty(m) ? m : "salle";
+  // convention de la banque : le champ materiel est une liste d'ALTERNATIVES (n'importe laquelle
+  // suffit) ; un tag « a + b » est une combinaison obligatoire. Faisable = une alternative dont
+  // chaque composant est disponible.
+  const tagsDe = alt => alt.split(" + ").map(t => t.trim());
+  const faisable = (e, materiel) => {
+    const ok = okDe(materiel);
+    if (ok === null) return true;
+    return e.materiel.some(alt => tagsDe(alt).every(t => ok.has(t)));
+  };
+  // ce qui manque pour une case vide, en langage utilisateur : les tags absents, du plus courant à la
+  // maison au plus « salle »
+  const ORDRE_TAGS = ["barre de traction", "élastique", "haltères", "banc", "kettlebell", "barres de dips", "ballon", "roulette", "rouleau", "poulie", "machine", "barre", "trap bar", "rack", "tapis / machine cardio"];
+  const manqueDe = (exos, materiel) => {
+    const ok = okDe(materiel) || new Set();
+    const tags = new Set(exos.flatMap(e => e.materiel.flatMap(tagsDe)).filter(t => !ok.has(t)));
+    const l = [...tags].sort((a, b) => (ORDRE_TAGS.indexOf(a) + 1 || 99) - (ORDRE_TAGS.indexOf(b) + 1 || 99)).slice(0, 2);
+    return l.length ? l.join(" ni ") : "matériel";
+  };
+  const CONSEQUENCE = {
+    tirage_v: ["tirage vertical", "le dos reste sous-travaillé"], tirage_h: ["tirage horizontal", "le dos reste sous-travaillé"],
+    poussee_h: ["poussée horizontale", "les pectoraux restent sous-travaillés"], poussee_v: ["poussée verticale", "les épaules restent sous-travaillées"],
+    squat: ["squat", "les cuisses restent sous-travaillées"], hinge: ["charnière de hanche", "l'arrière des cuisses et les fessiers restent sous-travaillés"],
+    unilateral: ["travail sur une jambe", "les cuisses et l'équilibre restent sous-travaillés"], gainage: ["gainage", "le tronc reste sous-travaillé"],
+    cardio_mobilite: ["cardio ou mobilité", "la séance de récupération est plus courte"]
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Focus (règle 1) : compartiments et muscles autorisés, cases à remplir */
+  /* ------------------------------------------------------------------ */
+  const ISO_HAUT = ["biceps", "triceps", "épaules latérales", "arrière d'épaule"];
+  const ISO_BAS = ["fessiers", "ischio-jambiers", "abducteurs", "mollets"];
+  const FULL = [...COMPOSES, "isolation", "gainage"];
+  // repli : quand une case d'isolation n'a plus de muscle libre dans la séance (jamais deux
+  // isolations du même muscle), elle devient un polyarticulaire du focus
+  const FOCUS = {
+    fullA: { nom: "Full body A", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+      cases: [{ c: "squat" }, { c: "poussee_h" }, { c: "tirage_h" }, { c: "hinge" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
+    fullB: { nom: "Full body B", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+      cases: [{ c: "hinge" }, { c: "poussee_v" }, { c: "tirage_v" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
+    fullC: { nom: "Full body C", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+      cases: [{ c: "unilateral" }, { c: "poussee_h" }, { c: "tirage_h" }, { c: "squat" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
+    haut: { nom: "Haut du corps", comp: ["poussee_h", "poussee_v", "tirage_h", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
+      cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "poussee_v" }, { c: "tirage_v" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
+    bas: { nom: "Bas du corps", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+      cases: [{ c: "squat" }, { c: "hinge" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
+    push: { nom: "Push (poussée)", comp: ["poussee_h", "poussee_v", "isolation", "gainage"], iso: ["triceps", "épaules latérales"], bas: false,
+      cases: [{ c: "poussee_h" }, { c: "poussee_v" }, { c: "poussee_h" }, { c: "isolation", m: ["triceps"] }, { c: "isolation", m: ["épaules latérales"] }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
+    pull: { nom: "Pull (tirage)", comp: ["tirage_h", "tirage_v", "isolation", "gainage"], iso: ["biceps", "arrière d'épaule"], bas: false,
+      cases: [{ c: "tirage_v" }, { c: "tirage_h" }, { c: "tirage_h" }, { c: "isolation", m: ["arrière d'épaule"] }, { c: "isolation", m: ["biceps"] }, { c: "isolation", repli: "tirage_v" }, { c: "gainage" }] },
+    legs: { nom: "Legs (jambes)", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+      cases: [{ c: "squat" }, { c: "hinge" }, { c: "unilateral" }, { c: "isolation", m: ["fessiers"] }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
+    focusBas: { nom: "Focus bas du corps", comp: ["hinge", "unilateral", "squat", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+      cases: [{ c: "hinge" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "squat" }, { c: "gainage" }] },
+    focusHaut: { nom: "Focus haut du corps", comp: ["poussee_h", "tirage_h", "poussee_v", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
+      cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
+    recup: { nom: "Récupération active", comp: ["cardio_mobilite"], iso: [], bas: false,
+      cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1200 }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }] }
+  };
+  const appartientAuFocus = (e, focus) => {
+    const f = FOCUS[focus];
+    if (!f) return false;
+    if (!f.comp.includes(e.compartiment)) return false;
+    if (e.compartiment === "isolation" && !f.iso.includes(e.muscle)) return false;
+    return true;
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Squelettes par fréquence                                           */
+  /* ------------------------------------------------------------------ */
+  const SQUELETTES = {
+    1: { nom: "fullbody-1", description: "1 séance full body", seances: ["fullA"] },
+    2: { nom: "fullbody-AB", description: "2 séances full body A et B", seances: ["fullA", "fullB"] },
+    3: { nom: "fullbody-ABC", description: "3 séances full body A, B et C", seances: ["fullA", "fullB", "fullC"] },
+    4: { nom: "haut-bas-x2", description: "haut / bas, deux fois", seances: ["haut", "bas", "haut", "bas"] },
+    5: { nom: "haut-bas-x2-focus", description: "haut / bas deux fois + un jour focus (objectif ou sport)", seances: ["haut", "bas", "haut", "bas", "focus"] },
+    6: { nom: "push-pull-legs-x2", description: "push / pull / legs, deux fois", seances: ["push", "pull", "legs", "push", "pull", "legs"] },
+    7: { nom: "push-pull-legs-x2-recup", description: "push / pull / legs deux fois + un jour de récupération active (mobilité, cardio léger) — jamais une 7e séance de force", seances: ["push", "pull", "legs", "push", "pull", "legs", "recup"] }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Objectifs (règle 11) et sports (règle 10) : des modificateurs      */
+  /* ------------------------------------------------------------------ */
+  // prioritaires : muscles qui pèsent lourd dans le choix ; obligatoires : exercices placés
+  // d'office dans chaque séance qui admet leur muscle (remplacés selon matériel et niveau, règle 12),
+  // le premier dans une case d'isolation, le suivant en case supplémentaire si le temps le permet
+  const OBJECTIFS = {
+    tonifier: { nom: "Me tonifier", prioritaires: ["fessiers", "ischio-jambiers", "abducteurs", "chaîne postérieure"], obligatoires: ["hipthrust", "abduction"], cote: "bas", reps: "moyen", repsIso: "leger" },
+    poids: { nom: "Perdre du poids", prioritaires: [], obligatoires: [], cote: null, reps: "leger", repsIso: "long" },
+    muscler: { nom: "Me muscler", prioritaires: ["pectoraux", "dos (grand dorsal)", "épaules", "épaules latérales", "triceps", "biceps"], obligatoires: [], cote: "haut", reps: "moyen", repsIso: "leger" },
+    mieux: { nom: "Me sentir mieux", prioritaires: [], obligatoires: [], cote: null, reps: "moyen", repsIso: "leger" },
+    douce: { nom: "Reprendre en douceur", prioritaires: [], obligatoires: [], cote: null, reps: "leger", repsIso: "leger", difficulteMax: 1, seriesMax: 3 },
+    // obligatoiresComposes : placé une fois par semaine dans la première case de son compartiment
+    force: { nom: "Force", prioritaires: [], obligatoires: [], obligatoiresComposes: ["souleve_terre"], cote: null, reps: "force", repsIso: "moyen" }
+  };
+  /* POINT D'EXTENSION (IA, étape ultérieure) : interpréter un objectif en texte
+     libre. Aujourd'hui : quelques mots-clés déterministes, sinon « mieux ».
+     Contrat à conserver : (texte) → { base: clé d'OBJECTIFS, prioritaires: [muscles] }. */
+  const interpreterObjectifLibre = texte => {
+    const t = (texte || "").toLowerCase();
+    if (/\bforce\b|plus forte?\b|soulever plus lourd|1rm/.test(t)) return { base: "force", prioritaires: [] };
+    if (/fessier|fesse|galbe/.test(t)) return { base: "tonifier", prioritaires: ["fessiers"] };
+    if (/bras|épaule|pec|dos\b|haut du corps/.test(t)) return { base: "muscler", prioritaires: [] };
+    if (/maigrir|gras|poids|sèche|seche/.test(t)) return { base: "poids", prioritaires: [] };
+    if (/douceur|reprise|blessure|doux/.test(t)) return { base: "douce", prioritaires: [] };
+    return { base: "mieux", prioritaires: [] };
+  };
+  // favoris : exercices poussés en avant pour ce sport ; brasMin : isolations de bras réduites
+  // au minimum (les cases d'isolation du haut vont aux épaules) ; unilateral : une case
+  // d'isolation du bas devient une seconde case unilatérale ; gainage anti-rotation en plus
+  const SPORTS = {
+    // obligatoires : une entrée = un exercice ou une liste d'alternatives (le premier admissible est pris)
+    course: { nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    cyclisme: { nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    natation: { nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
+    football: { nom: "Football", prioritaires: ["ischio-jambiers", "fessiers", "adducteurs", "quadriceps"], favoris: ["nordic", "bulgare", "fente_laterale", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    tennis: { nom: "Tennis & padel", prioritaires: ["arrière d'épaule", "épaules", "fessiers", "obliques"], favoris: ["pallof", "planche_laterale", "fente_laterale", "tirage_ela"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    rugby: { nom: "Rugby", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "quadriceps", "pectoraux"], favoris: ["souleve_terre", "squat", "rowing_barre"], unilateral: false, brasMin: false, antiRotation: false, cote: null },
+    basket: { nom: "Basket & handball", prioritaires: ["quadriceps", "fessiers", "mollets", "épaules"], favoris: ["bulgare", "stepup", "mollets", "squat_saut"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    escalade: { nom: "Escalade", prioritaires: ["dos (grand dorsal)", "biceps", "arrière d'épaule", "avant-bras"], favoris: ["traction", "traction_lestee", "rowing_inverse", "hollow"], unilateral: false, brasMin: false, antiRotation: false, cote: "haut" },
+    frappe: { nom: "Sports de frappe", prioritaires: ["obliques", "épaules", "chaîne postérieure", "mollets"], favoris: ["pallof", "planche_laterale", "push_press", "swing"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    prehension: { nom: "Sports de préhension", prioritaires: ["dos (grand dorsal)", "chaîne postérieure", "biceps", "obliques"], favoris: ["traction", "rowing_barre", "souleve_terre", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: null },
+    mma: { nom: "MMA", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "obliques", "épaules"], favoris: ["traction", "souleve_terre", "pallof", "push_press"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    equitation: { nom: "Équitation", prioritaires: ["adducteurs", "fessiers", "abducteurs", "dos (grand dorsal)"], favoris: ["fente_laterale", "abduction", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    danse: { nom: "Danse", prioritaires: ["fessiers", "abducteurs", "mollets", "obliques"], favoris: ["bulgare", "mollets", "planche_laterale", "abduction"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    yoga: { nom: "Yoga & pilates", prioritaires: ["dos (grand dorsal)", "pectoraux", "fessiers", "épaules"], favoris: ["traction", "developpe_couche", "hipthrust"], unilateral: false, brasMin: false, antiRotation: false, cote: null }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Niveau observé (règle 7) et échelle (règle 9)                      */
+  /* ------------------------------------------------------------------ */
+  const NIVEAU = {
+    1: { difficulteMax: 1, echelle: "simple", nbExos: [4, 5], seriesCompose: 3, seriesIso: 2, volumeMin: 6, volumeMax: 12 },
+    2: { difficulteMax: 2, echelle: "phare", nbExos: [5, 6], seriesCompose: 3, seriesIso: 3, volumeMin: 8, volumeMax: 16 },
+    3: { difficulteMax: 3, echelle: "avance", nbExos: [6, 7], seriesCompose: 4, seriesIso: 3, volumeMin: 10, volumeMax: 20 }
+  };
+  // règle 7 : nombre d'exercices par séance ; en force, un de moins au minimum — les 5 séries
+  // des gros mouvements prennent la place, et jamais deux isolations du même muscle
+  // (en force, le pull n'a qu'un tirage vertical et un rowing : deux tirages, deux isolations, 4 exercices)
+  const nbExosDe = (niveau, objCle, focus) => { const n = NIVEAU[niveau].nbExos; return objCle === "force" ? [Math.max(3, n[0] - (focus === "pull" ? 2 : 1)), n[1]] : n; };
+  // une régression (pompes genoux, planche genoux, pistol assisté…) n'a sa place qu'à défaut
+  // d'alternative dès le niveau 2 ; au niveau 3, les difficultés 1 non plus
+  const tropFacilePour = (e, niveau) => niveau >= 3 ? e.difficulte <= 1 || !!e.regression : niveau === 2 ? !!e.regression : false;
+  const tropFacilePourAvance = e => tropFacilePour(e, 3);
+
+  /* ------------------------------------------------------------------ */
+  /* Sélection d'un exercice pour une case                              */
+  /* ------------------------------------------------------------------ */
+  const POIDS = { prioritaire: 40, secondairePrioritaire: 12, favori: 30, unilateralSport: 15, accessoire: -30, dejaSemaine: -22, gainageRepete: -60, isolationRepetee: -40, muscleIsoleSemaine: -15 };
+  const scoreExo = (e, ctx, cas) => {
+    let s = 0;
+    // règle 9 : la version qui correspond au niveau
+    if (ctx.obj.reps === "force" && COMPOSES.includes(e.compartiment)) { if (e.echelle === "phare") s += 32; else if (e.echelle === "avance") s += 22; else s += 4; }
+    else if (e.echelle === ctx.niv.echelle) s += 30; else if (e.echelle === "phare") s += 18; else if (ctx.niveau === 3 && e.echelle === "avance") s += 20;
+    // difficulté proche du niveau
+    s -= Math.abs(e.difficulte - ctx.niveau) * 6;
+    // la version simple qui mène au phare du compartiment en peu d'étapes (goblet → squat barre : +6 ;
+    // tirage élastique → poulie → assistée → négative → traction : 0)
+    if (e.echelle === "simple") { const d = ctx.distancePhare(e.id); if (d > 0) s += Math.max(0, 8 - 2 * d); }
+    // déjà éprouvé dans les programmes de l'app
+    if (e.existant) s += 3;
+    // un polyarticulaire en répétitions plutôt qu'en isométrie (la chaise n'est pas « le squat »)
+    if (COMPOSES.includes(e.compartiment) && e.reps) s += 4;
+    if (e.accessoire) s += POIDS.accessoire;
+    // muscles prioritaires (règles 10-11) : l'objectif et le sport pèsent autant l'un que l'autre
+    if (ctx.prioritaires.includes(e.muscle)) s += POIDS.prioritaire;
+    if ((e.secondaires || []).some(m => ctx.prioritaires.includes(m))) s += POIDS.secondairePrioritaire;
+    if (ctx.favoris.has(e.id)) s += POIDS.favori;
+    if (cas.m && cas.m.includes(e.muscle)) s += 25;
+    // variation dans la semaine : pas deux fois le même exercice ; le gainage tourne d'une séance à l'autre
+    if (e.compartiment === "gainage") s += POIDS.gainageRepete * (ctx.compteSemaine[e.id] || 0);
+    else if (ctx.dejaSemaine.has(e.id)) s += POIDS.dejaSemaine;
+    if (e.compartiment === "isolation" && ctx.musclesSeance.has(e.muscle)) s += POIDS.isolationRepetee;
+    // variété des isolations dans la semaine : un muscle déjà isolé cette semaine laisse la place à un autre
+    if (e.compartiment === "isolation" && ctx.musclesSemaine.has(e.muscle)) s += POIDS.muscleIsoleSemaine;
+    // unilatéral demandé par le sport
+    if (ctx.unilateral && e.unilateral) s += POIDS.unilateralSport;
+    return s;
+  };
+  // en force, jamais deux isolations du même muscle dans une séance (dur) ; sinon c'est une pénalité
+  const admissible = (e, ctx, focus) => faisable(e, ctx.materiel) && e.difficulte <= ctx.difficulteMax && !ctx.dejaSeance.has(e.id)
+    && !(ctx.niveau === 1 && e.coordination) && appartientAuFocus(e, focus)
+    && !(e.compartiment === "isolation" && ctx.musclesSeance.has(e.muscle) && (ctx.obj.reps === "force" || ctx.forceUnique));
+  const choisir = (banque, cas, focus, ctx) => {
+    let cands = banque.exercices.filter(e => e.compartiment === cas.c && admissible(e, ctx, focus));
+    if (cas.c === "cardio_mobilite") cands = cands.filter(e => e.type === cas.type);
+    // niveau 2 : pas de régression ; niveau 3 : ni difficulté 1 ni régression — sauf absence totale d'alternative
+    // (pour une isolation, l'alternative se cherche dans le même muscle : un mollet ne se remplace pas par un hip thrust)
+    if (ctx.niveau >= 2) {
+      const ok = e => !tropFacilePour(e, ctx.niveau);
+      const h = cas.c === "isolation" ? cands.filter(e => ok(e) || !cands.some(x => x.muscle === e.muscle && ok(x))) : cands.filter(ok);
+      if (h.length) cands = h;
+    }
+    // force : jamais un mouvement d'hypertrophie (Arnold press) en polyarticulaire, si un autre existe
+    if (ctx.obj.reps === "force" && COMPOSES.includes(cas.c)) { const h = cands.filter(e => !e.hypertrophie); if (h.length) cands = h; }
+    // un accessoire n'ouvre jamais une séance, et ne remplit une case de polyarticulaire que faute de mieux
+    // (s'il ne reste qu'un accessoire, il est pris mais rangé après les vrais polyarticulaires — jamais en ouverture)
+    if (COMPOSES.includes(cas.c)) { const p = cands.filter(e => !e.accessoire); if (p.length) cands = p; }
+    if (cas.m) { const m = cands.filter(e => cas.m.includes(e.muscle)); if (m.length) cands = m; }
+    if (!cands.length) return cas.repli && ctx.obj.reps !== "force" ? choisir(banque, { ...cas, c: cas.repli, repli: null, m: null }, focus, ctx) : null;
+    cands.sort((a, b) => scoreExo(b, ctx, cas) - scoreExo(a, ctx, cas) || a.id.localeCompare(b.id));
+    return cands[0];
+  };
+  // exercice obligatoire de l'objectif : lui-même s'il est admissible, sinon son remplaçant (règle 12)
+  const forcer = (banque, id, focus, ctx) => {
+    const e = banque.exercices.find(x => x.id === id);
+    if (!e) return null;
+    if (admissible(e, ctx, focus) && !tropFacilePour(e, ctx.niveau)) return { exercice: e, remplace: false };
+    // un remplaçant exact seulement (même compartiment, même muscle) : une case d'isolation ne devient pas un hinge
+    const r = remplacerExercice(banque, id, { materiel: ctx.materiel, niveau: ctx.niveau, exclure: [...ctx.dejaSeance] });
+    if (r.approximatif !== null) return null;
+    const ok = r.candidats.find(c => admissible(c, ctx, focus) && !tropFacilePour(c, ctx.niveau)) || r.candidats.find(c => admissible(c, ctx, focus));
+    return ok ? { exercice: ok, remplace: true } : null;
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Séries × reps, repos, durée (règles 5 et 6)                        */
+  /* ------------------------------------------------------------------ */
+  const exerciceProgramme = (e, dose, role) => ({
+    id: e.id, nom: e.nom, compartiment: e.compartiment, muscle: e.muscle, secondaires: e.secondaires || [], difficulte: e.difficulte, echelle: e.echelle,
+    unilateral: !!e.unilateral, accessoire: !!e.accessoire, regression: !!e.regression, consigne: e.consigne, erreur: e.erreur, demo: e.demo, materiel: e.materiel,
+    series: dose.series, reps: dose.reps || null, duree_s: dose.duree_s || null, repos_s: dose.repos_s, role: role || null
+  });
+  const doser = (e, ctx) => {
+    if (e.compartiment === "cardio_mobilite") return { series: 1, duree_s: ctx.dureeCardio && e.type === "cardio" ? ctx.dureeCardio : e.duree_s, repos_s: 0 };
+    if (e.compartiment === "gainage") return { series: 3, reps: e.reps || null, duree_s: e.duree_s || null, repos_s: 45 };
+    const iso = e.compartiment === "isolation";
+    if (!e.reps && e.duree_s) return { series: iso ? ctx.niv.seriesIso : ctx.niv.seriesCompose, duree_s: e.duree_s, repos_s: 60 };
+    const compose = COMPOSES.includes(e.compartiment);
+    const force = ctx.obj.reps === "force";
+    let reps = iso ? R[ctx.obj.repsIso] : R[ctx.obj.reps];
+    if (force && compose) reps = e.compartiment === "unilateral" ? R.lourd : R.force; // gros mouvements à 3-6, unilatéral 5-8
+    if (force && ctx.niveau === 1) reps = iso ? R.moyen : R.moyen; // un débutant ne descend pas sous 8 reps
+    if (e.compartiment === "unilateral" && reps[1] < 8) reps = R.moyen;
+    // une fourchette spécifique de la banque (négatives 3-5, nordic 3-6, tractions 5-8) l'emporte ;
+    // un accessoire (superman, extension lombaire) garde sa fourchette longue
+    if (e.reps && (e.reps[1] <= (force ? 6 : 8) || e.accessoire)) reps = e.reps;
+    let series = iso ? ctx.niv.seriesIso : ctx.niv.seriesCompose;
+    if (ctx.obj.seriesMax) series = Math.min(series, ctx.obj.seriesMax);
+    if (force && compose && e.compartiment !== "unilateral" && (e.echelle === "phare" || e.echelle === "avance") && ctx.niveau >= 2) series = ctx.niveau === 3 ? 5 : 4;
+    return { series, reps, repos_s: reposDe(reps, iso) };
+  };
+  // règle 6 : durée depuis séries et repos, jamais devinée
+  const dureeExercice = x => {
+    if (x.compartiment === "cardio_mobilite") return x.duree_s;
+    const travail = x.duree_s ? x.duree_s + 10 : x.reps[1] * 3 + 15;
+    return x.series * travail + Math.max(0, x.series - 1) * x.repos_s + 60; // + 1 min de transition
+  };
+  const ECHAUFFEMENT_S = 360;
+  const dureeSeance = s => Math.ceil((ECHAUFFEMENT_S + s.exercices.reduce((t, x) => t + dureeExercice(x), 0)) / 60);
+
+  // compression pour tenir dans le temps : la case supplémentaire de l'objectif, puis les isolations
+  // (l'obligatoire de l'objectif en dernier), puis séries, puis repos jusqu'aux planchers
+  // (ordre de DECISIONS.md « Adapter ma séance ») ; jamais les polyarticulaires
+  const comprimer = (s, tempsMin, nbMin) => {
+    const tient = () => dureeSeance(s) <= tempsMin;
+    const forces = () => s.exercices.filter(estForce);
+    const retirer = x => s.exercices.splice(s.exercices.indexOf(x), 1);
+    while (!tient()) {
+      const extra = s.exercices.filter(x => x.role === "objectif_extra");
+      if (!extra.length) break;
+      retirer(extra[extra.length - 1]); s._extraRetiree = true;
+    }
+    // deux gainages (le sien + l'anti-rotation du sport) : le gainage ordinaire saute avant les isolations
+    while (!tient()) {
+      const g = s.exercices.filter(x => x.compartiment === "gainage");
+      if (g.length < 2 || !g.some(x => x.role === "sport")) break;
+      retirer(g.find(x => x.role !== "sport"));
+    }
+    // l'isolation obligatoire de l'objectif (hip thrust) ne saute qu'en tout dernier recours
+    while (!tient()) {
+      const isos = s.exercices.filter(x => x.compartiment === "isolation" && x.role !== "objectif");
+      if (isos.length && forces().length > nbMin) { retirer(isos[isos.length - 1]); continue; }
+      break;
+    }
+    while (!tient()) {
+      const reductible = s.exercices.filter(x => x.compartiment !== "cardio_mobilite" && x.series > 2);
+      if (!reductible.length) break;
+      reductible[reductible.length - 1].series--;
+    }
+    while (!tient()) {
+      const r = s.exercices.filter(x => x.reps && x.repos_s > (x.compartiment === "isolation" ? PLANCHER_REPOS.isolation : PLANCHER_REPOS.compose));
+      if (!r.length) break;
+      for (const x of r) x.repos_s = Math.max(x.compartiment === "isolation" ? PLANCHER_REPOS.isolation : PLANCHER_REPOS.compose, x.repos_s - 30);
+    }
+    // dernier recours : le temps l'emporte sur le nombre minimal d'exercices du niveau —
+    // les isolations restantes sautent, puis le gainage ; jamais un polyarticulaire
+    while (!tient()) {
+      const iso = s.exercices.filter(x => x.compartiment === "isolation" && x.role !== "objectif");
+      if (iso.length) { retirer(iso[iso.length - 1]); s._sousMinimum = true; continue; }
+      const g = s.exercices.find(x => x.compartiment === "gainage");
+      if (g) { retirer(g); s._sousMinimum = true; continue; }
+      const o = s.exercices.find(x => x.role === "objectif");
+      if (o) { retirer(o); s._sousMinimum = true; s._objectifRetire = true; continue; }
+      break;
+    }
+    s._comprimee = true;
+    return tient();
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Volume hebdomadaire par gros groupe (règle 3)                      */
+  /* direct : séries où le groupe est le muscle principal (sert au plafond) */
+  /* total : + secondaires comptés ½ (sert au minimum)                    */
+  /* ------------------------------------------------------------------ */
+  const volumeSemaine = seances => {
+    const direct = Object.fromEntries(GROS_GROUPES.map(g => [g, 0]));
+    const total = Object.fromEntries(GROS_GROUPES.map(g => [g, 0]));
+    for (const s of seances) for (const x of s.exercices) {
+      if (!estForce(x)) continue;
+      const g = grosGroupeVolume(x); if (g) { direct[g] += x.series; total[g] += x.series; }
+      for (const g2 of grosSecondaires(x)) if (g2 !== g) total[g2] += x.series * 0.5;
+    }
+    for (const g of GROS_GROUPES) total[g] = Math.round(total[g] * 2) / 2;
+    return { direct, total };
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Placement des séances dans la semaine (règle 4, semaine cyclique)   */
+  /* ------------------------------------------------------------------ */
+  const combinaisons = (n, k) => { const out = []; const rec = (d, acc) => { if (acc.length === k) { out.push(acc.slice()); return; } for (let i = d; i <= n; i++) { acc.push(i); rec(i + 1, acc); acc.pop(); } }; rec(1, []); return out; };
+  const suivant = d => d === 7 ? 1 : d + 1, precedent = d => d === 1 ? 7 : d - 1;
+  // jamais le même gros groupe deux jours de suite (dur) ; jamais de séance un jour de sport (dur) ;
+  // ensuite : le moins de jours collés, le bloc le plus court, la semaine plutôt que le week-end,
+  // les séances jambes loin des jours de sport
+  const placer = (seances, joursSport) => {
+    const k = seances.length;
+    const groupes = seances.map(s => new Set(s.exercices.map(grosGroupe).filter(Boolean)));
+    const jambes = seances.map(s => FOCUS[s.focus] && FOCUS[s.focus].bas);
+    const sport = new Set(joursSport);
+    let meilleur = null, meilleurScore = -Infinity;
+    for (const jours of combinaisons(7, k)) {
+      if (jours.some(d => sport.has(d))) continue;
+      let ok = true, colles = 0;
+      for (let i = 0; i < k; i++) {
+        const j = (i + 1) % k, ecart = j > i ? jours[j] - jours[i] : jours[j] + 7 - jours[i];
+        if (k > 1 && ecart === 1) { colles++; for (const g of groupes[i]) if (groupes[j].has(g)) { ok = false; break; } }
+        if (!ok) break;
+      }
+      if (!ok) continue;
+      const pris = new Set(jours);
+      let bloc = 0, cur = 0;
+      for (let d = 1; d <= 14; d++) { if (pris.has(((d - 1) % 7) + 1)) { cur++; bloc = Math.max(bloc, cur); } else cur = 0; }
+      bloc = Math.min(bloc, k);
+      const weekend = jours.filter(d => d >= 6).length;
+      let pres = 0;
+      jours.forEach((d, i) => { if (jambes[i] && (sport.has(suivant(d)) || sport.has(precedent(d)))) pres++; });
+      let minEcart = 7;
+      for (let i = 0; i < k; i++) { const j = (i + 1) % k; minEcart = Math.min(minEcart, j > i ? jours[j] - jours[i] : jours[j] + 7 - jours[i]); }
+      const score = -colles * 10 - bloc * 10 - weekend * 15 - pres * 25 + (k > 1 ? minEcart * 3 : 0) - jours[0];
+      if (score > meilleurScore) { meilleurScore = score; meilleur = jours; }
+    }
+    return meilleur; // null si impossible
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Génération                                                          */
+  /* ------------------------------------------------------------------ */
+  const genererProgramme = (entrees, banque) => {
+    const frequence = Math.max(1, Math.min(7, parseInt(entrees.frequence) || 3));
+    const niveau = Math.max(1, Math.min(3, parseInt(entrees.niveau) || 1));
+    const niv = NIVEAU[niveau];
+    // n'importe quel nombre entier de minutes (47, 33…), 15 au moins
+    const tempsMin = Math.max(15, Math.round(Number(entrees.tempsMin)) || 60);
+    const materiel = normaliserMateriel(entrees.materiel);
+    const joursSport = [...new Set((entrees.joursSport || []).map(Number).filter(d => d >= 1 && d <= 7))].sort();
+    const avertissements = [], limites = [];
+
+    // objectif : les 5 de l'onboarding, ou texte libre interprété (point d'extension)
+    let objCle = entrees.objectif, prioritaires = [];
+    if (!OBJECTIFS[objCle] || objCle === "libre") {
+      const texte = String(entrees.objectifLibre || "").trim(), it = entrees.interpretation;
+      if (it && it.repli) {
+        // l'IA a échoué ou répondu hors format : esthétique équilibré, et on le dit
+        objCle = "mieux";
+        avertissements.push(`Je n'ai pas réussi à lire ton objectif « ${texte} » : programme esthétique équilibré. Tu peux le reformuler dans les réglages.`);
+      } else if (it && OBJECTIFS[it.base] && it.base !== "libre") {
+        // point d'extension IA : l'objectif en texte libre lu en muscles prioritaires
+        objCle = it.base; prioritaires = (it.prioritaires || []).map(String).slice(0, 6);
+        avertissements.push(`Ton objectif « ${texte} » a été lu comme « ${OBJECTIFS[objCle].nom} »${prioritaires.length ? ", priorité à " + prioritaires.join(", ") : ""}.`);
+      } else {
+        const i = interpreterObjectifLibre(texte);
+        objCle = i.base; prioritaires = i.prioritaires.slice();
+        if (texte) avertissements.push(`Objectif libre « ${texte} » interprété comme « ${OBJECTIFS[objCle].nom} » (mots-clés, sans IA).`);
+      }
+    }
+    const obj = OBJECTIFS[objCle];
+    prioritaires.push(...obj.prioritaires);
+    // sport : modificateur seulement si l'intention est de progresser dans ce sport (règle 10)
+    const sport = entrees.sport && SPORTS[entrees.sport] ? SPORTS[entrees.sport] : null;
+    const intentionSport = !!(sport && entrees.intention === "sport");
+    if (intentionSport) prioritaires.push(...sport.prioritaires);
+    const favoris = new Set(intentionSport ? sport.favoris : []);
+    const difficulteMax = Math.min(niv.difficulteMax, obj.difficulteMax || 3);
+    if (joursSport.length + frequence > 7) avertissements.push(`${frequence} séances et ${joursSport.length} jours de sport ne tiennent pas dans 7 jours : les jours de sport sont ignorés pour le placement.`);
+    const joursSportPlacement = joursSport.length + frequence > 7 ? [] : joursSport;
+
+    // squelette ; le jour focus du 5× suit le côté dominant (objectif, puis sport)
+    const squelette = SQUELETTES[frequence];
+    const cote = obj.cote || (intentionSport ? sport.cote : null) || "bas";
+    const focusList = squelette.seances.map(f => f === "focus" ? (cote === "haut" ? "focusHaut" : "focusBas") : f);
+
+    const phares = new Set((banque.compartiments || []).map(c => c.phare).filter(Boolean));
+    const byId = Object.fromEntries(banque.exercices.map(e => [e.id, e]));
+    // nombre d'étapes de « monte_vers » jusqu'au phare du compartiment (0 si la chaîne n'y mène pas)
+    const distancePhare = id => { let n = 0, cur = byId[id], vus = new Set(); while (cur && cur.monte_vers && !vus.has(cur.id) && n < 9) { vus.add(cur.id); n++; if (phares.has(cur.monte_vers)) return n; cur = byId[cur.monte_vers]; } return 0; };
+    const ctxBase = { niveau, niv, materiel, difficulteMax, obj, prioritaires, favoris, phares, distancePhare, unilateral: intentionSport && sport.unilateral, dejaSemaine: new Set(), compteSemaine: {}, musclesSemaine: new Set() };
+    const obligatoires = [...obj.obligatoires, ...(intentionSport ? sport.obligatoires || [] : [])].map(o => Array.isArray(o) ? o : [o]);
+    const composesAPlacer = (obj.obligatoiresComposes || []).slice();
+    const lettres = "ABCDEFG";
+    const seances = focusList.map((focus, i) => {
+      const f = FOCUS[focus];
+      const ctx = { ...ctxBase, dejaSeance: new Set(), musclesSeance: new Set() };
+      const exercices = [];
+      let cases = f.cases.map(c => ({ ...c }));
+      // règle 7 : nombre d'exercices selon le niveau (les cases d'isolation en trop sautent)
+      const nbExos = nbExosDe(niveau, objCle, focus);
+      const nbMax = nbExos[1];
+      const nbForce = () => cases.filter(c => c.c !== "gainage" && c.c !== "cardio_mobilite").length;
+      while (nbForce() > nbMax) {
+        const idx = cases.map(c => c.c).lastIndexOf("isolation");
+        if (idx < 0) break; cases.splice(idx, 1);
+      }
+      // force : un seul rowing horizontal par séance pull (pas deux fois le même geste)
+      if (obj.reps === "force" && focus === "pull") { const i2 = cases.map(c => c.c).lastIndexOf("tirage_h"); if (i2 > cases.map(c => c.c).indexOf("tirage_h")) cases.splice(i2, 1); }
+      // règle 10 : le sport modifie les cases — une seconde case unilatérale au bas du corps,
+      // les isolations du haut vont aux épaules plutôt qu'aux bras, un gainage anti-rotation en plus
+      if (intentionSport && f.bas && sport.unilateral) {
+        const idx = cases.map(c => c.c).lastIndexOf("isolation");
+        if (idx >= 0 && !cases.some(c => c.c === "unilateral" && c.sport)) cases[idx] = { c: "unilateral", sport: true };
+      }
+      if (intentionSport && !f.bas && sport.brasMin) for (const c of cases) if (c.c === "isolation" && !c.m) c.m = ["arrière d'épaule", "épaules latérales"];
+      if (intentionSport && sport.antiRotation && focus !== "recup") cases.push({ c: "gainage", m: ["obliques"], sport: true });
+      // règle 11 : les obligatoires de l'objectif prennent les cases d'isolation ; au-delà, une case
+      // supplémentaire par séance si le temps le permet (retirée en premier par la compression)
+      let extra = false;
+      for (const alts of obligatoires) {
+        const e = byId[alts[0]];
+        if (!e || !f.iso.includes(e.muscle)) continue;
+        const libre = cases.find(c => c.c === "isolation" && !c.force);
+        if (libre) { libre.force = alts; libre.m = null; }
+        else if (!extra) { cases.push({ c: "isolation", force: alts, extra: true }); extra = true; }
+      }
+      // polyarticulaires obligatoires (soulevé de terre en force) : la première case du compartiment dans la semaine
+      for (const id of composesAPlacer.slice()) {
+        const e = byId[id]; if (!e) continue;
+        const cas = cases.find(c => c.c === e.compartiment && !c.force);
+        if (cas) { cas.force = [id]; cas.compose = true; composesAPlacer.splice(composesAPlacer.indexOf(id), 1); }
+      }
+      cases[0].ouverture = true;
+      for (const cas of cases) {
+        let e = null, role = null;
+        if (cas.force) {
+          let r = null;
+          for (const id of cas.force) { r = forcer(banque, id, focus, ctx); if (r) { r.id = id; break; } }
+          if (r) { e = r.exercice; role = cas.extra ? "objectif_extra" : "objectif"; if (r.remplace && !ctxBase.dejaSemaine.has(e.id)) avertissements.push(`Séance ${lettres[i]} : ${byId[r.id].nom} remplacé par ${e.nom} (${nomMateriel(materiel)}, niveau ${niveau}, règle 12).`); }
+          else if (cas.compose) avertissements.push(`${byId[cas.force[0]].nom} : pas de version adaptée (${nomMateriel(materiel)}, niveau ${niveau}), la case est remplie normalement.`);
+        }
+        if (!e) e = choisir(banque, cas, focus, ctx);
+        if (!e) {
+          // case vide faute de matériel : une limite physique, dite en langage utilisateur (une fois par case)
+          if (!(cas.force && !cas.compose) && !(cas.c === "isolation" && obj.reps === "force")) {
+            // pour une isolation : seuls les muscles sans aucun exercice faisable comptent (pas ceux déjà pris dans la séance)
+            const muscles = cas.c === "isolation" ? (cas.m || f.iso).filter(m => !banque.exercices.some(x => x.compartiment === "isolation" && x.muscle === m && faisable(x, materiel))) : null;
+            const groupe = banque.exercices.filter(x => x.compartiment === cas.c && (cas.c !== "isolation" || muscles.includes(x.muscle)) && (cas.c !== "cardio_mobilite" || x.type === cas.type));
+            if (cas.c !== "isolation" || muscles.length) {
+              const manque = manqueDe(groupe, materiel);
+              const quoi = cas.c === "isolation" ? [`travail isolé des ${muscles.join(", ")}`, "ces muscles ne travaillent que dans les gros mouvements"] : CONSEQUENCE[cas.c];
+              const message = `Sans ${manque}, pas de ${quoi[0]} : ${quoi[1]}.`;
+              if (!limites.some(l => l.message === message)) { limites.push({ seance: lettres[i], compartiment: cas.c, muscles, manque, message }); avertissements.push(message); }
+            if (cas.force && !cas.compose) { /* obligatoire d'objectif ou de sport sans version faisable : déjà couvert par la limite */ }
+            }
+          }
+          continue;
+        }
+        const dose = doser(e, { ...ctx, dureeCardio: cas.duree });
+        exercices.push(exerciceProgramme(e, dose, role || (cas.sport ? "sport" : null)));
+        ctx.dejaSeance.add(e.id); ctxBase.dejaSemaine.add(e.id); ctxBase.compteSemaine[e.id] = (ctxBase.compteSemaine[e.id] || 0) + 1;
+        if (e.compartiment === "isolation") { ctx.musclesSeance.add(e.muscle); ctxBase.musclesSemaine.add(e.muscle); }
+      }
+      // règle 2 : ordre (tri stable : à rang égal, l'ordre des cases)
+      exercices.forEach((x, k) => { x._k = k; });
+      exercices.sort((a, b) => rangOrdre(a) - rangOrdre(b) || a._k - b._k);
+      exercices.forEach(x => { delete x._k; });
+      const s = { lettre: lettres[i], nom: f.nom, focus, exercices, dureeMin: 0 };
+      // règle 6 : tenir dans le temps
+      if (!comprimer(s, tempsMin, nbExos[0])) avertissements.push(`Séance ${s.lettre} : ${dureeSeance(s)} min même compressée, au-delà des ${tempsMin} min demandées.`);
+      if (s._objectifRetire) avertissements.push(`Séance ${s.lettre} : même l'exercice obligatoire de l'objectif ne tenait pas dans ${tempsMin} min, retiré en dernier recours.`);
+      if (s._extraRetiree) avertissements.push(`Séance ${s.lettre} : la case supplémentaire de l'objectif ne tenait pas dans ${tempsMin} min, retirée.`);
+      s.dureeMin = dureeSeance(s);
+      return s;
+    });
+    // règle 3 : plafond hebdomadaire sur les séries DIRECTES par gros groupe — d'abord les séries des
+    // isolations du groupe (jamais sous 2), puis celles des polyarticulaires (jamais sous 3), puis on
+    // retire des isolations du groupe tant que la séance garde son minimum d'exercices
+    let volume = volumeSemaine(seances);
+    for (const g of GROS_GROUPES) {
+      let garde = 0;
+      while (volume.direct[g] > niv.volumeMax && garde++ < 60) {
+        const duGroupe = seances.flatMap(s => s.exercices).filter(x => grosGroupeVolume(x) === g);
+        const iso = duGroupe.filter(x => x.compartiment === "isolation" && x.series > 2);
+        if (iso.length) { iso[iso.length - 1].series--; volume = volumeSemaine(seances); continue; }
+        const comp = duGroupe.filter(x => x.compartiment !== "isolation" && x.series > 3).sort((a, b) => (a.echelle === "phare" ? 1 : 0) - (b.echelle === "phare" ? 1 : 0) || b.series - a.series);
+        if (comp.length) { comp[0].series--; volume = volumeSemaine(seances); continue; }
+        // la seconde case unilatérale ajoutée par le sport peut descendre à 2 séries
+        const sportUni = duGroupe.filter(x => x.role === "sport" && x.compartiment === "unilateral" && x.series > 2);
+        if (sportUni.length) { sportUni[0].series--; volume = volumeSemaine(seances); continue; }
+        let retire = false;
+        for (const s of [...seances].reverse()) {
+          const idx = s.exercices.map(x => x.compartiment === "isolation" && grosGroupeVolume(x) === g && x.role !== "objectif").lastIndexOf(true);
+          if (idx >= 0 && s.exercices.filter(estForce).length > nbExosDe(niveau, objCle, s.focus)[0]) { s.exercices.splice(idx, 1); retire = true; break; }
+        }
+        if (!retire) { avertissements.push(`Volume ${g} : ${volume.direct[g]} séries directes/semaine au-dessus du maximum ${niv.volumeMax} du niveau ${niveau}, sans isolation à retirer (règle 3).`); break; }
+        volume = volumeSemaine(seances);
+      }
+    }
+    // règle 3, minimum : un groupe sous le minimum gagne une série sur son polyarticulaire principal
+    // (phare d'abord, 5 séries au plus) tant que la séance tient dans le temps et que rien ne dépasse
+    for (const g of GROS_GROUPES) {
+      let garde = 0;
+      while (frequence >= 3 && volume.total[g] < niv.volumeMin && garde++ < 20) {
+        const cands = seances.flatMap(s => s.exercices.filter(x => estForce(x) && grosGroupeVolume(x) === g && x.compartiment !== "isolation" && x.series < Math.min(5, niv.seriesCompose + 1) && !x._bump).map(x => ({ x, s })))
+          .sort((a, b) => (b.x.echelle === "phare" ? 1 : 0) - (a.x.echelle === "phare" ? 1 : 0) || a.x.series - b.x.series);
+        let fait = false;
+        for (const { x, s } of cands) {
+          x.series++;
+          const v2 = volumeSemaine(seances);
+          if (dureeSeance(s) <= tempsMin && GROS_GROUPES.every(h => v2.direct[h] <= niv.volumeMax || v2.direct[h] === volume.direct[h])) { volume = v2; fait = true; x._bump = true; break; }
+          x.series--;
+        }
+        if (!fait) break;
+      }
+    }
+    for (const g of GROS_GROUPES) if (frequence >= 3 && volume.total[g] < niv.volumeMin) avertissements.push(`Volume ${g} : ${volume.total[g]} séries/semaine (secondaires comptés ½), sous le minimum ${niv.volumeMin} du niveau ${niveau} (règle 3).`);
+    if (frequence <= 2) {
+      const sous = GROS_GROUPES.filter(g => volume.total[g] < niv.volumeMin);
+      if (sous.length) avertissements.push(`À ${frequence} séance${frequence > 1 ? "s" : ""} par semaine, le volume minimal de la règle 3 (${niv.volumeMin} séries par muscle) n'est pas atteignable dans ${tempsMin} min : programme d'entretien (${sous.join(", ")} sous le minimum).`);
+    }
+    for (const s of seances) { s.dureeMin = dureeSeance(s); for (const x of s.exercices) delete x._bump; }
+    // règle 7 : nombre minimal d'exercices (si le matériel ou le temps a fait sauter des cases)
+    for (const s of seances) {
+      const c = s.exercices.filter(estForce).length, nbExos = nbExosDe(niveau, objCle, s.focus);
+      if (s.focus !== "recup" && c < nbExos[0]) avertissements.push(`Séance ${s.lettre} : ${c} exercices seulement (minimum ${nbExos[0]} au niveau ${niveau}${objCle === "force" ? " en force" : ""}) — ${s._sousMinimum ? `le temps (${tempsMin} min) l'a emporté sur le nombre d'exercices` : "matériel trop restreint pour ce focus"}.`);
+    }
+
+    // règle 4 : placement dans la semaine
+    const jours = placer(seances, joursSportPlacement);
+    if (!jours) avertissements.push("Aucun placement dans la semaine ne respecte la règle 4 (même gros groupe deux jours consécutifs).");
+    const semaine = [];
+    for (let d = 1; d <= 7; d++) {
+      const i = jours ? jours.indexOf(d) : (d <= seances.length ? d - 1 : -1);
+      semaine.push({ jour: d, seance: i >= 0 ? seances[i] : null, sport: joursSport.includes(d) });
+    }
+
+    return {
+      entrees: { frequence, objectif: objCle, objectifLibre: entrees.objectifLibre || "", sport: sport ? entrees.sport : null, intention: intentionSport ? "sport" : "soi", materiel, niveau, tempsMin, joursSport },
+      squelette: { nom: squelette.nom, description: squelette.description },
+      semaine, seances, volume, avertissements, limites,
+      pointsExtension: [
+        "interpreterObjectifLibre(texte) : l'IA choisira les muscles prioritaires depuis un objectif en texte libre (aujourd'hui : mots-clés).",
+        "habillage : phrases d'accompagnement par séance et par exercice (nom du programme, mot d'encouragement) — non implémenté, le moteur ne produit que la structure.",
+        "supersets : dernier cran de compression de « Adapter ma séance », non implémenté.",
+        "finisher : un cardio (perte de gras) ou une mobilité (reprise en douceur) en fin de séance — à décider avec Léo, sur le même principe que la case supplémentaire de l'objectif (ajoutée seulement si le temps le permet)."
+      ]
+    };
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Étape 3 : ce que l'app donne au moteur, et ce qu'elle en reçoit     */
+  /* ------------------------------------------------------------------ */
+  // les deux questions factuelles de l'onboarding → niveau observé initial (règle 7) :
+  // jamais fait de muscu → 1 ; quelques mois → 2 si squat et pompe sont sûrs, sinon 1 ;
+  // plus d'un an régulièrement → 3 si sûrs, sinon 2. Le mot « niveau » n'apparaît jamais à l'écran.
+  const niveauDepuisQuestions = (muscu, technique) => muscu === "an" ? (technique === "oui" ? 3 : 2) : muscu === "mois" ? (technique === "oui" ? 2 : 1) : 1;
+  const REPONSES_DEFAUT = { frequence: 3, objectif: "mieux", objectifLibre: "", muscu: "jamais", technique: "pas_sur", sport: null, intention: "soi", joursSport: [], materiel: "salle", tempsMin: 60, interpretation: null };
+  const entreesDepuisReponses = r => {
+    const x = { ...REPONSES_DEFAUT, ...(r || {}) };
+    return { frequence: x.frequence, objectif: x.objectif, objectifLibre: x.objectifLibre || "", interpretation: x.interpretation || null, sport: x.sport || null, intention: x.intention || "soi", joursSport: x.joursSport || [], materiel: x.materiel, niveau: niveauDepuisQuestions(x.muscu, x.technique), tempsMin: x.tempsMin || 60 };
+  };
+  // forme attendue par l'écran Séance : lettres, exos {id, nom, dose, repos, charge}, gainage en liste
+  const PALETTE_APP = ["#FF5C4D", "#3D5AFE", "#2CE5A7", "#FFB020", "#7C5CFF", "#22D3EE", "#C2417A"];
+  const doseDe = x => x.compartiment === "cardio_mobilite" ? `${Math.round(x.duree_s / 60)} min` : x.duree_s ? `${x.series} × ${x.duree_s} s` : `${x.series} × ${x.reps[0]}-${x.reps[1]}${x.unilateral ? " / côté" : ""}`;
+  // « charge » = il y a une charge à noter en kg : une alternative faisable avec le matériel de la
+  // personne qui passe par des poids (haltères, barre, kettlebell, machine, poulie, trap bar)
+  const TAGS_CHARGE = new Set(["haltères", "barre", "kettlebell", "machine", "poulie", "trap bar", "rack"]);
+  const chargeDe = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.some(u => TAGS_CHARGE.has(u)); }); };
+  const presenterPourApp = prog => {
+    const seances = {};
+    prog.seances.forEach((s, i) => {
+      const exos = s.exercices.filter(x => x.compartiment !== "gainage").map(x => ({
+        id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
+        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
+      }));
+      const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
+        id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
+      }));
+      seances[s.lettre] = { nom: s.nom, couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
+    });
+    const obj = OBJECTIFS[prog.entrees.objectif] || OBJECTIFS.mieux;
+    const f = prog.entrees.frequence;
+    return {
+      nom: `${obj.nom} · ${f} séance${f > 1 ? "s" : ""}`,
+      emoji: "",
+      desc: `${prog.squelette.description}, ${prog.entrees.tempsMin} min par séance.`,
+      lieu: "perso",
+      moteur: {
+        version: 1, entrees: prog.entrees, squelette: prog.squelette,
+        semaine: prog.semaine.map(j => ({ jour: j.jour, lettre: j.seance ? j.seance.lettre : null, sport: !!j.sport })),
+        avertissements: prog.avertissements, limites: prog.limites, volume: prog.volume
+      },
+      seances
+    };
+  };
+  // le tout en un : réponses de l'onboarding → programme pour l'app
+  const programmePourApp = (reponses, banque) => presenterPourApp(genererProgramme(entreesDepuisReponses(reponses), banque));
+
+  /* ------------------------------------------------------------------ */
+  /* Règle 12 : remplacement d'un exercice                              */
+  /* ------------------------------------------------------------------ */
+  const remplacerExercice = (banque, exoId, opts = {}) => {
+    const o = banque.exercices.find(e => e.id === exoId);
+    if (!o) return { exercice: null, approximatif: null, candidats: [] };
+    const materiel = opts.materiel || "salle", niveau = opts.niveau || 2, exclure = new Set([exoId, ...(opts.exclure || [])]);
+    const diffMax = opts.niveau ? NIVEAU[niveau].difficulteMax : 3;
+    const tri = (a, b) => Math.abs(a.difficulte - o.difficulte) - Math.abs(b.difficulte - o.difficulte) || (faisable(b, materiel) - faisable(a, materiel)) || (a.echelle === o.echelle ? -1 : 0) - (b.echelle === o.echelle ? -1 : 0) || a.id.localeCompare(b.id);
+    // jamais deux crans de difficulté d'écart : une variation reste une variation
+    const base = banque.exercices.filter(e => !exclure.has(e.id) && e.difficulte <= diffMax && Math.abs(e.difficulte - o.difficulte) <= 1);
+    // même compartiment ET même muscle principal, faisables d'abord
+    let cands = base.filter(e => e.compartiment === o.compartiment && e.muscle === o.muscle && faisable(e, materiel)).sort(tri);
+    if (cands.length) return { exercice: cands[0], approximatif: null, candidats: cands };
+    // sinon même muscle principal dans un autre compartiment, signalé
+    cands = base.filter(e => e.muscle === o.muscle && faisable(e, materiel) && e.compartiment !== "cardio_mobilite").sort(tri);
+    if (cands.length) return { exercice: cands[0], approximatif: "même muscle, geste différent", candidats: cands };
+    return { exercice: null, approximatif: null, candidats: [] };
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Audit de la banque : où la règle 12 manque de candidats            */
+  /* ------------------------------------------------------------------ */
+  // Pour chaque compartiment (isolations par muscle, cardio / mobilité par type) × matériel × niveau :
+  // combien d'exercices sont disponibles, et combien de remplaçants exacts la règle 12 trouve pour le
+  // plus isolé d'entre eux. Un « trou » = aucun exercice, ou moins de 2 remplaçants. Le cardio et la
+  // mobilité n'ont pas de « même muscle » : on y compte simplement les autres exercices du même type.
+  const MATERIELS = ["salle", "halteres", "pdc", "rien"];
+  const auditerBanque = banque => {
+    const groupes = [];
+    for (const c of banque.compartiments) {
+      const du = banque.exercices.filter(e => e.compartiment === c.id);
+      if (c.id === "isolation") for (const m of [...new Set(du.map(e => e.muscle))]) groupes.push({ compartiment: c.id, nom: `${c.nom} · ${m}`, exos: du.filter(e => e.muscle === m) });
+      else if (c.id === "cardio_mobilite") for (const t of ["cardio", "mobilite"]) groupes.push({ compartiment: c.id, nom: `${c.nom} · ${t === "cardio" ? "cardio" : "mobilité"}`, type: t, exos: du.filter(e => e.type === t) });
+      else groupes.push({ compartiment: c.id, nom: c.nom, exos: du });
+    }
+    const lignes = [];
+    for (const g of groupes) for (const materiel of MATERIELS) for (let niveau = 1; niveau <= 3; niveau++) {
+      const dispo = g.exos.filter(e => faisable(e, materiel) && e.difficulte <= NIVEAU[niveau].difficulteMax);
+      let min = null, isole = null;
+      for (const e of dispo) {
+        let k;
+        if (g.type) k = dispo.length - 1;
+        else { const r = remplacerExercice(banque, e.id, { materiel, niveau }); k = r.approximatif === null ? r.candidats.length : 0; }
+        if (min === null || k < min) { min = k; isole = e; }
+      }
+      lignes.push({ compartiment: g.compartiment, nom: g.nom, materiel, niveau, disponibles: dispo.length, remplacants: min, isole: isole ? { id: isole.id, nom: isole.nom } : null, trou: !dispo.length || min < 2, limite: false });
+    }
+    // limite physique : hors salle, aucun exercice à aucun niveau — le mouvement n'existe pas avec ce
+    // matériel (isolation des biceps sans charge…). Ce n'est pas un trou à combler : le moteur le dit
+    // dans le programme.
+    for (const l of lignes) if (l.materiel !== "salle" && lignes.filter(x => x.nom === l.nom && x.materiel === l.materiel).every(x => x.disponibles === 0)) { l.limite = true; l.trou = false; }
+    return lignes;
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Vérificateur : les règles, mécaniquement                            */
+  /* ------------------------------------------------------------------ */
+  const verifierRegles = (prog, banque) => {
+    const v = [];
+    const seances = prog.semaine.filter(j => j.seance).map(j => j.seance);
+    const f = prog.entrees.frequence, niveau = prog.entrees.niveau, niv = NIVEAU[niveau], materiel = prog.entrees.materiel;
+    // squelette
+    const attendu = SQUELETTES[f];
+    if (!attendu || prog.squelette.nom !== attendu.nom) v.push({ regle: "squelette", message: `squelette ${prog.squelette.nom} au lieu de ${attendu && attendu.nom}` });
+    const focusAttendus = attendu ? attendu.seances.map(x => x === "focus" ? /^focus/ : x) : [];
+    if (seances.length !== focusAttendus.length) v.push({ regle: "squelette", message: `${seances.length} séances au lieu de ${focusAttendus.length}` });
+    else seances.forEach((s, i) => { const a = focusAttendus[i]; if (a instanceof RegExp ? !a.test(s.focus) : s.focus !== a) v.push({ regle: "squelette", message: `séance ${s.lettre} : focus ${s.focus} au lieu de ${a}` }); });
+    if (f === 7 && seances[6] && seances[6].exercices.some(e => e.compartiment !== "cardio_mobilite")) v.push({ regle: "7x", message: "de la force le 7e jour" });
+    for (const s of seances) {
+      for (const e of s.exercices) if (!appartientAuFocus(e, s.focus)) v.push({ regle: 1, message: `${e.nom} hors du focus ${s.focus} (séance ${s.lettre})` });
+      const rangs = s.exercices.map(e => ORDRE_COMP[e.compartiment] >= 20 ? 2 : e.compartiment === "isolation" ? 1 : 0);
+      for (let i = 1; i < rangs.length; i++) if (rangs[i] < rangs[i - 1]) { v.push({ regle: 2, message: `séance ${s.lettre} : ordre ${s.exercices.map(e => e.compartiment).join(" > ")}` }); break; }
+      if (s.exercices[0] && s.exercices[0].accessoire) v.push({ regle: 2, message: `séance ${s.lettre} ouvre sur un accessoire (${s.exercices[0].nom})` });
+      for (const e of s.exercices) if (e.reps && e.compartiment !== "gainage") { const attendu = reposDe(e.reps, e.compartiment === "isolation"); const okRep = e.reps[1] <= 6 ? e.repos_s === 180 : (e.reps[0] >= 12 || e.compartiment === "isolation") ? e.repos_s >= 60 && e.repos_s <= 90 : e.repos_s === 120; if (!okRep && !(e.repos_s < attendu && e.repos_s >= (e.compartiment === "isolation" ? PLANCHER_REPOS.isolation : PLANCHER_REPOS.compose) && s._comprimee)) v.push({ regle: 5, message: `${e.nom} : ${e.reps.join("-")} reps, repos ${e.repos_s} s` }); }
+      if (s.dureeMin !== dureeSeance(s)) v.push({ regle: 6, message: `séance ${s.lettre} : durée affichée ${s.dureeMin}, calculée ${dureeSeance(s)}` });
+      if (s.dureeMin > prog.entrees.tempsMin) v.push({ regle: 6, message: `séance ${s.lettre} : ${s.dureeMin} min > ${prog.entrees.tempsMin}` });
+      for (const e of s.exercices) if (e.difficulte > niv.difficulteMax) v.push({ regle: 7, message: `${e.nom} difficulté ${e.difficulte} au niveau ${niveau}` });
+      if (niveau === 1) for (const e of s.exercices) { const b = banque.exercices.find(x => x.id === e.id); if (b && b.coordination) v.push({ regle: 7, message: `${e.nom} demande de la coordination, niveau 1` }); }
+      if (niveau >= 2 && prog.entrees.objectif !== "douce") for (const e of s.exercices) {
+        if (!tropFacilePour(e, niveau) || e.compartiment === "cardio_mobilite") continue;
+        const pris = new Set(s.exercices.map(x => x.id));
+        const alt = banque.exercices.filter(x => !pris.has(x.id) && x.compartiment === e.compartiment && (e.compartiment !== "isolation" || x.muscle === e.muscle) && x.difficulte <= niv.difficulteMax && faisable(x, materiel) && !tropFacilePour(x, niveau) && appartientAuFocus(x, s.focus));
+        if (alt.length) v.push({ regle: 7, message: `${e.nom} (difficulté ${e.difficulte}${e.regression ? ", régression" : ""}) au niveau ${niveau} alors que ${alt[0].nom} existe` });
+      }
+      const c = s.exercices.filter(estForce).length, extra = s.exercices.filter(e => e.role === "objectif_extra").length, nbExos = nbExosDe(niveau, prog.entrees.objectif, s.focus);
+      if (s.focus !== "recup" && (c < nbExos[0] || c > nbExos[1] + extra) && !prog.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : ${c} exercices`))) v.push({ regle: 7, message: `séance ${s.lettre} : ${c} exercices (attendu ${nbExos.join("-")}${extra ? " + " + extra + " d'objectif" : ""})` });
+      if (niveau === 1 && s.exercices.some(e => e.echelle === "avance")) v.push({ regle: 9, message: `séance ${s.lettre} : version avancée pour un débutant` });
+      const musclesIso = s.exercices.filter(e => e.compartiment === "isolation").map(e => e.muscle);
+      if (prog.entrees.objectif === "force" && new Set(musclesIso).size !== musclesIso.length) v.push({ regle: 11, message: `séance ${s.lettre} : deux isolations du même muscle en force (${musclesIso.join(", ")})` });
+      for (const e of s.exercices) if (!faisable(banque.exercices.find(x => x.id === e.id) || e, materiel)) v.push({ regle: "materiel", message: `${e.nom} infaisable avec « ${materiel} »` });
+    }
+    // règle 3
+    if (f >= 4) for (const g of GROS_GROUPES) { const n = seances.filter(s => s.exercices.some(e => groupesDe(e).has(g))).length; if (n < 2 && !(prog.limites || []).length) v.push({ regle: 3, message: `${g} travaillé ${n} fois par semaine` }); }
+    const vol = volumeSemaine(seances);
+    for (const g of GROS_GROUPES) { if (vol.direct[g] > niv.volumeMax && !prog.avertissements.some(a => a.startsWith(`Volume ${g} : `) && /au-dessus du maximum/.test(a))) v.push({ regle: 3, message: `${g} : ${vol.direct[g]} séries directes > max ${niv.volumeMax}` }); if (f >= 3 && vol.total[g] < niv.volumeMin && !prog.avertissements.some(a => a.startsWith(`Volume ${g}`))) v.push({ regle: 3, message: `${g} : ${vol.total[g]} séries < min ${niv.volumeMin}` }); }
+    // règle 4 (cyclique) et jours de sport
+    const parJour = {};
+    for (const j of prog.semaine) if (j.seance) parJour[j.jour] = new Set(j.seance.exercices.map(grosGroupe).filter(Boolean));
+    for (let d = 1; d <= 7; d++) { const a = parJour[d], b = parJour[suivant(d)]; if (!a || !b) continue; for (const g of a) if (b.has(g)) v.push({ regle: 4, message: `${g} les jours ${d} et ${suivant(d)}` }); }
+    if (prog.entrees.joursSport.length + f <= 7) for (const j of prog.semaine) if (j.seance && j.sport) v.push({ regle: "sport", message: `séance ${j.seance.lettre} un jour de sport (${j.jour})` });
+    return v;
+  };
+
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+});
+</script>
+<script id="banque-exercices">
+/* copie de banque-exercices.json — ne pas éditer ici : node outils/sync.js */
+window.BANQUE = {"version":1,"genere":"programmes étape 1 (marqueurs étape 2 : accessoire, regression, coordination ; convention du matériel : alternatives, « a + b » = combinaison)","regles":{"materiel":"liste d'alternatives : n'importe laquelle suffit ; « a + b » = combinaison obligatoire (barre + banc)","repos":"≤6 reps → 180 s ; 8-12 → 120 s ; 12+ et isolation → 60-90 s (règle 5)","echelle":"simple → phare → avancé ; monte_vers = exercice proposé après plusieurs semaines stables (règle 9)","demo":"champ demo = requête du système de démos existant (recherche YouTube « <demo> exercice technique »)"},"compartiments":[{"n":1,"id":"squat","nom":"Squat (s'accroupir)","phare":"squat"},{"n":2,"id":"hinge","nom":"Hinge (charnière de hanche)","phare":"rdl"},{"n":3,"id":"poussee_h","nom":"Poussée horizontale","phare":"developpe_couche"},{"n":4,"id":"poussee_v","nom":"Poussée verticale","phare":"militaire"},{"n":5,"id":"tirage_h","nom":"Tirage horizontal","phare":"rowing_barre"},{"n":6,"id":"tirage_v","nom":"Tirage vertical","phare":"traction"},{"n":7,"id":"unilateral","nom":"Unilatéral jambes","phare":"fente"},{"n":8,"id":"gainage","nom":"Gainage","phare":"planche"},{"n":9,"id":"isolation","nom":"Isolations","phare":"hipthrust"},{"n":10,"id":"cardio_mobilite","nom":"Cardio et mobilité","phare":null}],"exercices":[{"id":"chaise","nom":"Chaise contre le mur","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"squat_pdc","reps":null,"unilateral":false,"consigne":"Dos plaqué au mur, cuisses à l'horizontale, genoux au-dessus des chevilles, respire calmement.","erreur":"Se laisser glisser plus bas que 90° ou décoller les talons.","duree_s":40,"existant":"chaise","accessoire":true,"demo":"Chaise contre le mur"},{"id":"squat_pdc","nom":"Squat au poids du corps","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers","gainage"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"goblet","reps":[12,15],"unilateral":false,"consigne":"Pieds largeur d'épaules, pointes légèrement ouvertes, descends comme pour t'asseoir en gardant la poitrine haute.","erreur":"Genoux qui rentrent vers l'intérieur en remontant.","existant":"squat_pdc","repos_s":90,"demo":"Squat au poids du corps"},{"id":"goblet","nom":"Goblet squat","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers","gainage"],"materiel":["haltères","kettlebell"],"difficulte":1,"echelle":"simple","monte_vers":"squat","reps":[8,12],"unilateral":false,"consigne":"Haltère serré contre la poitrine, coudes qui passent entre les genoux en bas, talons au sol tout du long.","erreur":"Arrondir le dos en bas pour aller chercher la profondeur.","existant":"goblet","repos_s":120,"demo":"Goblet squat"},{"id":"presse","nom":"Presse à cuisses","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers"],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"squat","reps":[8,12],"unilateral":false,"consigne":"Pieds au milieu du plateau, descends jusqu'à ce que les cuisses touchent le buste sans que le bassin décolle du dossier.","erreur":"Verrouiller les genoux en haut ou laisser le bas du dos se décoller.","existant":"presse","repos_s":120,"demo":"Presse à cuisses"},{"id":"hack_squat","nom":"Hack squat","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers"],"materiel":["machine"],"difficulte":2,"echelle":"simple","monte_vers":"squat","reps":[8,12],"unilateral":false,"consigne":"Dos entier contre le dossier, descends contrôlé jusqu'à 90° minimum, pousse dans le talon.","erreur":"Pieds trop bas sur le plateau : les genoux passent loin devant et ça tire.","repos_s":120,"demo":"Hack squat"},{"id":"squat","nom":"Squat barre","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers","adducteurs","gainage"],"materiel":["barre"],"difficulte":2,"echelle":"phare","monte_vers":"squat_avant","reps":[5,8],"unilateral":false,"consigne":"Barre sur les trapèzes, inspire et bloque, descends genoux dans l'axe des pieds jusqu'aux cuisses parallèles, remonte en poussant le sol.","erreur":"Fesses qui remontent avant les épaules (good morning involontaire) : trop lourd.","existant":"squat","repos_s":180,"demo":"Squat barre"},{"id":"squat_saut","nom":"Squats sautés","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers","mollets"],"materiel":["poids du corps"],"difficulte":2,"echelle":"avance","monte_vers":null,"reps":[8,12],"unilateral":false,"consigne":"Descends à mi-hauteur, saute en extension complète, atterris en douceur genoux fléchis, enchaîne.","erreur":"Atterrir jambes tendues ou genoux qui claquent vers l'intérieur.","existant":"squat_saut","repos_s":120,"demo":"Squats sautés"},{"id":"squat_avant","nom":"Squat avant (front squat)","compartiment":"squat","muscle":"quadriceps","secondaires":["fessiers","gainage","haut du dos"],"materiel":["barre"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[5,8],"unilateral":false,"consigne":"Barre posée sur les épaules devant, coudes hauts tout le mouvement, buste vertical, descends profond.","erreur":"Coudes qui tombent : la barre roule vers l'avant et le dos s'arrondit.","repos_s":180,"demo":"Squat avant (front squat)"},{"id":"superman","nom":"Superman au sol","compartiment":"hinge","muscle":"chaîne postérieure","secondaires":["fessiers","lombaires"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"lombaire","reps":[10,15],"unilateral":false,"consigne":"Allongé sur le ventre, décolle bras et jambes de quelques centimètres en serrant les fesses, tiens une seconde.","erreur":"Cambrer le cou en regardant devant : regard au sol.","existant":"superman","accessoire":true,"approximatif":"chaîne postérieure au sol : geste de hinge sans charge","repos_s":120,"demo":"Superman au sol"},{"id":"lombaire","nom":"Extension lombaire 45°","compartiment":"hinge","muscle":"chaîne postérieure","secondaires":["fessiers","ischio-jambiers","lombaires"],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"rdl_halteres","reps":[12,15],"unilateral":false,"consigne":"Bassin calé sur le coussin, descends en pliant la hanche pas le dos, remonte jusqu'à l'alignement — pas au-delà.","erreur":"Hyperextension en haut : on s'arrête aligné.","existant":"lombaire","accessoire":true,"repos_s":90,"demo":"Extension lombaire 45°"},{"id":"rdl_halteres","nom":"Soulevé de terre roumain haltères","compartiment":"hinge","muscle":"ischio-jambiers","secondaires":["fessiers","lombaires"],"materiel":["haltères"],"difficulte":1,"echelle":"simple","monte_vers":"rdl","reps":[8,12],"unilateral":false,"consigne":"Haltères le long des cuisses, pousse les fesses vers l'arrière genoux à peine fléchis, descends jusqu'à sentir l'étirement derrière les cuisses.","erreur":"Plier les genoux pour descendre plus bas : c'est la hanche qui recule, pas un squat.","repos_s":120,"demo":"Soulevé de terre roumain haltères"},{"id":"rdl","nom":"Soulevé de terre roumain","compartiment":"hinge","muscle":"ischio-jambiers","secondaires":["fessiers","lombaires","haut du dos"],"materiel":["barre"],"difficulte":2,"echelle":"phare","monte_vers":"souleve_terre","reps":[8,12],"unilateral":false,"consigne":"Barre collée aux cuisses, hanches qui reculent, dos plat, descends jusqu'à mi-tibia ou l'étirement, remonte en serrant les fesses.","erreur":"Barre qui s'éloigne des jambes : le dos prend tout.","existant":"rdl","repos_s":120,"demo":"Soulevé de terre roumain"},{"id":"swing","nom":"Kettlebell swing","compartiment":"hinge","muscle":"fessiers","secondaires":["ischio-jambiers","gainage"],"materiel":["kettlebell"],"difficulte":2,"echelle":"simple","monte_vers":"rdl","reps":[15,20],"unilateral":false,"consigne":"Hanches qui claquent vers l'avant pour projeter la kettlebell à hauteur d'épaules, bras relâchés, fesses serrées en haut.","erreur":"Soulever avec les bras ou faire un squat : c'est un mouvement de hanche.","existant":"swing","repos_s":60,"demo":"Kettlebell swing"},{"id":"good_morning","nom":"Good morning","compartiment":"hinge","muscle":"ischio-jambiers","secondaires":["fessiers","lombaires"],"materiel":["barre"],"difficulte":2,"echelle":"avance","monte_vers":"souleve_terre","reps":[8,12],"unilateral":false,"consigne":"Barre légère sur les trapèzes, penche le buste en reculant les hanches jusqu'à sentir l'arrière des cuisses, dos plat.","erreur":"Charger trop vite : c'est un exercice de technique, pas de force.","repos_s":120,"demo":"Good morning"},{"id":"rdl_une_jambe","nom":"Soulevé de terre roumain une jambe","compartiment":"hinge","muscle":"ischio-jambiers","secondaires":["fessiers","équilibre","gainage"],"materiel":["haltères","kettlebell","poids du corps"],"difficulte":2,"echelle":"simple","monte_vers":"rdl","reps":[8,12],"unilateral":true,"consigne":"Debout sur une jambe, haltère dans la main opposée, penche le buste en envoyant la jambe libre vers l'arrière, dos plat, jusqu'à sentir l'étirement derrière la cuisse, remonte en serrant la fesse.","erreur":"Le bassin qui s'ouvre vers le plafond : les deux hanches restent face au sol.","lot":1,"trou":"charnière unilatérale, niveau 2 (remplaçant du RDL haltères)","repos_s":120,"demo":"Soulevé de terre roumain une jambe"},{"id":"trap_bar","nom":"Soulevé de terre trap bar","compartiment":"hinge","muscle":"chaîne postérieure","secondaires":["quadriceps","fessiers","haut du dos","avant-bras"],"materiel":["trap bar"],"difficulte":2,"echelle":"simple","monte_vers":"souleve_terre","reps":[5,8],"unilateral":false,"consigne":"Au centre de la barre hexagonale, poignées hautes, dos plat, pousse le sol avec les jambes puis ouvre les hanches, épaules au-dessus des poignées.","erreur":"Transformer le mouvement en squat en gardant les hanches trop basses : c'est une charnière, le buste s'incline.","lot":1,"trou":"charnière lourde de niveau 2, marche vers le soulevé de terre","repos_s":180,"demo":"Soulevé de terre trap bar"},{"id":"souleve_sumo","nom":"Soulevé de terre sumo","compartiment":"hinge","muscle":"chaîne postérieure","secondaires":["fessiers","adducteurs","quadriceps","haut du dos"],"materiel":["barre"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[5,8],"unilateral":false,"consigne":"Pieds larges pointes ouvertes, mains à l'intérieur des genoux, buste plus droit qu'au soulevé classique, pousse les genoux vers l'extérieur et le sol avec les pieds, hanches et épaules montent ensemble.","erreur":"Les hanches qui montent avant les épaules : le buste garde son angle jusqu'à ce que la barre passe les genoux.","lot":1,"trou":"charnière niveau 3 (remplaçant du soulevé de terre)","repos_s":180,"demo":"Soulevé de terre sumo"},{"id":"rack_pull","nom":"Rack pull (soulevé partiel depuis le rack)","compartiment":"hinge","muscle":"chaîne postérieure","secondaires":["haut du dos","trapèzes","fessiers","avant-bras"],"materiel":["barre + rack"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[3,6],"unilateral":false,"consigne":"Barre posée sur les supports juste sous les genoux, prise comme au soulevé, tire en ouvrant les hanches et en serrant les omoplates en haut, repose contrôlé.","erreur":"Se pencher en arrière en haut : on termine debout, pas cambré.","lot":1,"trou":"charnière niveau 3 (remplaçant du soulevé de terre)","repos_s":180,"demo":"Rack pull (soulevé partiel depuis le rack)"},{"id":"souleve_terre","nom":"Soulevé de terre","compartiment":"hinge","muscle":"chaîne postérieure","secondaires":["fessiers","ischio-jambiers","quadriceps","haut du dos","gainage"],"materiel":["barre"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[5,8],"unilateral":false,"consigne":"Barre au-dessus du milieu du pied, dos plat, pousse le sol avec les jambes puis ouvre les hanches — la barre reste collée aux tibias.","erreur":"Tirer avec le dos en premier : hanches et épaules doivent monter ensemble.","repos_s":180,"demo":"Soulevé de terre"},{"id":"hip_hinge_elastique","nom":"Pull-through à l'élastique","compartiment":"hinge","muscle":"fessiers","secondaires":["ischio-jambiers"],"materiel":["élastique","poulie"],"difficulte":1,"echelle":"simple","monte_vers":"rdl_halteres","reps":[12,15],"unilateral":false,"consigne":"Élastique ancré bas derrière toi tenu entre les jambes, recule les hanches puis ouvre-les en serrant les fesses.","erreur":"Se redresser avec le dos au lieu de pousser les hanches vers l'avant.","accessoire":true,"repos_s":90,"demo":"Pull-through à l'élastique"},{"id":"pompes_mur","nom":"Pompes au mur / sur banc","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["triceps","épaules"],"materiel":["poids du corps","banc"],"difficulte":1,"echelle":"simple","monte_vers":"pompes_genoux","reps":[8,12],"unilateral":false,"consigne":"Mains un peu plus larges que les épaules, corps droit comme une planche, poitrine vers le support, coudes à 45°.","erreur":"Bassin qui casse : serre les fesses et le ventre.","existant":"pompes_mur","regression":true,"repos_s":120,"demo":"Pompes au mur / sur banc"},{"id":"pompes_genoux","nom":"Pompes sur les genoux","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["triceps","épaules"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"pompes","reps":[8,12],"unilateral":false,"consigne":"Genoux au sol, corps droit des genoux à la tête, mains un peu plus larges que les épaules, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste.","erreur":"Casser à la hanche en montant : les fesses restent dans l'alignement.","regression":true,"repos_s":120,"demo":"Pompes sur les genoux"},{"id":"pompes","nom":"Pompes","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["triceps","épaules","gainage"],"materiel":["poids du corps"],"difficulte":2,"echelle":"simple","monte_vers":"developpe_couche","reps":[8,12],"unilateral":false,"consigne":"Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste.","erreur":"Tête qui plonge en premier et bassin qui reste en l'air.","existant":"pompes","repos_s":120,"demo":"Pompes"},{"id":"chest_press","nom":"Chest press machine","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["triceps","épaules"],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"developpe_couche","reps":[8,12],"unilateral":false,"consigne":"Poignées à hauteur de poitrine, omoplates serrées contre le dossier, pousse sans verrouiller les coudes.","erreur":"Épaules qui remontent vers les oreilles pendant la poussée.","repos_s":120,"demo":"Chest press machine"},{"id":"dc_halteres","nom":"Développé couché haltères","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["triceps","épaules"],"materiel":["haltères"],"difficulte":1,"echelle":"simple","monte_vers":"developpe_couche","reps":[8,12],"unilateral":false,"consigne":"Allongé, haltères au-dessus de la poitrine, descends coudes à 45° jusqu'à la hauteur du buste, remonte sans cogner les haltères.","erreur":"Descendre coudes écartés à 90° : les épaules encaissent.","repos_s":120,"demo":"Développé couché haltères"},{"id":"developpe_couche","nom":"Développé couché","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["triceps","épaules"],"materiel":["barre"],"difficulte":2,"echelle":"phare","monte_vers":"dc_incline","reps":[5,8],"unilateral":false,"consigne":"Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière.","erreur":"Rebondir la barre sur la poitrine ou décoller les fesses du banc.","repos_s":180,"demo":"Développé couché"},{"id":"dc_incline","nom":"Développé incliné haltères","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["épaules","triceps"],"materiel":["haltères + banc"],"difficulte":2,"echelle":"avance","monte_vers":"dips","reps":[8,12],"unilateral":false,"consigne":"Banc à 30°, haltères qui descendent à hauteur du haut de la poitrine, poussée légèrement convergente.","erreur":"Banc trop redressé : ça devient un exercice d'épaules.","repos_s":120,"demo":"Développé incliné haltères"},{"id":"dips","nom":"Dips aux barres parallèles","compartiment":"poussee_h","muscle":"pectoraux","secondaires":["triceps","épaules"],"materiel":["barres de dips"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[6,10],"unilateral":false,"consigne":"Buste légèrement penché en avant, descends jusqu'à ce que les épaules soient au niveau des coudes, remonte sans balancer.","erreur":"Descendre trop bas épaules en avant : douleur à l'avant de l'épaule.","repos_s":180,"demo":"Dips aux barres parallèles"},{"id":"pike","nom":"Pompes piquées (épaules)","compartiment":"poussee_v","muscle":"épaules","secondaires":["triceps","gainage"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"dev","reps":[8,12],"unilateral":false,"consigne":"Fesses hautes en V inversé, descends le sommet du crâne vers le sol entre les mains, pousse pour revenir.","erreur":"Casser le V et retomber en pompe classique.","existant":"pike","repos_s":120,"demo":"Pompes piquées (épaules)"},{"id":"shoulder_press_machine","nom":"Développé épaules machine","compartiment":"poussee_v","muscle":"épaules","secondaires":["triceps"],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"dev","reps":[8,12],"unilateral":false,"consigne":"Poignées à hauteur des oreilles, dos contre le dossier, pousse en haut sans verrouiller.","erreur":"Cambrer le bas du dos pour aider la poussée.","repos_s":120,"demo":"Développé épaules machine"},{"id":"dev","nom":"Développé haltères assis","compartiment":"poussee_v","muscle":"épaules","secondaires":["triceps","haut des pectoraux"],"materiel":["haltères"],"difficulte":1,"echelle":"simple","monte_vers":"militaire","reps":[8,12],"unilateral":false,"consigne":"Haltères à hauteur des oreilles paumes vers l'avant, pousse jusqu'à ce que les haltères se rapprochent en haut, redescends contrôlé.","erreur":"Cambrer le dos pour pousser plus lourd : réduis la charge.","existant":"dev","ambigu":"« Développé haltères » des templates : rangé en poussée verticale (épaules). Si c'était un développé couché haltères, le déplacer vers dc_halteres.","repos_s":120,"demo":"Développé haltères assis"},{"id":"arnold","nom":"Arnold press","compartiment":"poussee_v","muscle":"épaules","secondaires":["triceps","avant d'épaule"],"materiel":["haltères"],"difficulte":2,"echelle":"avance","monte_vers":"militaire","reps":[8,12],"unilateral":false,"consigne":"Départ paumes vers toi haltères devant le visage, tourne les paumes vers l'avant en poussant vers le haut.","erreur":"Faire la rotation en bas seulement : elle se fait pendant la montée.","hypertrophie":true,"repos_s":120,"demo":"Arnold press"},{"id":"militaire","nom":"Développé militaire","compartiment":"poussee_v","muscle":"épaules","secondaires":["triceps","gainage","haut des pectoraux"],"materiel":["barre"],"difficulte":2,"echelle":"phare","monte_vers":"push_press","reps":[5,8],"unilateral":false,"consigne":"Debout, barre sur le haut de la poitrine, fesses et ventre serrés, pousse la barre au-dessus de la tête en reculant légèrement le menton.","erreur":"Cambrer le bas du dos et pousser la barre devant le visage au lieu de dans l'axe.","existant":"militaire","repos_s":180,"demo":"Développé militaire"},{"id":"push_press","nom":"Push press","compartiment":"poussee_v","muscle":"épaules","secondaires":["triceps","quadriceps","gainage"],"materiel":["barre"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[5,8],"unilateral":false,"consigne":"Petite flexion de genoux puis extension explosive des jambes pour lancer la barre, termine la poussée avec les bras.","erreur":"Plier trop les genoux : c'est un ressort court, pas un squat.","repos_s":180,"demo":"Push press"},{"id":"rowing_inverse","nom":"Rowing inversé","compartiment":"tirage_h","muscle":"dos (grand dorsal)","secondaires":["biceps","trapèzes","gainage"],"materiel":["poids du corps","barre"],"difficulte":1,"echelle":"simple","monte_vers":"rowing_halteres","reps":[8,12],"unilateral":false,"consigne":"Suspendu sous une barre basse (ou une table solide) corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates.","erreur":"Bassin qui tombe : serre les fesses, plus la position est verticale, plus c'est facile.","repos_s":120,"demo":"Rowing inversé"},{"id":"rowing_elastique","nom":"Rowing à l'élastique","compartiment":"tirage_h","muscle":"dos (grand dorsal)","secondaires":["biceps","trapèzes"],"materiel":["élastique"],"difficulte":1,"echelle":"simple","monte_vers":"rowing","reps":[12,15],"unilateral":false,"consigne":"Assis ou debout, tire les coudes vers l'arrière le long du corps, omoplates qui se rapprochent en fin de mouvement.","erreur":"Tirer avec les bras seulement : les coudes passent derrière le buste grâce aux omoplates.","repos_s":90,"demo":"Rowing à l'élastique"},{"id":"rowing","nom":"Tirage horizontal (poulie / machine)","compartiment":"tirage_h","muscle":"dos (grand dorsal)","secondaires":["biceps","trapèzes","arrière d'épaule"],"materiel":["poulie","machine"],"difficulte":1,"echelle":"simple","monte_vers":"rowing_barre","reps":[8,12],"unilateral":false,"consigne":"Buste droit et stable, tire la poignée vers le nombril coudes le long du corps, laisse les omoplates s'ouvrir en revenant.","erreur":"Se balancer d'avant en arrière avec le buste pour tirer plus lourd.","existant":"rowing","anciens_ids":["rowing2"],"repos_s":120,"demo":"Tirage horizontal (poulie / machine)"},{"id":"rowing_halteres","nom":"Rowing haltère un bras","compartiment":"tirage_h","muscle":"dos (grand dorsal)","secondaires":["biceps","trapèzes"],"materiel":["haltères + banc"],"difficulte":1,"echelle":"simple","monte_vers":"rowing_barre","reps":[8,12],"unilateral":true,"consigne":"Main et genou sur le banc, dos plat, tire l'haltère vers la hanche coude près du corps, redescends jusqu'à l'étirement.","erreur":"Tourner le buste pour monter l'haltère plus haut.","repos_s":120,"demo":"Rowing haltère un bras"},{"id":"rowing_barre","nom":"Rowing barre","compartiment":"tirage_h","muscle":"dos (grand dorsal)","secondaires":["biceps","trapèzes","lombaires","arrière d'épaule"],"materiel":["barre"],"difficulte":2,"echelle":"phare","monte_vers":"rowing_pendlay","reps":[8,12],"unilateral":false,"consigne":"Buste penché à 45°, dos plat, tire la barre vers le bas du ventre coudes vers l'arrière, redescends bras tendus.","erreur":"Se redresser à chaque répétition pour tricher : le buste reste fixe.","repos_s":120,"demo":"Rowing barre"},{"id":"rowing_pendlay","nom":"Rowing Pendlay","compartiment":"tirage_h","muscle":"dos (grand dorsal)","secondaires":["biceps","trapèzes","lombaires"],"materiel":["barre"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[5,8],"unilateral":false,"consigne":"Buste à l'horizontale, barre repose au sol entre chaque répétition, tire explosif vers le bas de la poitrine.","erreur":"Laisser le buste remonter au fil des répétitions.","repos_s":180,"demo":"Rowing Pendlay"},{"id":"tirage_elastique_v","nom":"Tirage vertical à l'élastique","compartiment":"tirage_v","muscle":"dos (grand dorsal)","secondaires":["biceps","arrière d'épaule"],"materiel":["élastique"],"difficulte":1,"echelle":"simple","monte_vers":"tirage_v","reps":[12,15],"unilateral":false,"consigne":"Élastique ancré haut, tire les coudes vers les hanches en gardant le buste droit.","erreur":"Hausser les épaules au départ : elles restent basses.","repos_s":90,"demo":"Tirage vertical à l'élastique"},{"id":"tirage_v","nom":"Tirage vertical poulie","compartiment":"tirage_v","muscle":"dos (grand dorsal)","secondaires":["biceps","arrière d'épaule"],"materiel":["poulie","machine"],"difficulte":1,"echelle":"simple","monte_vers":"traction_assistee","reps":[8,12],"unilateral":false,"consigne":"Prise un peu plus large que les épaules, tire la barre vers le haut de la poitrine coudes vers le bas et l'arrière, buste à peine incliné.","erreur":"Tirer derrière la nuque ou se pencher fort en arrière.","existant":"tirage_v","repos_s":120,"demo":"Tirage vertical poulie"},{"id":"traction_assistee","nom":"Traction assistée (machine ou élastique)","compartiment":"tirage_v","muscle":"dos (grand dorsal)","secondaires":["biceps","arrière d'épaule","gainage"],"materiel":["machine","élastique"],"difficulte":1,"echelle":"simple","monte_vers":"traction_negative","reps":[8,12],"unilateral":false,"consigne":"Choisis une assistance qui te laisse 8 à 12 répétitions propres, menton au-dessus de la barre, descente contrôlée.","erreur":"Assistance trop forte : on ne progresse plus. Réduis-la dès que 12 passent.","repos_s":120,"demo":"Traction assistée (machine ou élastique)"},{"id":"traction_negative","nom":"Traction négative","compartiment":"tirage_v","muscle":"dos (grand dorsal)","secondaires":["biceps","arrière d'épaule","gainage"],"materiel":["barre de traction"],"difficulte":2,"echelle":"simple","monte_vers":"traction","reps":[3,5],"unilateral":false,"consigne":"Monte avec un saut ou un banc, puis descends le plus lentement possible (3 à 5 secondes) jusqu'aux bras tendus.","erreur":"Se laisser tomber sur la fin : contrôle jusqu'en bas.","regression":true,"repos_s":180,"demo":"Traction négative"},{"id":"traction","nom":"Traction","compartiment":"tirage_v","muscle":"dos (grand dorsal)","secondaires":["biceps","arrière d'épaule","gainage"],"materiel":["barre de traction"],"difficulte":3,"echelle":"phare","monte_vers":"traction_lestee","reps":[5,8],"unilateral":false,"consigne":"Départ bras tendus épaules basses, tire les coudes vers les hanches jusqu'au menton au-dessus de la barre, redescends complètement.","erreur":"Répétitions à moitié (bras jamais tendus) ou balancement des jambes.","repos_s":180,"demo":"Traction"},{"id":"traction_lestee","nom":"Traction lestée","compartiment":"tirage_v","muscle":"dos (grand dorsal)","secondaires":["biceps","arrière d'épaule","gainage"],"materiel":["barre de traction"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[4,6],"unilateral":false,"consigne":"Ceinture de lest ou haltère entre les pieds, même geste strict que la traction, amplitude complète.","erreur":"Ajouter du lest avant 10 tractions strictes.","repos_s":180,"demo":"Traction lestée"},{"id":"split_squat","nom":"Split squat statique","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","équilibre"],"materiel":["poids du corps","haltères"],"difficulte":1,"echelle":"simple","monte_vers":"fente_arr","reps":[8,12],"unilateral":true,"consigne":"Un pied devant l'autre écartés d'un grand pas, descends le genou arrière vers le sol, buste droit, remonte sur place.","erreur":"Pas trop court : le genou avant dépasse loin la pointe du pied.","repos_s":120,"demo":"Split squat statique"},{"id":"fente_arr","nom":"Fentes arrière","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","équilibre"],"materiel":["poids du corps","haltères"],"difficulte":1,"echelle":"simple","monte_vers":"fente","reps":[8,12],"unilateral":true,"consigne":"Recule un pied, descends le genou arrière vers le sol, pousse dans le talon avant pour revenir.","erreur":"Se pencher en avant et tirer sur le genou arrière.","existant":"fente_arr","repos_s":120,"demo":"Fentes arrière"},{"id":"stepup","nom":"Step-up sur banc","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers"],"materiel":["banc","poids du corps","haltères + banc"],"difficulte":1,"echelle":"simple","monte_vers":"fente","reps":[8,12],"unilateral":true,"consigne":"Pied entier sur le banc, monte en poussant dans ce pied seulement, redescends contrôlé sans rebondir.","erreur":"Prendre l'élan avec la jambe du sol.","existant":"stepup","repos_s":120,"demo":"Step-up sur banc"},{"id":"fente","nom":"Fentes marchées","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","gainage","équilibre"],"materiel":["haltères","poids du corps"],"difficulte":2,"echelle":"phare","monte_vers":"bulgare","reps":[8,12],"unilateral":true,"consigne":"Grand pas devant, genou arrière qui frôle le sol, buste droit, pousse dans le talon avant pour enchaîner sur l'autre jambe.","erreur":"Pas trop court : le genou avant dépasse la pointe du pied et le talon décolle.","existant":"fente","repos_s":120,"demo":"Fentes marchées"},{"id":"fente_laterale","nom":"Fente latérale","compartiment":"unilateral","muscle":"adducteurs","secondaires":["quadriceps","fessiers"],"materiel":["poids du corps","haltères"],"difficulte":2,"echelle":"simple","monte_vers":"bulgare","reps":[8,12],"unilateral":true,"consigne":"Grand pas sur le côté, assieds-toi sur la jambe qui s'est déplacée, l'autre tendue, pointes vers l'avant.","erreur":"Genou qui part vers l'intérieur : il suit la pointe du pied.","repos_s":120,"demo":"Fente latérale"},{"id":"bulgare","nom":"Fentes bulgares","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","équilibre","gainage"],"materiel":["haltères + banc","poids du corps"],"difficulte":2,"echelle":"avance","monte_vers":"bulgare_lestee","reps":[8,12],"unilateral":true,"consigne":"Pied arrière posé sur un banc, descends verticalement jusqu'à la cuisse avant parallèle, remonte en poussant dans le talon.","erreur":"Banc trop loin : ça devient une fente vers l'avant et le genou souffre.","existant":"bulgare","repos_s":120,"demo":"Fentes bulgares"},{"id":"pistol_assiste","nom":"Pistol squat assisté","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","équilibre","gainage"],"materiel":["poids du corps","élastique"],"difficulte":2,"echelle":"avance","monte_vers":"pistol","reps":[5,8],"unilateral":true,"consigne":"Tenu à un support ou un élastique, descends sur une jambe l'autre tendue devant, remonte sans t'aider des bras.","erreur":"Genou qui part vers l'intérieur ou talon qui décolle.","regression":true,"repos_s":180,"demo":"Pistol squat assisté"},{"id":"stepup_leste","nom":"Step-up lesté","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","équilibre"],"materiel":["haltères + banc","barre + banc"],"difficulte":2,"echelle":"simple","monte_vers":"bulgare_lestee","reps":[8,12],"unilateral":true,"consigne":"Haltères le long du corps ou barre sur les épaules, pied entier sur le banc à hauteur de genou, monte en poussant dans ce seul pied, redescends lentement sans rebondir.","erreur":"Se propulser avec la jambe au sol : elle ne fait que suivre.","lot":1,"trou":"unilatéral niveau 2","repos_s":120,"demo":"Step-up lesté"},{"id":"curtsy","nom":"Fentes curtsy (révérence)","compartiment":"unilateral","muscle":"fessiers","secondaires":["quadriceps","abducteurs","équilibre"],"materiel":["poids du corps","haltères"],"difficulte":2,"echelle":"simple","monte_vers":"bulgare","reps":[8,12],"unilateral":true,"consigne":"Croise une jambe derrière l'autre comme pour une révérence, descends jusqu'à ce que le genou arrière frôle le sol, buste droit, remonte en poussant dans le pied avant.","erreur":"Le genou avant qui rentre vers l'intérieur : il reste au-dessus du pied.","lot":1,"trou":"unilatéral niveau 2, second muscle principal du compartiment","repos_s":120,"demo":"Fentes curtsy (révérence)"},{"id":"bulgare_lestee","nom":"Fentes bulgares lestées","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","équilibre","gainage"],"materiel":["haltères + banc","barre + banc"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[6,10],"unilateral":true,"consigne":"Pied arrière sur le banc, haltères en main ou barre sur les épaules, descends jusqu'à ce que le genou arrière frôle le sol, buste légèrement penché, remonte en poussant dans le talon avant.","erreur":"Le pied avant trop près du banc, qui envoie le genou loin devant : recule-le d'une demi-foulée.","lot":1,"trou":"unilatéral niveau 3","repos_s":180,"demo":"Fentes bulgares lestées"},{"id":"fente_barre","nom":"Fentes barre","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","gainage","équilibre"],"materiel":["barre"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[6,10],"unilateral":true,"consigne":"Barre sur les trapèzes comme au squat, grand pas en avant, genou arrière qui frôle le sol, buste vertical, pousse dans le talon avant pour revenir.","erreur":"Le pas trop court qui envoie le genou loin devant le pied : allonge la foulée.","lot":1,"trou":"unilatéral niveau 3","repos_s":180,"demo":"Fentes barre"},{"id":"pistol","nom":"Pistol squat","compartiment":"unilateral","muscle":"quadriceps","secondaires":["fessiers","équilibre","gainage"],"materiel":["poids du corps"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[4,8],"unilateral":true,"consigne":"Debout sur une jambe, l'autre tendue devant, bras devant pour l'équilibre, descends jusqu'en bas sans t'aider des mains, remonte sans que le talon décolle.","erreur":"Tomber en arrière au bas du mouvement : le poids reste sur le milieu du pied, le buste penché vers l'avant.","lot":1,"trou":"unilatéral niveau 3, suite du pistol assisté","repos_s":180,"demo":"Pistol squat"},{"id":"planche_genoux","nom":"Planche sur les genoux","compartiment":"gainage","muscle":"abdominaux","secondaires":["fessiers","épaules"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"planche","reps":null,"unilateral":false,"consigne":"Coudes sous les épaules, genoux au sol, ligne droite des genoux à la tête, ventre rentré.","erreur":"Fesses qui remontent pour soulager : serre-les.","duree_s":30,"regression":true,"repos_s":45,"demo":"Planche sur les genoux"},{"id":"deadbug","nom":"Dead bug","compartiment":"gainage","muscle":"abdominaux","secondaires":["fléchisseurs de hanche"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"hollow","reps":[8,12],"unilateral":true,"consigne":"Sur le dos, bas du dos plaqué au sol, allonge lentement bras et jambe opposés sans que le dos se décolle.","erreur":"Le bas du dos qui se cambre pendant l'allongement.","existant":"deadbug","coordination":true,"repos_s":120,"demo":"Dead bug"},{"id":"bird_dog","nom":"Bird-dog","compartiment":"gainage","muscle":"abdominaux","secondaires":["fessiers","lombaires"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"planche_laterale","reps":[8,12],"unilateral":true,"consigne":"À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens.","erreur":"Le bassin qui tourne ou le dos qui se creuse : le buste reste une table.","repos_s":120,"demo":"Bird-dog"},{"id":"planche","nom":"Planche","compartiment":"gainage","muscle":"abdominaux","secondaires":["fessiers","épaules","lombaires"],"materiel":["poids du corps"],"difficulte":2,"echelle":"phare","monte_vers":"planche_laterale","reps":null,"unilateral":false,"consigne":"Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire.","erreur":"Bassin qui s'affaisse ou fesses en l'air : on cherche la ligne droite.","duree_s":40,"existant":"planche","repos_s":45,"demo":"Planche"},{"id":"planche_laterale","nom":"Planche latérale","compartiment":"gainage","muscle":"obliques","secondaires":["fessiers","épaules"],"materiel":["poids du corps"],"difficulte":2,"echelle":"simple","monte_vers":"pallof","reps":null,"unilateral":true,"consigne":"Coude sous l'épaule, hanches décollées et alignées avec les épaules et les pieds, tiens.","erreur":"Hanche qui tombe vers le sol.","duree_s":30,"repos_s":45,"demo":"Planche latérale"},{"id":"hollow","nom":"Hollow hold","compartiment":"gainage","muscle":"abdominaux","secondaires":["fléchisseurs de hanche"],"materiel":["poids du corps"],"difficulte":2,"echelle":"simple","monte_vers":"releves","reps":null,"unilateral":false,"consigne":"Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens.","erreur":"Bas du dos qui se décolle : monte un peu les jambes.","duree_s":20,"existant":"hollow","repos_s":45,"demo":"Hollow hold"},{"id":"releves","nom":"Relevés de jambes","compartiment":"gainage","muscle":"abdominaux","secondaires":["fléchisseurs de hanche"],"materiel":["poids du corps"],"difficulte":2,"echelle":"simple","monte_vers":"roulette","reps":[10,15],"unilateral":false,"consigne":"Allongé ou suspendu, monte les jambes jusqu'à 90° en enroulant le bassin, redescends lentement sans toucher.","erreur":"Cambrer le dos sur la descente : arrête-toi avant.","existant":"releves","repos_s":120,"demo":"Relevés de jambes"},{"id":"pallof","nom":"Pallof press","compartiment":"gainage","muscle":"obliques","secondaires":["abdominaux"],"materiel":["poulie","élastique"],"difficulte":2,"echelle":"phare","monte_vers":"pallof_demi_genou","reps":[12,15],"unilateral":true,"consigne":"De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s.","erreur":"Tourner les épaules vers la poulie.","repos_s":90,"demo":"Pallof press"},{"id":"roulette","nom":"Roulette abdominale (ab wheel)","compartiment":"gainage","muscle":"abdominaux","secondaires":["grand dorsal","épaules"],"materiel":["roulette"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[6,10],"unilateral":false,"consigne":"À genoux, roule vers l'avant en gardant le bas du dos rond et le ventre serré, reviens sans cambrer.","erreur":"Cambrer le dos en bout de course : réduis l'amplitude.","repos_s":180,"demo":"Roulette abdominale (ab wheel)"},{"id":"releve_genoux_suspendu","nom":"Relevé de genoux suspendu","compartiment":"gainage","muscle":"abdominaux","secondaires":["fléchisseurs de hanche","avant-bras","grand dorsal"],"materiel":["barre de traction"],"difficulte":2,"echelle":"simple","monte_vers":"roulette","reps":[10,15],"unilateral":false,"consigne":"Suspendu à la barre bras tendus, épaules basses, ramène les genoux vers la poitrine en enroulant le bassin, redescends lentement sans balancer.","erreur":"Se balancer pour lancer les genoux : c'est le ventre qui tire, pas l'élan.","lot":1,"trou":"gainage niveau 2","repos_s":120,"demo":"Relevé de genoux suspendu"},{"id":"farmer_walk","nom":"Farmer walk (marche du fermier)","compartiment":"gainage","muscle":"abdominaux","secondaires":["avant-bras","trapèzes","obliques"],"materiel":["haltères","kettlebell","trap bar"],"difficulte":1,"echelle":"simple","monte_vers":"planche_laterale","reps":null,"unilateral":false,"consigne":"Un haltère lourd dans chaque main, épaules basses et en arrière, marche à pas courts et rapides sur 20 à 30 m en gardant le buste parfaitement droit.","erreur":"Les épaules qui roulent vers l'avant sous la charge : omoplates serrées, regard loin devant.","duree_s":40,"lot":1,"trou":"gainage avec charge, tous niveaux","repos_s":45,"demo":"Farmer walk (marche du fermier)"},{"id":"pallof_rotation","nom":"Pallof press avec rotation lente","compartiment":"gainage","muscle":"obliques","secondaires":["abdominaux","fessiers"],"materiel":["poulie","élastique"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[12,15],"unilateral":true,"consigne":"Même départ que le Pallof, bras tendus devant, tourne lentement le buste de quelques degrés vers l'extérieur puis reviens face à la poulie, hanches immobiles.","erreur":"Tourner avec les hanches : seul le buste pivote, le bassin reste face à l'avant.","lot":1,"trou":"gainage anti-rotation niveau 3","repos_s":90,"demo":"Pallof press avec rotation lente"},{"id":"pallof_demi_genou","nom":"Pallof press à demi-genou","compartiment":"gainage","muscle":"obliques","secondaires":["abdominaux","fessiers"],"materiel":["poulie","élastique"],"difficulte":2,"echelle":"simple","monte_vers":"pallof_rotation","reps":[8,12],"unilateral":true,"consigne":"Un genou au sol, l'autre pied devant, poulie sur le côté à hauteur de poitrine, pousse les mains devant toi et tiens deux secondes sans que le buste tourne.","erreur":"Le buste qui bascule vers la poulie : serre la fesse du genou au sol et reste grand.","lot":1,"trou":"gainage anti-rotation niveau 2, position d'apprentissage du Pallof (remplaçant de la planche latérale)","repos_s":120,"demo":"Pallof press à demi-genou"},{"id":"pont_sol","nom":"Pont fessier au sol","compartiment":"isolation","muscle":"fessiers","secondaires":["ischio-jambiers"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"hipthrust","reps":[12,15],"unilateral":false,"consigne":"Sur le dos pieds à plat, monte les hanches en serrant les fesses jusqu'à l'alignement épaules-genoux, tiens une seconde.","erreur":"Pousser avec le bas du dos et cambrer en haut.","isolation":true,"existant":"pont_sol","repos_s":90,"demo":"Pont fessier au sol"},{"id":"pont","nom":"Pont fessier unilatéral","compartiment":"isolation","muscle":"fessiers","secondaires":["ischio-jambiers","gainage"],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"hipthrust","reps":[12,15],"unilateral":true,"consigne":"Même pont, une jambe tendue en l'air, hanches qui restent à l'horizontale.","erreur":"Bassin qui penche du côté de la jambe libre.","isolation":true,"existant":"pont","repos_s":90,"demo":"Pont fessier unilatéral"},{"id":"hipthrust_machine","nom":"Hip thrust machine","compartiment":"isolation","muscle":"fessiers","secondaires":["ischio-jambiers"],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"hipthrust","reps":[8,12],"unilateral":false,"consigne":"Dos calé, pieds sous les genoux, monte en serrant les fesses jusqu'à l'alignement, menton rentré.","erreur":"Aller trop haut en cambrant : on s'arrête aligné.","isolation":true,"repos_s":90,"demo":"Hip thrust machine"},{"id":"hipthrust","nom":"Hip thrust","compartiment":"isolation","muscle":"fessiers","secondaires":["ischio-jambiers","gainage"],"materiel":["barre + banc"],"difficulte":2,"echelle":"phare","monte_vers":null,"reps":[8,12],"unilateral":false,"consigne":"Omoplates sur le banc, barre sur les hanches, tibias verticaux en haut, monte en serrant fort les fesses, menton rentré.","erreur":"Cambrer en haut ou pousser avec les lombaires : le buste reste légèrement incliné.","isolation":true,"existant":"hipthrust","repos_s":90,"demo":"Hip thrust"},{"id":"kickback","nom":"Kickback à la poulie","compartiment":"isolation","muscle":"fessiers","secondaires":[],"materiel":["poulie","élastique"],"difficulte":1,"echelle":"simple","monte_vers":"hipthrust","reps":[12,15],"unilateral":true,"consigne":"Chevillère à la poulie basse, buste légèrement penché, pousse la jambe vers l'arrière en serrant la fesse.","erreur":"Cambrer le dos pour monter la jambe plus haut.","isolation":true,"repos_s":90,"demo":"Kickback à la poulie"},{"id":"abduction","nom":"Abduction machine","compartiment":"isolation","muscle":"abducteurs","secondaires":["fessiers"],"materiel":["machine"],"difficulte":1,"echelle":"phare","monte_vers":null,"reps":[12,15],"unilateral":false,"consigne":"Buste légèrement penché en avant, écarte les genoux contre la résistance, tiens une seconde en fin de course.","erreur":"Aller vite en laissant la machine revenir seule.","isolation":true,"existant":"abduction","repos_s":90,"demo":"Abduction machine"},{"id":"abduction_elastique","nom":"Abduction à l'élastique","compartiment":"isolation","muscle":"abducteurs","secondaires":["fessiers"],"materiel":["élastique"],"difficulte":1,"echelle":"simple","monte_vers":"abduction","reps":[15,20],"unilateral":true,"consigne":"Élastique au-dessus des genoux, debout ou en pas latéraux, écarte contre la résistance sans bouger le buste.","erreur":"Buste qui se penche pour aider.","isolation":true,"repos_s":60,"demo":"Abduction à l'élastique"},{"id":"clamshell","nom":"Clamshell (coquillage)","compartiment":"isolation","muscle":"abducteurs","secondaires":["fessiers"],"materiel":["poids du corps","élastique"],"difficulte":1,"echelle":"simple","monte_vers":"abduction","reps":[15,20],"unilateral":true,"consigne":"Sur le côté genoux pliés pieds joints, ouvre le genou du dessus sans que le bassin bascule en arrière.","erreur":"Bassin qui roule vers l'arrière pour ouvrir plus grand.","isolation":true,"repos_s":60,"demo":"Clamshell (coquillage)"},{"id":"legcurl","nom":"Leg curl allongé","compartiment":"isolation","muscle":"ischio-jambiers","secondaires":["mollets"],"materiel":["machine"],"difficulte":1,"echelle":"phare","monte_vers":null,"reps":[8,12],"unilateral":false,"consigne":"Hanches plaquées sur le banc, ramène les talons vers les fesses, redescends lentement.","erreur":"Décoller les hanches pour tricher sur la fin.","isolation":true,"existant":"legcurl","approximatif":"sous-muscle « ischio-jambiers » ajouté à la liste des isolations","repos_s":90,"demo":"Leg curl allongé"},{"id":"legcurl_ballon","nom":"Leg curl au ballon","compartiment":"isolation","muscle":"ischio-jambiers","secondaires":["fessiers","gainage"],"materiel":["ballon"],"difficulte":1,"echelle":"simple","monte_vers":"legcurl","reps":[12,15],"unilateral":false,"consigne":"Sur le dos talons sur un ballon, hanches décollées, ramène le ballon vers les fesses sans laisser les hanches tomber.","erreur":"Hanches qui redescendent pendant le mouvement.","isolation":true,"repos_s":90,"demo":"Leg curl au ballon"},{"id":"nordic","nom":"Nordic curl","compartiment":"isolation","muscle":"ischio-jambiers","secondaires":["fessiers"],"materiel":["poids du corps"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[3,6],"unilateral":false,"consigne":"Genoux au sol chevilles bloquées, laisse-toi descendre le plus lentement possible corps droit, remonte en t'aidant des mains.","erreur":"Casser les hanches pour ralentir : le corps reste d'une pièce.","isolation":true,"repos_s":180,"demo":"Nordic curl"},{"id":"legcurl_assis","nom":"Leg curl assis","compartiment":"isolation","muscle":"ischio-jambiers","secondaires":["mollets"],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"legcurl","reps":[8,12],"unilateral":false,"consigne":"Dos calé, coussin au-dessus des chevilles, ramène les talons sous le siège en gardant les cuisses plaquées, remonte lentement.","erreur":"Décoller les fesses du siège pour tirer plus lourd : la charge est trop haute.","isolation":true,"lot":1,"trou":"ischio-jambiers en salle, niveaux 1-2","repos_s":90,"demo":"Leg curl assis"},{"id":"glute_ham_raise","nom":"Glute-ham raise (GHD)","compartiment":"isolation","muscle":"ischio-jambiers","secondaires":["fessiers","lombaires"],"materiel":["machine"],"difficulte":3,"echelle":"avance","monte_vers":null,"reps":[6,10],"unilateral":false,"consigne":"Chevilles bloquées, genoux sur le coussin, corps droit des genoux à la tête, descends en contrôlant jusqu'à l'horizontale, remonte en tirant avec l'arrière des cuisses.","erreur":"Casser les hanches pour remonter : le corps reste une planche, on plie seulement les genoux.","isolation":true,"lot":1,"trou":"ischio-jambiers niveau 3 (remplaçant du nordic curl)","repos_s":90,"demo":"Glute-ham raise (GHD)"},{"id":"curl","nom":"Curl biceps haltères","compartiment":"isolation","muscle":"biceps","secondaires":["avant-bras"],"materiel":["haltères"],"difficulte":1,"echelle":"phare","monte_vers":null,"reps":[12,15],"unilateral":false,"consigne":"Coudes fixes le long du corps, monte les haltères en tournant les paumes vers le haut, descends contrôlé.","erreur":"Balancer le buste pour monter la charge.","isolation":true,"existant":"curl","repos_s":90,"demo":"Curl biceps haltères"},{"id":"curl_barre","nom":"Curl barre","compartiment":"isolation","muscle":"biceps","secondaires":["avant-bras"],"materiel":["barre"],"difficulte":2,"echelle":"avance","monte_vers":null,"reps":[8,12],"unilateral":false,"consigne":"Prise largeur d'épaules, coudes collés aux flancs, monte sans avancer les coudes, descends jusqu'aux bras tendus.","erreur":"Coudes qui partent vers l'avant en haut du mouvement.","isolation":true,"repos_s":90,"demo":"Curl barre"},{"id":"curl_marteau","nom":"Curl marteau","compartiment":"isolation","muscle":"biceps","secondaires":["avant-bras","brachial"],"materiel":["haltères"],"difficulte":1,"echelle":"simple","monte_vers":"curl","reps":[12,15],"unilateral":false,"consigne":"Paumes face à face tout le mouvement, coudes fixes, monte et descends contrôlé.","erreur":"Tourner les poignets en haut.","isolation":true,"repos_s":90,"demo":"Curl marteau"},{"id":"curl_poulie","nom":"Curl à la poulie basse","compartiment":"isolation","muscle":"biceps","secondaires":["avant-bras"],"materiel":["poulie","élastique"],"difficulte":1,"echelle":"simple","monte_vers":"curl","reps":[12,15],"unilateral":false,"consigne":"Face à la poulie, coudes fixes, tension constante, contracte en haut une seconde.","erreur":"Reculer les coudes en montant.","isolation":true,"repos_s":90,"demo":"Curl à la poulie basse"},{"id":"triceps","nom":"Extension triceps à la poulie","compartiment":"isolation","muscle":"triceps","secondaires":[],"materiel":["poulie","élastique"],"difficulte":1,"echelle":"phare","monte_vers":null,"reps":[12,15],"unilateral":false,"consigne":"Coudes collés aux flancs, pousse la corde ou la barre vers le bas jusqu'aux bras tendus, remonte contrôlé.","erreur":"Coudes qui s'écartent ou épaules qui participent.","isolation":true,"existant":"triceps","repos_s":90,"demo":"Extension triceps à la poulie"},{"id":"dips_banc","nom":"Dips sur banc","compartiment":"isolation","muscle":"triceps","secondaires":["épaules","pectoraux"],"materiel":["poids du corps","banc"],"difficulte":1,"echelle":"simple","monte_vers":"triceps","reps":[8,12],"unilateral":false,"consigne":"Mains sur le bord du banc, descends jusqu'à 90° au coude en gardant le dos près du banc, pousse.","erreur":"Descendre trop bas : douleur à l'avant de l'épaule.","isolation":true,"existant":"dips_banc","repos_s":90,"demo":"Dips sur banc"},{"id":"extension_nuque","nom":"Extension triceps au-dessus de la tête","compartiment":"isolation","muscle":"triceps","secondaires":[],"materiel":["haltères"],"difficulte":1,"echelle":"simple","monte_vers":"triceps","reps":[12,15],"unilateral":false,"consigne":"Un haltère à deux mains au-dessus de la tête, descends derrière la nuque coudes serrés, remonte.","erreur":"Coudes qui s'ouvrent sur les côtés.","isolation":true,"repos_s":90,"demo":"Extension triceps au-dessus de la tête"},{"id":"barre_front","nom":"Barre au front","compartiment":"isolation","muscle":"triceps","secondaires":[],"materiel":["barre","haltères"],"difficulte":2,"echelle":"avance","monte_vers":null,"reps":[8,12],"unilateral":false,"consigne":"Allongé, barre au-dessus du front, plie les coudes seulement pour descendre la barre vers le front, remonte.","erreur":"Bouger les épaules : seuls les coudes travaillent.","isolation":true,"repos_s":90,"demo":"Barre au front"},{"id":"lateral","nom":"Élévations latérales","compartiment":"isolation","muscle":"épaules latérales","secondaires":["trapèzes"],"materiel":["haltères"],"difficulte":1,"echelle":"phare","monte_vers":null,"reps":[12,15],"unilateral":false,"consigne":"Haltères le long du corps, monte les bras sur les côtés jusqu'à l'horizontale, coudes à peine fléchis, descends lentement.","erreur":"Hausser les épaules et balancer le buste : allège.","isolation":true,"existant":"lateral","repos_s":90,"demo":"Élévations latérales"},{"id":"lateral_poulie","nom":"Élévation latérale à la poulie","compartiment":"isolation","muscle":"épaules latérales","secondaires":[],"materiel":["poulie","élastique"],"difficulte":1,"echelle":"simple","monte_vers":"lateral","reps":[12,15],"unilateral":true,"consigne":"Poulie basse de l'autre côté du corps, monte le bras sur le côté jusqu'à l'horizontale, tension constante.","erreur":"Monter au-dessus de l'horizontale.","isolation":true,"repos_s":90,"demo":"Élévation latérale à la poulie"},{"id":"lateral_machine","nom":"Élévation latérale machine","compartiment":"isolation","muscle":"épaules latérales","secondaires":[],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"lateral","reps":[12,15],"unilateral":false,"consigne":"Coussinets contre les bras, monte jusqu'à l'horizontale sans hausser les épaules.","erreur":"Charge trop lourde et amplitude qui rétrécit.","isolation":true,"repos_s":90,"demo":"Élévation latérale machine"},{"id":"oiseau","nom":"Oiseau (élévations arrière)","compartiment":"isolation","muscle":"arrière d'épaule","secondaires":["haut du dos"],"materiel":["haltères"],"difficulte":1,"echelle":"simple","monte_vers":"tirage_ela","reps":[12,15],"unilateral":false,"consigne":"Buste penché à l'horizontale, monte les haltères sur les côtés en serrant les omoplates, coudes à peine fléchis.","erreur":"Se redresser en montant les bras.","isolation":true,"repos_s":90,"demo":"Oiseau (élévations arrière)"},{"id":"tirage_ela","nom":"Face pull (poulie / élastique)","compartiment":"isolation","muscle":"arrière d'épaule","secondaires":["haut du dos","rotateurs"],"materiel":["poulie","élastique"],"difficulte":1,"echelle":"phare","monte_vers":null,"reps":[12,15],"unilateral":false,"consigne":"Corde à hauteur des yeux, tire vers le visage en écartant les mains, coudes hauts, serre les omoplates en fin de course.","erreur":"Tirer vers la poitrine coudes bas : ça devient un rowing.","isolation":true,"existant":"tirage_ela","approximatif":"sous-muscle « arrière d'épaule » ajouté à la liste des isolations","repos_s":90,"demo":"Face pull (poulie / élastique)"},{"id":"reverse_pec_deck","nom":"Reverse pec deck (oiseau machine)","compartiment":"isolation","muscle":"arrière d'épaule","secondaires":["haut du dos","trapèzes"],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"tirage_ela","reps":[12,15],"unilateral":false,"consigne":"Poitrine contre le dossier, bras presque tendus, écarte les poignées vers l'arrière en serrant les omoplates, reviens sans laisser la charge retomber.","erreur":"Plier les coudes pour tirer avec les bras : ce sont les épaules qui reculent, coudes fixes.","isolation":true,"lot":1,"trou":"arrière d'épaule en salle","repos_s":90,"demo":"Reverse pec deck (oiseau machine)"},{"id":"mollets","nom":"Mollets debout (machine)","compartiment":"isolation","muscle":"mollets","secondaires":[],"materiel":["machine"],"difficulte":1,"echelle":"phare","monte_vers":null,"reps":[12,15],"unilateral":false,"consigne":"Jambes tendues, monte sur la pointe le plus haut possible, tiens une seconde, redescends jusqu'à l'étirement complet.","erreur":"Répétitions courtes et rebondies.","isolation":true,"existant":"mollets","repos_s":90,"demo":"Mollets debout (machine)"},{"id":"mollets_marche","nom":"Mollets sur une marche","compartiment":"isolation","muscle":"mollets","secondaires":[],"materiel":["poids du corps"],"difficulte":1,"echelle":"simple","monte_vers":"mollets","reps":[15,20],"unilateral":false,"consigne":"Avant-pieds sur le bord d'une marche, descends le talon sous le niveau, monte sur la pointe, tiens en haut.","erreur":"Aller vite sans passer par l'étirement en bas.","isolation":true,"existant":"mollets_marche","repos_s":60,"demo":"Mollets sur une marche"},{"id":"mollets_assis","nom":"Mollets assis (machine)","compartiment":"isolation","muscle":"mollets","secondaires":[],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"mollets","reps":[12,15],"unilateral":false,"consigne":"Genoux sous le coussin, amplitude complète de l'étirement à la pointe, tiens en haut.","erreur":"Rebondir en bas.","isolation":true,"repos_s":90,"demo":"Mollets assis (machine)"},{"id":"mollets_presse","nom":"Mollets à la presse","compartiment":"isolation","muscle":"mollets","secondaires":[],"materiel":["machine"],"difficulte":1,"echelle":"simple","monte_vers":"mollets","reps":[12,15],"unilateral":false,"consigne":"Avant-pieds en bas du plateau, jambes tendues, pousse sur la pointe puis laisse le talon descendre.","erreur":"Plier les genoux pour aider.","isolation":true,"repos_s":90,"demo":"Mollets à la presse"},{"id":"marche_inclinee","nom":"Marche inclinée","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["tapis / machine cardio"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":1200,"unilateral":false,"consigne":"Tapis à 8-12 % d'inclinaison, allure où tu peux encore parler par phrases courtes, sans tenir les barres.","erreur":"Se tenir aux barres : l'inclinaison ne sert plus à rien.","existant":"Marche inclinée","demo":"Marche inclinée","reps":null},{"id":"escaliers","nom":"Escaliers / stairmaster","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["tapis / machine cardio"],"difficulte":2,"echelle":null,"monte_vers":null,"duree_s":900,"unilateral":false,"consigne":"Pied entier sur la marche, buste droit, allure régulière.","erreur":"Se pencher sur la console.","existant":"Escaliers / stairmaster","demo":"Escaliers / stairmaster","reps":null},{"id":"rameur","nom":"Rameur","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["tapis / machine cardio"],"difficulte":2,"echelle":null,"monte_vers":null,"duree_s":900,"unilateral":false,"consigne":"Jambes d'abord, puis buste, puis bras ; retour dans l'ordre inverse. Cadence 24-28 coups/min.","erreur":"Tirer avec les bras avant d'avoir poussé les jambes.","existant":"Rameur","demo":"Rameur","reps":null},{"id":"velo","nom":"Vélo","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["tapis / machine cardio"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":1200,"unilateral":false,"consigne":"Selle à hauteur de hanche, cadence 80-90 tours/min, résistance qui laisse respirer.","erreur":"Selle trop basse : les genoux souffrent.","existant":"Vélo","demo":"Vélo","reps":null},{"id":"corde","nom":"Corde à sauter","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["aucun"],"difficulte":2,"echelle":null,"monte_vers":null,"duree_s":480,"unilateral":false,"consigne":"Petits sauts sur l'avant-pied, coudes près du corps, la corde tourne avec les poignets.","erreur":"Sauter trop haut et atterrir à plat.","existant":"Corde à sauter","demo":"Corde à sauter","reps":null},{"id":"elliptique","nom":"Elliptique","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["tapis / machine cardio"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":1200,"unilateral":false,"consigne":"Buste droit, pousse et tire avec les bras, allure où tu peux parler.","erreur":"S'affaler sur les poignées.","demo":"Elliptique","reps":null},{"id":"course_douce","nom":"Course douce","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["aucun","tapis / machine cardio"],"difficulte":2,"echelle":null,"monte_vers":null,"duree_s":1200,"unilateral":false,"consigne":"Allure de conversation, foulée courte, atterrissage sous le bassin.","erreur":"Partir trop vite et finir en marchant.","demo":"Course douce","reps":null},{"id":"burpees","nom":"Burpees","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["aucun"],"difficulte":2,"echelle":null,"monte_vers":null,"duree_s":300,"unilateral":false,"consigne":"Descends en planche, pompe facultative, ramène les pieds, saute. Rythme régulier plutôt que vitesse.","erreur":"Dos qui s'arrondit quand les pieds reviennent.","existant":"burpees","approximatif":"conditionnement au poids du corps : rangé en cardio","demo":"Burpees","reps":null},{"id":"montees","nom":"Montées de genoux","compartiment":"cardio_mobilite","type":"cardio","muscle":"cardio","secondaires":[],"materiel":["aucun"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":180,"unilateral":false,"consigne":"Sur place, genoux à hauteur de hanche, bras qui accompagnent, sur l'avant-pied.","erreur":"Se pencher en arrière.","existant":"montees","approximatif":"conditionnement au poids du corps : rangé en cardio","demo":"Montées de genoux","reps":null},{"id":"mobilite_hanches","nom":"Mobilité hanches (90/90)","compartiment":"cardio_mobilite","type":"mobilite","muscle":"hanches","secondaires":[],"materiel":["aucun"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":240,"unilateral":false,"consigne":"Assis, une jambe à 90° devant, l'autre à 90° sur le côté, bascule d'un côté à l'autre en gardant le buste droit.","erreur":"Forcer avec les mains : on va où les hanches vont.","demo":"Mobilité hanches (90/90)","reps":null},{"id":"flechisseurs","nom":"Étirement fléchisseurs de hanche (fente basse)","compartiment":"cardio_mobilite","type":"mobilite","muscle":"hanches","secondaires":[],"materiel":["aucun"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":180,"unilateral":false,"consigne":"Genou arrière au sol, avance les hanches en serrant la fesse arrière, buste droit, 45 s par côté.","erreur":"Cambrer le dos au lieu d'avancer la hanche.","demo":"Étirement fléchisseurs de hanche (fente basse)","reps":null},{"id":"ischios_etirement","nom":"Étirement ischio-jambiers","compartiment":"cardio_mobilite","type":"mobilite","muscle":"ischio-jambiers","secondaires":[],"materiel":["aucun"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":180,"unilateral":false,"consigne":"Talon sur un support bas, jambe tendue, penche-toi depuis les hanches dos plat jusqu'à la tension, respire.","erreur":"Arrondir le dos pour toucher le pied.","demo":"Étirement ischio-jambiers","reps":null},{"id":"ouverture_epaules","nom":"Ouverture d'épaules (bâton ou élastique)","compartiment":"cardio_mobilite","type":"mobilite","muscle":"épaules","secondaires":[],"materiel":["élastique","aucun"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":180,"unilateral":false,"consigne":"Bâton ou élastique tenu large, passe-le devant-derrière bras tendus, lentement.","erreur":"Prise trop étroite : élargis.","demo":"Ouverture d'épaules (bâton ou élastique)","reps":null},{"id":"thoracique","nom":"Extension thoracique au rouleau","compartiment":"cardio_mobilite","type":"mobilite","muscle":"dos (thoracique)","secondaires":[],"materiel":["rouleau"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":180,"unilateral":false,"consigne":"Rouleau sous le haut du dos, mains derrière la tête, laisse le haut du dos s'étendre par-dessus, change de hauteur.","erreur":"Cambrer les lombaires : le bassin reste au sol.","demo":"Extension thoracique au rouleau","reps":null},{"id":"chat_vache","nom":"Chat-vache","compartiment":"cardio_mobilite","type":"mobilite","muscle":"colonne","secondaires":[],"materiel":["aucun"],"difficulte":1,"echelle":null,"monte_vers":null,"duree_s":120,"unilateral":false,"consigne":"À quatre pattes, arrondis le dos en expirant puis creuse-le en inspirant, lentement.","erreur":"Aller vite : c'est le souffle qui donne le rythme.","demo":"Chat-vache","reps":null}]};
+</script>
 <script>
 const {
   useState,
@@ -879,6 +1672,8 @@ const GAINAGE = [{
   duree: null,
   repos: 45
 }];
+// gainage d'une séance : liste propre (programmes du moteur, v20.0) ou la liste globale (anciens programmes)
+const gainageDe = S => Array.isArray(S.gainage) ? S.gainage : S.gainage ? GAINAGE : [];
 const nbSeries = ex => parseInt(ex.dose) || 3;
 const fmtCharge = e => e == null ? "" : e.kg != null ? `${e.kg} kg` : (e.series || []).filter(v => v != null && v !== "").join(" / ") + " kg";
 const maxCharge = e => e == null ? 0 : e.kg != null ? e.kg : Math.max(0, ...(e.series || []).filter(v => v != null && v !== "").map(Number));
@@ -2209,6 +3004,7 @@ function App() {
       ...(extra.programmePerso ? {
         programmePerso: extra.programmePerso
       } : {}),
+      reponses: extra.reponses || null,
       style: extra.style || "soins",
       styles: extra.styles || [extra.style || "soins"],
       styleApplique: (extra.styles || [extra.style || "soins"]).join("+"),
@@ -2256,6 +3052,7 @@ function App() {
   const galRef = useRef(null);
   const pending = useRef(null); // {type:'exo'|'cardio'|'hab', ...}
   const [chargeur, setChargeur] = useState(false);
+  const [regen, setRegen] = useState(null); // flux de régénération ouvert : { mode, question }
 
   /* ---- chargement + migration + décroissance ---- */
   useEffect(() => {
@@ -2564,21 +3361,26 @@ function App() {
       color: SUB
     }
   }, "Chargement…");
-  if (role !== "coach" && !st.programme) return /*#__PURE__*/React.createElement(ChoixProgramme, {
+  // adoption d'un programme du moteur : charges, XP et historique restent (les identifiants
+  // d'exercices sont stables depuis l'étape 1)
+  const adopterProgramme = (p, rep) => {
+    maj(s => {
+      s.programmePerso = p;
+      s.programme = "perso";
+      s.reponses = rep;
+      s.moteurRefuse = false;
+      return s;
+    });
+    setRegen(null);
+    toast("Programme adopté — tes charges sont conservées");
+  };
+  if (role !== "coach" && !st.programme) return /*#__PURE__*/React.createElement(Regenerer, {
+    st: st,
     code: code,
-    onChoisir: id => {
-      maj(s => {
-        s.programme = id;
-        return s;
-      });
-    },
-    onPerso: p => {
-      maj(s => {
-        s.programmePerso = p;
-        s.programme = "perso";
-        return s;
-      });
-    }
+    mode: "changer",
+    onAdopter: adopterProgramme,
+    onGarder: null,
+    onFermer: () => {}
   });
   PROG = st.programme === "perso" && st.programmePerso ? st.programmePerso : PROGRAMMES[st.programme] || PROGRAMMES.fessiers;
   SEANCES = PROG.seances;
@@ -3372,7 +4174,22 @@ function App() {
       fontSize: 12,
       textDecoration: "underline"
     }
-  }, "Fermer"))), reglagesOuvert && /*#__PURE__*/React.createElement(Reglages, {
+  }, "Fermer"))), regen && /*#__PURE__*/React.createElement(Regenerer, {
+    st: st,
+    code: code,
+    mode: regen.mode,
+    questionInitiale: regen.question,
+    onAdopter: adopterProgramme,
+    onGarder: () => {
+      maj(s => {
+        s.moteurRefuse = true;
+        return s;
+      });
+      setRegen(null);
+      toast("Ancien programme conservé — la proposition reste dans les réglages");
+    },
+    onFermer: () => setRegen(null)
+  }), reglagesOuvert && /*#__PURE__*/React.createElement(Reglages, {
     st: st,
     maj: maj,
     onPousser: pousserEtat,
@@ -3385,6 +4202,13 @@ function App() {
     onPauseMaj: rafraichirPause,
     onRevoirTuto: revoirTour,
     onChanger: changerProfil,
+    onRegen: (mode, q) => {
+      setReglagesOuvert(false);
+      setRegen({
+        mode,
+        question: q
+      });
+    },
     onFermer: () => setReglagesOuvert(false),
     onNouveau: () => {
       localStorage.removeItem("lvlup-actif");
@@ -3721,7 +4545,49 @@ function App() {
         return x;
       });
     }
-  }), role !== "coach" && tab === "jour" && /*#__PURE__*/React.createElement("div", null, !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
+  }), role !== "coach" && tab === "jour" && /*#__PURE__*/React.createElement("div", null, !st.reponses && !st.moteurRefuse && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setRegen({
+      mode: "migration"
+    }),
+    className: "carte-migration",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      width: "100%",
+      textAlign: "left",
+      background: "rgba(124,92,255,.14)",
+      border: `1.5px solid ${COL.G}`,
+      borderRadius: 14,
+      padding: "11px 14px",
+      marginBottom: 12,
+      color: INK
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "sliders",
+    s: 18,
+    c: COL.G
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 13,
+      fontWeight: 700
+    }
+  }, "Nouveau moteur de programmes — veux-tu régénérer le tien ?"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 11,
+      color: SUB,
+      marginTop: 2
+    }
+  }, "Tu vois le nouveau programme avant de décider. Charges et historique restent."))), PROG.moteur && !J.seance && /*#__PURE__*/React.createElement(AvertissementsProgramme, {
+    prog: PROG,
+    compact: true
+  }), !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
     onClick: partagerInvite,
     style: {
       display: "flex",
@@ -3802,7 +4668,7 @@ function App() {
     }
   }, "Qu'est-ce qu'on fait aujourd'hui ?"), /*#__PURE__*/React.createElement(Carrousel, null, Object.keys(SEANCES).map(t => {
     const S = SEANCES[t];
-    const estXP = S.exos.length * XP.exo + XP.bonusSeance + (S.gainage ? GAINAGE.length * XP.gainageItem + XP.bonusGainage : 0);
+    const estXP = S.exos.length * XP.exo + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0);
     return /*#__PURE__*/React.createElement("button", {
       key: t,
       onClick: () => choisir(t),
@@ -3863,7 +4729,7 @@ function App() {
         marginTop: 5,
         position: "relative"
       }
-    }, S.exos.length, " exercices", S.gainage ? " + gainage" : "", " · ~", S.exos.length * 7 + (S.gainage ? 10 : 0), " min"), /*#__PURE__*/React.createElement("div", {
+    }, S.exos.length, " exercices", gainageDe(S).length ? " + gainage" : "", " · ", S.dureeMin ? S.dureeMin : "~" + (S.exos.length * 7 + (gainageDe(S).length ? 10 : 0)), " min"), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "inline-flex",
         alignItems: "center",
@@ -5097,7 +5963,8 @@ function SeanceView({
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
   const tousFaits = J.faits.length >= S.exos.length;
-  const gainFait = J.gainage.length >= GAINAGE.length;
+  const gain = gainageDe(S);
+  const gainFait = gain.length > 0 && J.gainage.length >= gain.length;
   // accordéon : un seul exercice déployé à la fois, les autres restent visibles
   // en compact, à leur place. L'ordre d'affichage ne bouge jamais — il porte
   // l'ordre d'exécution de la séance.
@@ -5375,7 +6242,17 @@ function SeanceView({
         borderTop: `1px solid ${LINE}`,
         animation: ouvert ? "deploie .24s ease-out" : "none"
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, ex.consigne && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        lineHeight: 1.5,
+        color: INK,
+        marginBottom: 10
+      }
+    }, ex.consigne), /*#__PURE__*/React.createElement(ErreurFrequente, {
+      texte: ex.erreur,
+      couleur: S.couleur
+    }), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         alignItems: "center",
@@ -5429,7 +6306,7 @@ function SeanceView({
       dernier: der,
       couleur: S.couleur,
       onSave: onCharge
-    })), !fait && (() => {
+    })), !fait && ex.repos > 0 && (() => {
       // repos en cours pour CET exercice : le bouton devient le chrono lui-même
       // (bleu, décompte en gros) — un re-tap ne remet jamais à zéro (garde dans
       // lancerRepos)
@@ -5596,7 +6473,7 @@ function SeanceView({
       fontWeight: 700,
       fontSize: 13
     }
-  }, "📤 Envoyer mes preuves du jour")), S.gainage && /*#__PURE__*/React.createElement("div", {
+  }, "📤 Envoyer mes preuves du jour")), gain.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 16
     }
@@ -5615,12 +6492,12 @@ function SeanceView({
       fontFamily: DISPLAY,
       fontSize: 13
     }
-  }, "+ GAINAGE · 8 MIN"), /*#__PURE__*/React.createElement("div", {
+  }, "+ GAINAGE · ", gain.length * 2, " MIN"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       opacity: .9
     }
-  }, "3 tours · 45 s entre les tours")), GAINAGE.map(g => {
+  }, "3 tours · 45 s entre les tours")), gain.map(g => {
     const ok = J.gainage.includes(g.id);
     const tours = Math.min(3, (J.gainTours || {})[g.id] || 0);
     const ouvertG = gainOuvert === g.id;
@@ -5720,7 +6597,17 @@ function SeanceView({
         borderTop: `1px solid ${LINE}`,
         animation: ouvertG ? "deploie .24s ease-out" : "none"
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, g.consigne && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        lineHeight: 1.5,
+        color: INK,
+        marginBottom: 10
+      }
+    }, g.consigne), /*#__PURE__*/React.createElement(ErreurFrequente, {
+      texte: g.erreur,
+      couleur: COL.G
+    }), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         alignItems: "center",
@@ -6149,7 +7036,7 @@ function BoutonMaintenir({
 const xpParSeanceMoyenne = () => {
   const l = Object.values(SEANCES || {});
   if (!l.length) return 150;
-  const tot = l.reduce((a, S) => a + S.exos.length * XP.exo + XP.bonusSeance + (S.gainage ? GAINAGE.length * XP.gainageItem + XP.bonusGainage : 0), 0);
+  const tot = l.reduce((a, S) => a + S.exos.length * XP.exo + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0), 0);
   return Math.max(1, Math.round(tot / l.length));
 };
 const seancesRestantes = (niveauCible, xp) => {
@@ -7958,6 +8845,304 @@ const Cadre = ({
     onTap: onRetour
   }), children));
 };
+/* ============================ PROGRAMME PAR LE MOTEUR (v20.0) ============================ */
+/* Composants écrits à la main (pas de JSX précompilé) : h = React.createElement. */
+const h = React.createElement;
+// le moteur et la banque sont embarqués dans la page (copies synchronisées par outils/sync.js)
+const genererAvecMoteur = reponses => window.Moteur.programmePourApp(reponses, window.BANQUE);
+// point d'extension IA : l'objectif en texte libre → muscles prioritaires. Toute erreur = repli honnête.
+const interpreterObjectif = async (code, texte) => {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 9000);
+  try {
+    const r = await fetch(api(code, "/interpreter"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ objectif: texte }),
+      signal: ctrl.signal
+    });
+    if (!r.ok) return { repli: true, raison: r.status === 503 ? "nonconfig" : "echec" };
+    const d = await r.json();
+    if (!d || typeof d.base !== "string") return { repli: true, raison: "format" };
+    return { base: d.base, prioritaires: Array.isArray(d.prioritaires) ? d.prioritaires.map(String).slice(0, 6) : [] };
+  } catch {
+    return { repli: true, raison: "reseau" };
+  } finally {
+    clearTimeout(t);
+  }
+};
+const SPORTS_UI = [["course", "Course à pied"], ["cyclisme", "Cyclisme"], ["natation", "Natation"], ["football", "Football"], ["tennis", "Tennis & padel"], ["rugby", "Rugby"], ["basket", "Basket & handball"], ["escalade", "Escalade"], ["frappe", "Boxe, kick, muay-thaï"], ["prehension", "Judo, lutte, JJB"], ["mma", "MMA"], ["equitation", "Équitation"], ["danse", "Danse"], ["yoga", "Yoga & pilates"]];
+const MATERIEL_UI = [["haltères", "Haltères"], ["barre", "Barre et disques"], ["banc", "Banc"], ["machine", "Machines guidées"], ["poulie", "Poulie"], ["élastique", "Élastique"], ["barre de traction", "Barre de traction"], ["barres de dips", "Barres de dips"], ["kettlebell", "Kettlebell"], ["trap bar", "Trap bar"], ["rack", "Rack"], ["roulette", "Roulette abdominale"], ["ballon", "Swiss ball"], ["rouleau", "Rouleau de massage"], ["tapis / machine cardio", "Tapis ou machine cardio"]];
+const TOUS_TAGS = MATERIEL_UI.map(m => m[0]);
+// les quatre situations ne sont que des raccourcis qui pré-cochent la liste (DECISIONS.md, « Matériel réel »)
+const RACCOURCIS_MATERIEL = [["salle", "Salle complète", TOUS_TAGS], ["maison", "Maison équipée", ["haltères", "banc", "élastique", "barre de traction"]], ["pdc", "Poids du corps", ["barre de traction", "barres de dips"]], ["rien", "Rien du tout", []]];
+const OBJECTIFS_UI = [["tonifier", "Me tonifier"], ["poids", "Perdre du poids"], ["muscler", "Me muscler"], ["mieux", "Me sentir mieux (énergie, stress)"], ["douce", "Reprendre en douceur"], ["libre", "Autre chose ? Décris-le"]];
+const MUSCU_UI = [["jamais", "Jamais"], ["mois", "Quelques mois"], ["an", "Plus d'un an, régulièrement"]];
+const TECHNIQUE_UI = [["oui", "Oui"], ["pas_sur", "Pas sûr·e"]];
+const JOURS_UI = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const REPONSES_VIDES = () => ({ frequence: null, objectif: null, objectifLibre: "", muscu: null, technique: null, sport: undefined, intention: "soi", joursSport: [], materiel: TOUS_TAGS.slice(), raccourci: "salle", tempsMin: 60, interpretation: null });
+const libelle = (liste, v) => (liste.find(x => x[0] === v) || [])[1] || "";
+// profils d'avant le moteur : rien n'était stocké, on pré-remplit depuis le programme actuel
+const reponsesDepuisAncienProgramme = st => {
+  const prog = st.programme === "perso" ? st.programmePerso : PROGRAMMES[st.programme];
+  const n = prog ? Object.keys(prog.seances).length : 3;
+  const maison = !!(prog && prog.lieu === "maison");
+  const objectif = { fessiers: "tonifier", pertegras: "poids", hautducorps: "muscler", fullbody3: "mieux", douce: "douce", maison: "mieux" }[st.programme] || "mieux";
+  return { ...REPONSES_VIDES(), frequence: Math.max(1, Math.min(7, n)), objectif, materiel: maison ? [] : TOUS_TAGS.slice(), raccourci: maison ? "rien" : "salle" };
+};
+// la liste des questions dépend des réponses (sport → deux questions de plus)
+const questionsProgramme = r => {
+  const q = [
+    { cle: "frequence", titre: "Combien de séances par semaine ?", type: "choix", grille: 2, opts: [[1, "1 séance"], [2, "2 séances"], [3, "3 séances"], [4, "4 séances"], [5, "5 séances"], [6, "6 séances"], [7, "7 jours : 6 séances + 1 jour de récupération active"]] },
+    { cle: "objectif", titre: "Ton objectif ?", type: "choix", opts: OBJECTIFS_UI },
+    { cle: "muscu", titre: "Tu as déjà fait de la muscu ?", type: "choix", opts: MUSCU_UI },
+    { cle: "technique", titre: "Tu sais faire un squat et une pompe correctement ?", sous: "Sans tricher : c'est ce qui décide par où on commence.", type: "choix", opts: TECHNIQUE_UI },
+    { cle: "sport", titre: "Tu pratiques un sport ?", type: "chips", opts: [["non", "Non, pas en ce moment"], ...SPORTS_UI] }
+  ];
+  if (r.sport && r.sport !== "non") {
+    q.push({ cle: "intention", titre: "La muscu, c'est pour progresser dans ce sport ou pour toi ?", type: "choix", opts: [["sport", "Pour progresser dans ce sport"], ["soi", "Pour moi : forme, silhouette, énergie"]] });
+    q.push({ cle: "joursSport", titre: "Quels jours ?", sous: "Les jours où tu pratiques ce sport. Aucune séance ces jours-là, et les jambes loin de tes grosses sorties.", type: "jours" });
+  }
+  q.push({ cle: "materiel", titre: "Ton matériel ?", sous: "Coche ce que tu as vraiment. Les raccourcis pré-cochent, tu ajustes.", type: "materiel" });
+  q.push({ cle: "tempsMin", titre: "Combien de temps par séance ?", sous: "Échauffement compris. Le programme tiendra dans ce temps, à la minute.", type: "temps" });
+  return q;
+};
+const reponsesCompletes = r => r.frequence && r.objectif && (r.objectif !== "libre" || (r.objectifLibre || "").trim().length >= 8) && r.muscu && r.technique && r.sport !== undefined;
+// ce que le moteur reçoit : la liste de matériel réelle, le sport à null s'il n'y en a pas
+const reponsesPourMoteur = r => ({ ...r, sport: r.sport && r.sport !== "non" ? r.sport : null, materiel: Array.isArray(r.materiel) ? r.materiel : TOUS_TAGS.slice() });
+
+const BoutonOption = ({ actif, onTap, children, accent, style }) => h("button", {
+  onClick: onTap,
+  style: {
+    ...GLASS,
+    border: `1px solid ${actif ? accent || COL.G : "rgba(255,255,255,.10)"}`,
+    background: actif ? "rgba(124,92,255,.18)" : GLASSBG,
+    borderRadius: 16,
+    padding: "15px 16px",
+    textAlign: "left",
+    color: INK,
+    fontWeight: 700,
+    fontSize: 15,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    ...(style || {})
+  }
+}, h("span", {
+  style: {
+    width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+    border: `2px solid ${actif ? accent || COL.G : "rgba(255,255,255,.25)"}`,
+    background: actif ? accent || COL.G : "transparent",
+    display: "grid", placeItems: "center"
+  }
+}, actif && h(Ic, { n: "check", s: 11, c: "#fff", w: 3 })), h("span", { style: { flex: 1, minWidth: 0, lineHeight: 1.25 } }, children));
+
+const BoutonContinuer = ({ onTap, disabled, children }) => h("button", {
+  onClick: () => !disabled && onTap(),
+  disabled: !!disabled,
+  style: {
+    width: "100%", marginTop: 14,
+    background: disabled ? "rgba(255,255,255,.08)" : COL.G,
+    color: disabled ? "#5A6274" : "#fff",
+    border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14
+  }
+}, children || "Continuer");
+
+/* Les questions du programme : partagées par l'onboarding, la migration et les réglages.
+   Un choix simple avance tout seul (240 ms) ; une liste, les jours et le temps ont un bouton. */
+function QuestionsProgramme({ reponses, setReponses, qIdx, setQIdx, onFin, onRetour, etiquette }) {
+  const QS = questionsProgramme(reponses);
+  const i = Math.min(qIdx, QS.length - 1);
+  const Q = QS[i];
+  const poser = (cle, v) => setReponses(r => ({ ...r, [cle]: v }));
+  const suivant = () => {
+    if (i < QS.length - 1) setQIdx(i + 1); else onFin();
+  };
+  const repondre = v => {
+    poser(Q.cle, v);
+    if (Q.cle === "objectif" && v === "libre") return; // le champ libre s'ouvre, pas d'avance automatique
+    if (Q.cle === "sport") {
+      // la liste des questions change : on avance après la mise à jour
+      setTimeout(() => setQIdx(i + 1), 240);
+      return;
+    }
+    setTimeout(suivant, 240);
+  };
+  const val = reponses[Q.cle];
+  const corps = () => {
+    if (Q.type === "choix") return h("div", { style: { display: "grid", gap: 9, gridTemplateColumns: Q.grille === 2 ? "1fr 1fr" : "1fr" } },
+      Q.opts.map(([v, l]) => h(BoutonOption, { key: String(v), actif: val === v, onTap: () => repondre(v), style: Q.grille === 2 && v === 7 ? { gridColumn: "1 / -1", fontSize: 13.5 } : Q.grille === 2 ? { fontSize: 14, padding: "13px 12px" } : {} }, l)),
+      Q.cle === "objectif" && val === "libre" && h("div", { key: "libre", style: { ...GLASS, borderRadius: 16, padding: "14px 16px", gridColumn: "1 / -1" } },
+        h("textarea", {
+          value: reponses.objectifLibre || "",
+          onChange: e => poser("objectifLibre", e.target.value),
+          rows: 3,
+          placeholder: "Ex : me remettre au sport après une blessure au genou, plutôt du renfo doux…",
+          style: { width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "10px 12px", fontSize: 13.5, background: FIELD, outline: "none", resize: "none", fontFamily: "inherit", color: INK }
+        }),
+        h("div", { style: { fontSize: 10.5, color: SUB, margin: "6px 0 8px" } }, "L'app lit ta description pour choisir les muscles à privilégier ; la structure des séances, elle, suit des règles fixes."),
+        h(BoutonContinuer, { onTap: suivant, disabled: (reponses.objectifLibre || "").trim().length < 8 }, (reponses.objectifLibre || "").trim().length >= 8 ? "Continuer" : "Décris un peu plus (8 caractères min)")));
+    if (Q.type === "chips") return h("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
+      Q.opts.map(([v, l]) => h(Chip, { key: v, actif: val === v, onTap: () => repondre(v) }, l)));
+    if (Q.type === "jours") return h("div", null,
+      h("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 } }, JOURS_UI.map((j, k) => {
+        const d = k + 1, on = (reponses.joursSport || []).includes(d);
+        return h("button", { key: d, onClick: () => poser("joursSport", on ? reponses.joursSport.filter(x => x !== d) : [...(reponses.joursSport || []), d].sort()), style: { ...GLASS, border: `1.5px solid ${on ? COL.G : LINE}`, background: on ? tintCss(COL.G) : GLASSBG, color: on ? COL.G : INK, borderRadius: 12, padding: "12px 0", fontWeight: 800, fontSize: 12 } }, j);
+      })),
+      h("div", { style: { fontSize: 11, color: SUB, marginTop: 8 } }, (reponses.joursSport || []).length ? `${reponses.joursSport.length} jour${reponses.joursSport.length > 1 ? "s" : ""} de sport.` : "Aucun jour coché : on placera les séances librement."),
+      h(BoutonContinuer, { onTap: suivant }));
+    if (Q.type === "materiel") {
+      const coche = t => (reponses.materiel || []).includes(t);
+      return h("div", null,
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 } }, RACCOURCIS_MATERIEL.map(([id, l, tags]) => h("button", {
+          key: id, onClick: () => setReponses(r => ({ ...r, raccourci: id, materiel: tags.slice() })),
+          style: { ...GLASS, border: `1.5px solid ${reponses.raccourci === id ? COL.G : LINE}`, background: reponses.raccourci === id ? tintCss(COL.G) : GLASSBG, color: reponses.raccourci === id ? COL.G : INK, borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 12.5 }
+        }, l))),
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" } }, MATERIEL_UI.map(([t, l]) => h("label", { key: t, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, padding: "5px 0", color: coche(t) ? INK : SUB } },
+          h("input", { type: "checkbox", checked: coche(t), onChange: () => setReponses(r => ({ ...r, raccourci: null, materiel: coche(t) ? r.materiel.filter(x => x !== t) : [...r.materiel, t] })), style: { accentColor: COL.G, width: 16, height: 16, margin: 0 } }), l))),
+        h("div", { style: { fontSize: 11, color: SUB, marginTop: 8 } }, "Le poids du corps est toujours disponible.", (reponses.materiel || []).length ? "" : " Sans rien du tout, l'app te dira ce qui manque."),
+        h(BoutonContinuer, { onTap: suivant }));
+    }
+    if (Q.type === "temps") {
+      const t = reponses.tempsMin || 60;
+      const fixer = v => { const n = Math.round(Number(v)); if (!isNaN(n)) poser("tempsMin", Math.max(15, Math.min(180, n))); };
+      return h("div", null,
+        h("div", { style: { ...GLASS, borderRadius: 16, padding: "16px" } },
+          h("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6, marginBottom: 12 } },
+            h("input", { type: "number", inputMode: "numeric", min: 15, max: 180, value: t, onChange: e => fixer(e.target.value), "aria-label": "Minutes par séance", style: { width: 84, fontFamily: DISPLAY, fontSize: 34, fontWeight: 800, textAlign: "center", background: FIELD, color: INK, border: `1.5px solid ${LINE}`, borderRadius: 12, padding: "4px 6px", outline: "none" } }),
+            h("span", { style: { fontSize: 14, color: SUB, fontWeight: 700 } }, "min")),
+          h("input", { type: "range", min: 15, max: 120, step: 1, value: Math.min(120, t), onChange: e => fixer(e.target.value), style: { width: "100%", accentColor: COL.G } }),
+          h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10.5, color: SUB, marginTop: 4 } }, h("span", null, "15 min"), h("span", null, "2 h")),
+          h("div", { style: { fontSize: 11, color: SUB, marginTop: 10, textAlign: "center" } }, "Tape le chiffre exact si tu veux : 47, 33… le moteur s'y tient.")),
+        h(BoutonContinuer, { onTap: suivant }, "Voir mon programme"));
+    }
+    return null;
+  };
+  return h(Cadre, { onRetour: () => i > 0 ? setQIdx(i - 1) : onRetour() },
+    h("div", { style: { minHeight: "78vh", display: "flex", flexDirection: "column", justifyContent: "center" } },
+      h("div", { style: { display: "flex", gap: 4, marginBottom: 22 } }, QS.map((q, k) => h("div", { key: q.cle, style: { flex: 1, height: 4, borderRadius: 2, background: k <= i ? COL.G : "rgba(255,255,255,.10)", transition: "background .3s" } }))),
+      h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: 1.4, color: SUB } }, etiquette || "TON PROGRAMME", " · ", i + 1, "/", QS.length),
+      h("div", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 26, lineHeight: 1.15, margin: "8px 0 8px" } }, Q.titre),
+      Q.sous && h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.45, marginBottom: 14 } }, Q.sous),
+      !Q.sous && h("div", { style: { height: 10 } }),
+      corps()));
+}
+
+/* Erreur fréquente : à la demande, jamais imposée (DECISIONS.md, affichage des textes) */
+function ErreurFrequente({ texte, couleur }) {
+  const [ouvert, setOuvert] = useState(false);
+  if (!texte) return null;
+  return h("div", { style: { marginBottom: 12 } },
+    h("button", { onClick: () => setOuvert(o => !o), "aria-expanded": ouvert, style: { background: "none", border: `1px solid ${LINE}`, borderRadius: 999, padding: "5px 11px", fontSize: 11, fontWeight: 700, color: ouvert ? couleur || COL.D : SUB } }, ouvert ? "Erreur fréquente ▾" : "Erreur fréquente ?"),
+    ouvert && h("div", { style: { fontSize: 12, lineHeight: 1.5, color: INK, marginTop: 7, padding: "8px 11px", borderLeft: `3px solid ${couleur || COL.D}`, background: "rgba(255,176,32,.08)", borderRadius: 8 } }, texte));
+}
+
+/* Les avertissements du moteur, en langage clair, jamais cachés */
+function AvertissementsProgramme({ prog, compact }) {
+  const l = prog && prog.moteur ? prog.moteur.avertissements || [] : [];
+  if (!l.length) return null;
+  return h("div", { style: { ...GLASS, borderRadius: 14, padding: "11px 14px", marginBottom: compact ? 10 : 14, borderColor: "rgba(255,176,32,.35)" } },
+    h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: COL.D, marginBottom: 6 } }, "À SAVOIR SUR CE PROGRAMME"),
+    l.map((a, k) => h("div", { key: k, style: { fontSize: 12, lineHeight: 1.5, color: INK, marginTop: k ? 5 : 0, display: "flex", gap: 7 } }, h("span", { style: { color: COL.D, flexShrink: 0 } }, "•"), h("span", null, a))));
+}
+
+/* Aperçu complet d'un programme généré : semaine, séances, exercices, doses, durées */
+function ApercuProgramme({ prog, onAdopter, onGarder, libAdopter, libGarder, titre }) {
+  const [ouverte, setOuverte] = useState(Object.keys(prog.seances)[0]);
+  const semaine = prog.moteur ? prog.moteur.semaine : [];
+  return h("div", null,
+    h("div", { style: { fontFamily: DISPLAY, fontSize: 21, textAlign: "center", marginTop: 4 } }, titre || "TON PROGRAMME"),
+    h("div", { style: { fontSize: 12.5, color: SUB, textAlign: "center", margin: "6px 0 14px", lineHeight: 1.45 } }, prog.nom, " — ", prog.desc),
+    semaine.length > 0 && h("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginBottom: 12 } }, semaine.map(j => {
+      const S = j.lettre ? prog.seances[j.lettre] : null;
+      return h("div", { key: j.jour, style: { textAlign: "center", borderRadius: 10, padding: "7px 0", background: S ? S.couleur : j.sport ? "rgba(34,211,238,.14)" : GLASSBG, color: S ? "#fff" : SUB, border: `1px solid ${S ? "transparent" : j.sport ? COL.K + "66" : LINE}` } },
+        h("div", { style: { fontSize: 9.5, fontWeight: 700, opacity: .85 } }, JOURS_UI[j.jour - 1]),
+        h("div", { style: { fontFamily: DISPLAY, fontSize: 15, fontWeight: 800, marginTop: 2 } }, j.lettre || (j.sport ? "S" : "–")));
+    })),
+    h(AvertissementsProgramme, { prog: prog }),
+    Object.entries(prog.seances).map(([l, S]) => {
+      const ouv = ouverte === l;
+      const gain = Array.isArray(S.gainage) ? S.gainage : [];
+      return h("div", { key: l, style: { ...GLASS, borderRadius: 16, marginBottom: 8, overflow: "hidden", borderColor: ouv ? S.couleur + "88" : "rgba(255,255,255,.10)" } },
+        h("button", { onClick: () => setOuverte(ouv ? null : l), "aria-expanded": ouv, style: { display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", background: "none", border: "none", padding: "12px 14px", color: INK } },
+          h("span", { style: { fontFamily: DISPLAY, fontWeight: 800, fontSize: 18, color: "#fff", background: S.couleur, borderRadius: 10, width: 34, height: 34, display: "grid", placeItems: "center", flexShrink: 0 } }, l),
+          h("span", { style: { flex: 1, minWidth: 0 } },
+            h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, S.nom),
+            h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, S.exos.length, " exercice", S.exos.length > 1 ? "s" : "", gain.length ? " + gainage" : "", S.dureeMin ? ` · ${S.dureeMin} min` : "")),
+          h("span", { style: { color: SUB, transform: ouv ? "rotate(90deg)" : "rotate(-90deg)", transition: "transform .2s", display: "grid" } }, h(Ic, { n: "chevron", s: 14, w: 2.4 }))),
+        ouv && h("div", { style: { padding: "0 14px 12px" } },
+          S.exos.map((e, k) => h("div", { key: e.id, style: { display: "flex", gap: 9, padding: "7px 0", borderTop: `1px solid ${LINE}`, fontSize: 12.5 } },
+            h("span", { style: { color: SUB, fontWeight: 700, width: 18, flexShrink: 0 } }, k + 1, "."),
+            h("span", { style: { flex: 1, minWidth: 0 } }, h("span", { style: { fontWeight: 700 } }, e.nom), h("span", { style: { display: "block", color: SUB, fontSize: 11.5, marginTop: 1 } }, e.dose, e.repos ? ` · repos ${fmtSec(e.repos)}` : "")))),
+          gain.map(g => h("div", { key: g.id, style: { display: "flex", gap: 9, padding: "7px 0", borderTop: `1px solid ${LINE}`, fontSize: 12.5 } },
+            h("span", { style: { color: COL.G, fontWeight: 800, width: 18, flexShrink: 0 } }, "G"),
+            h("span", { style: { flex: 1 } }, h("span", { style: { fontWeight: 700 } }, g.nom), h("span", { style: { display: "block", color: SUB, fontSize: 11.5, marginTop: 1 } }, g.dose, " · gainage"))))));
+    }),
+    h("button", { onClick: onAdopter, style: { width: "100%", marginTop: 10, background: COL.G, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontWeight: 800, fontSize: 15 } }, libAdopter || "Adopter ce programme"),
+    onGarder && h("button", { onClick: onGarder, style: { width: "100%", marginTop: 8, ...GLASS, color: INK, borderRadius: 14, padding: "13px", fontWeight: 700, fontSize: 13.5 } }, libGarder || "Garder l'ancien"));
+}
+
+/* Régénération : les questions (pré-remplies), puis l'aperçu, puis adopter ou garder.
+   Sert à la migration des anciens profils, à « Changer de programme » et aux réglages. */
+function Regenerer({ st, code, mode, questionInitiale, onAdopter, onGarder, onFermer }) {
+  const [reponses, setReponses] = useState(() => st.reponses ? { ...REPONSES_VIDES(), ...st.reponses, interpretation: null } : reponsesDepuisAncienProgramme(st));
+  const [qIdx, setQIdx] = useState(() => {
+    if (!questionInitiale) return 0;
+    const k = questionsProgramme(reponses).findIndex(q => q.cle === questionInitiale);
+    return k < 0 ? 0 : k;
+  });
+  const [etape, setEtape] = useState("questions");
+  const [prog, setProg] = useState(null);
+  const [lecture, setLecture] = useState(false);
+  const finir = async () => {
+    let interpretation = null;
+    if (reponses.objectif === "libre") {
+      setLecture(true);
+      interpretation = await interpreterObjectif(code, reponses.objectifLibre.trim());
+      setLecture(false);
+    }
+    const r = { ...reponses, interpretation };
+    setReponses(r);
+    setProg(genererAvecMoteur(reponsesPourMoteur(r)));
+    setEtape("apercu");
+  };
+  const ancien = !!(st.programme && (st.programme !== "perso" || st.programmePerso));
+  return h("div", { style: { position: "fixed", inset: 0, zIndex: 90, background: PAPER, overflowY: "auto", fontFamily: FONT, color: INK } },
+    etape === "questions" && !lecture && h(QuestionsProgramme, { reponses, setReponses, qIdx, setQIdx, onFin: finir, onRetour: onFermer, etiquette: mode === "migration" ? "NOUVEAU MOTEUR" : "CHANGER DE PROGRAMME" }),
+    lecture && h(Cadre, null, h("div", { style: { minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, color: SUB, fontSize: 13 } }, h(Orbe, { s: 26, c: COL.G }), "Je lis ton objectif…")),
+    etape === "apercu" && prog && h(Cadre, { onRetour: () => setEtape("questions") },
+      h(ApercuProgramme, {
+        prog, titre: mode === "migration" ? "TON NOUVEAU PROGRAMME" : "TON PROGRAMME",
+        onAdopter: () => onAdopter(prog, reponses),
+        onGarder: ancien ? onGarder : null,
+        libAdopter: "Adopter ce programme", libGarder: mode === "migration" ? "Garder l'ancien" : "Garder mon programme actuel"
+      })));
+}
+
+/* Réglages : mon programme — chaque réponse se modifie, chaque modification propose une régénération */
+function SectionProgramme({ st, onRegen }) {
+  const r = st.reponses;
+  const lignes = r ? [
+    ["frequence", "Séances par semaine", r.frequence === 7 ? "6 + 1 jour de récupération active" : String(r.frequence)],
+    ["objectif", "Objectif", r.objectif === "libre" ? `« ${r.objectifLibre} »` : libelle(OBJECTIFS_UI, r.objectif)],
+    ["muscu", "Expérience", libelle(MUSCU_UI, r.muscu) + " · squat et pompe : " + libelle(TECHNIQUE_UI, r.technique).toLowerCase()],
+    ["sport", "Sport", r.sport && r.sport !== "non" ? libelle(SPORTS_UI, r.sport) + (r.intention === "sport" ? " (pour progresser)" : " (pour moi)") + ((r.joursSport || []).length ? " · " + r.joursSport.map(d => JOURS_UI[d - 1]).join(", ") : "") : "Aucun"],
+    ["materiel", "Matériel", r.raccourci ? libelle(RACCOURCIS_MATERIEL, r.raccourci) : `${(r.materiel || []).length} élément${(r.materiel || []).length > 1 ? "s" : ""} coché${(r.materiel || []).length > 1 ? "s" : ""}`],
+    ["tempsMin", "Temps par séance", `${r.tempsMin} min`]
+  ] : null;
+  return h("div", { style: { marginBottom: 14 } },
+    h("div", { style: { fontSize: 11, fontWeight: 800, color: SUB, letterSpacing: .4, marginBottom: 6 } }, "MON PROGRAMME"),
+    lignes ? h("div", { style: { ...GLASS, borderRadius: 14, padding: "2px 14px", marginBottom: 8 } },
+      lignes.map(([cle, t, v]) => h("button", { key: cle, onClick: () => onRegen("reglage", cle), style: { display: "flex", width: "100%", alignItems: "center", gap: 10, background: "none", border: "none", borderBottom: `1px solid ${LINE}`, padding: "10px 0", textAlign: "left", color: INK } },
+        h("span", { style: { flex: 1, minWidth: 0 } },
+          h("span", { style: { display: "block", fontSize: 10.5, fontWeight: 700, color: SUB } }, t),
+          h("span", { style: { display: "block", fontSize: 13, fontWeight: 700, marginTop: 1, lineHeight: 1.3 } }, v)),
+        h("span", { style: { fontSize: 11, color: COL.G, fontWeight: 700, flexShrink: 0 } }, "modifier"))),
+      h("div", { style: { fontSize: 10.5, color: SUB, padding: "8px 0 8px", lineHeight: 1.4 } }, "Chaque changement te propose un nouveau programme, que tu vois avant de l'adopter."))
+    : h("button", { onClick: () => onRegen("migration"), style: { width: "100%", ...GLASS, border: `1.5px solid ${COL.G}`, background: tintCss(COL.G), color: INK, borderRadius: 12, padding: "11px 14px", fontWeight: 700, fontSize: 13, marginBottom: 8, textAlign: "left", lineHeight: 1.35 } }, "Nouveau moteur de programmes — régénérer le mien ", h("span", { style: { color: SUB, fontWeight: 500 } }, "(tu vois le résultat avant de décider)")),
+    h("button", { onClick: () => onRegen("changer"), style: { width: "100%", background: GLASSBG, color: INK, border: `1.5px solid ${LINE}`, borderRadius: 12, padding: "11px", fontWeight: 700, fontSize: 13 } }, "Changer de programme ", h("span", { style: { color: SUB, fontWeight: 500 } }, "(XP, charges et historique conservés)")));
+}
+
 function Onboarding({
   profils,
   onCreer,
@@ -7966,80 +9151,32 @@ function Onboarding({
 }) {
   const [etape, setEtape] = useState(urlCode ? "coach" : "promesse");
   const [mode, setMode] = useState(null); // solo | duo | coach
-  const [objf, setObjf] = useState(null);
-  const [lieu, setLieu] = useState(null);
-  const [jrs, setJrs] = useState(null);
   const [nom, setNom] = useState("");
   const [code, setCode] = useState(urlCode || codeAlea());
-  const [progSel, setProgSel] = useState(null);
+  const [codeSolo] = useState(codeAlea); // code du profil solo (préfixe KV), généré une fois
   const [qIdx, setQIdx] = useState(0);
   const [styles, setStyles] = useState(["soins"]);
   const legacy = !!localStorage.getItem("lvlup-state-v3");
   const [importer, setImporter] = useState(false);
-  const [objLibre, setObjLibre] = useState("");
-  const [progPerso, setProgPerso] = useState(null);
-  const [genEtat, setGenEtat] = useState(null); // null | "encours" | "ok" | "echec" | "nonconfig"
-  // objectif libre ou 5-6 séances/sem : les templates plafonnent à 4, on passe
-  // par la génération IA (le worker accepte jusqu'à 7 séances)
-  const needsIA = objf === "libre" || jrs >= 5;
-  const genererSurMesure = async () => {
-    setGenEtat("encours");
-    const desc = objf === "libre" ? objLibre.trim() : {
-      tonifier: "me tonifier",
-      poids: "perdre du poids",
-      muscler: "me muscler",
-      mieux: "me sentir mieux (énergie, stress)",
-      douce: "reprendre le sport en douceur"
-    }[objf] || "me remettre au sport";
-    const objectifTxt = `${desc} · ${jrs || 3} séances par semaine · ${lieu === "maison" ? "à la maison sans matériel" : "en salle"}`;
-    try {
-      const r = await fetch(api(code, "/generer"), {
-        method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          objectif: objectifTxt
-        })
-      });
-      if (r.status === 503) {
-        setGenEtat("nonconfig");
-        return;
-      }
-      if (!r.ok) throw new Error();
-      setProgPerso(await r.json());
-      setGenEtat("ok");
-    } catch {
-      setGenEtat("echec");
-    }
+  // les réponses aux questions du programme (mêmes questions que la migration et les réglages)
+  const [reponses, setReponses] = useState(REPONSES_VIDES);
+  // objectif en texte libre : lecture IA lancée dès la fin des questions ; le programme
+  // lui-même est calculé à la création, dans l'app, par le moteur
+  const [interp, setInterp] = useState(null); // null | "encours" | { base, prioritaires } | { repli: true }
+  const relire = () => {
+    setInterp("encours");
+    interpreterObjectif(codeSolo, reponses.objectifLibre.trim()).then(setInterp);
   };
   useEffect(() => {
-    if (etape === "final" && needsIA && genEtat === null) genererSurMesure();
+    if (etape === "final" && reponses.objectif === "libre" && interp === null) relire();
   }, [etape]);
-  const suggereAvec = (o, l, j) => {
-    const sauvegarde = [objf, lieu, jrs];
-    try {
-      return suggereCalc(o, l, j);
-    } catch {
-      return "fessiers";
-    }
-  };
-  const suggereCalc = (objf, lieu, jrs) => {
-    if (lieu === "maison") return "maison";
-    if (objf === "tonifier") return jrs && jrs <= 3 ? "fullbody3" : "fessiers";
-    if (objf === "poids") return "pertegras";
-    if (objf === "muscler") return "hautducorps";
-    if (objf === "mieux") return "fullbody3";
-    if (objf === "libre") return "fessiers"; // repli si la génération IA échoue
-    return "douce";
-  };
   // retour arrière depuis n'importe quel écran ; l'état est conservé donc les
   // choix déjà faits restent pré-remplis
   const retour = () => {
     if (etape === "mode") setEtape("promesse");else if (etape === "coach") setEtape("mode");else if (etape === "questions") {
       if (qIdx > 0) setQIdx(qIdx - 1);else setEtape("mode");
     } else if (etape === "final") {
-      setQIdx(2);
+      setQIdx(questionsProgramme(reponses).length - 1);
       setEtape("questions");
     } else if (etape === "prenom") setEtape("final");else if (etape === "invitation") setEtape("prenom");
   };
@@ -8230,7 +9367,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v19.21"));
+  }, "v20.0"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -8378,186 +9515,26 @@ function Onboarding({
     }
   }, "C'est parti !")));
 
-  /* ---- écran 3 : trois questions ---- */
-  if (etape === "questions") {
-    const QS = [{
-      cle: "objf",
-      titre: "Ton objectif ?",
-      val: objf,
-      set: setObjf,
-      opts: [["tonifier", "Me tonifier"], ["poids", "Perdre du poids"], ["muscler", "Me muscler"], ["mieux", "Me sentir mieux (énergie, stress)"], ["douce", "Reprendre en douceur"], ["libre", "Autre chose ? Décris-le"]]
-    }, {
-      cle: "lieu",
-      titre: "Tu t'entraînes où ?",
-      val: lieu,
-      set: setLieu,
-      opts: [["salle", "En salle"], ["maison", "À la maison"]]
-    }, {
-      cle: "jrs",
-      titre: "Combien de séances par semaine ?",
-      val: jrs,
-      set: setJrs,
-      opts: [[2, "2 séances"], [3, "3 séances"], [4, "4 séances"], [5, "5 séances"], [6, "6 séances"]]
-    }];
-    const Q = QS[qIdx];
-    const rep = v => {
-      Q.set(v);
-      // « Autre chose » ouvre le champ libre : pas d'avance automatique
-      if (Q.cle === "objf" && v === "libre") return;
-      setTimeout(() => {
-        if (qIdx < 2) setQIdx(qIdx + 1);else {
-          setProgSel(suggereAvec(qIdx === 0 ? v : objf, qIdx === 1 ? v : lieu, qIdx === 2 ? v : jrs));
-          setEtape("final");
-        }
-      }, 240);
-    };
-    return /*#__PURE__*/React.createElement(Cadre, {
-      onRetour: retour
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        minHeight: "78vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 5,
-        marginBottom: 26
-      }
-    }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        flex: 1,
-        height: 4,
-        borderRadius: 2,
-        background: i <= qIdx ? COL.G : "rgba(255,255,255,.10)",
-        transition: "background .3s"
-      }
-    }))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10.5,
-        fontWeight: 800,
-        letterSpacing: 1.4,
-        color: SUB
-      }
-    }, "QUESTION ", qIdx + 1, "/3"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: DISPLAY,
-        fontWeight: 700,
-        fontSize: 27,
-        lineHeight: 1.15,
-        margin: "8px 0 24px"
-      }
-    }, Q.titre), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "grid",
-        gap: 9
-      }
-    }, Q.opts.map(([v, l]) => {
-      const habitue = Q.cle === "jrs" && v === 6; // option « pour les habitués », visuellement distincte
-      return /*#__PURE__*/React.createElement("button", {
-        key: v,
-        onClick: () => rep(v),
-        style: {
-          ...GLASS,
-          border: habitue ? `1.5px dashed ${Q.val === v ? COL.D : "rgba(255,176,32,.45)"}` : `1px solid ${Q.val === v ? COL.G : "rgba(255,255,255,.10)"}`,
-          background: Q.val === v ? habitue ? "rgba(255,176,32,.14)" : "rgba(124,92,255,.18)" : GLASSBG,
-          borderRadius: 16,
-          padding: "17px 16px",
-          textAlign: "left",
-          color: INK,
-          fontWeight: 700,
-          fontSize: 15,
-          display: "flex",
-          alignItems: "center",
-          gap: 10
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          width: 20,
-          height: 20,
-          borderRadius: "50%",
-          flexShrink: 0,
-          border: `2px solid ${Q.val === v ? habitue ? COL.D : COL.G : "rgba(255,255,255,.25)"}`,
-          background: Q.val === v ? habitue ? COL.D : COL.G : "transparent",
-          display: "grid",
-          placeItems: "center"
-        }
-      }, Q.val === v && /*#__PURE__*/React.createElement(Ic, {
-        n: "check",
-        s: 11,
-        c: "#fff",
-        w: 3
-      })), l, habitue && /*#__PURE__*/React.createElement("span", {
-        style: {
-          marginLeft: "auto",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: .6,
-          color: COL.D,
-          background: "rgba(255,176,32,.14)",
-          borderRadius: 999,
-          padding: "3px 8px",
-          flexShrink: 0
-        }
-      }, "POUR LES HABITUÉS"));
-    }), Q.cle === "objf" && objf === "libre" && /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...GLASS,
-        borderRadius: 16,
-        padding: "14px 16px"
-      }
-    }, /*#__PURE__*/React.createElement("textarea", {
-      value: objLibre,
-      onChange: e => setObjLibre(e.target.value),
-      rows: 3,
-      placeholder: "Ex : me remettre au sport après une blessure au genou, plutôt du renfo doux…",
-      style: {
-        width: "100%",
-        border: `1.5px solid ${LINE}`,
-        borderRadius: 10,
-        padding: "10px 12px",
-        fontSize: 13.5,
-        background: FIELD,
-        outline: "none",
-        resize: "none",
-        fontFamily: "inherit"
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10.5,
-        color: SUB,
-        margin: "6px 0 8px"
-      }
-    }, "Ton programme sera composé sur mesure à partir de ta description."), /*#__PURE__*/React.createElement("button", {
-      onClick: () => objLibre.trim().length >= 8 && setQIdx(1),
-      disabled: objLibre.trim().length < 8,
-      style: {
-        width: "100%",
-        background: objLibre.trim().length >= 8 ? COL.G : "rgba(255,255,255,.08)",
-        color: objLibre.trim().length >= 8 ? "#fff" : "#5A6274",
-        border: "none",
-        borderRadius: 10,
-        padding: "11px",
-        fontWeight: 800,
-        fontSize: 13.5
-      }
-    }, objLibre.trim().length >= 8 ? "Continuer" : "Décris un peu plus (8 caractères min)")))));
-  }
+  /* ---- écran 3 : les questions du programme (fréquence, objectif, expérience, sport, matériel, temps) ---- */
+  if (etape === "questions") return /*#__PURE__*/React.createElement(QuestionsProgramme, {
+    reponses: reponses,
+    setReponses: setReponses,
+    qIdx: qIdx,
+    setQIdx: setQIdx,
+    onFin: () => setEtape("final"),
+    onRetour: () => setEtape("mode")
+  });
 
   /* ---- écran final : programme suggéré + prénom (+ code duo) ---- */
-  const enGen = needsIA && genEtat === "encours";
-  const genKO = needsIA && (genEtat === "echec" || genEtat === "nonconfig");
+  const enGen = reponses.objectif === "libre" && interp === "encours";
+  const genKO = !!(interp && interp.repli);
   const creer = intention => {
-    onCreer(nom, "coachee", mode === "duo" ? code : codeAlea(), importer, {
+    const rep = { ...reponses, interpretation: interp && interp !== "encours" ? interp : null };
+    const prog = genererAvecMoteur(reponsesPourMoteur(rep));
+    onCreer(nom, "coachee", mode === "duo" ? code : codeSolo, importer, {
       solo: mode === "solo",
-      ...(progPerso ? {
-        programmePerso: progPerso
-      } : {
-        programme: progSel
-      }),
+      programmePerso: prog,
+      reponses: rep,
       style: styles[0],
       styles,
       coachEnTete: !!intention
@@ -8723,7 +9700,7 @@ function Onboarding({
   }, /*#__PURE__*/React.createElement(Orbe, {
     s: 16,
     c: COL.G
-  }), "Ton programme sur mesure est en cours de composition…"), genKO && /*#__PURE__*/React.createElement("div", {
+  }), "Je lis ton objectif pour choisir tes priorités…"), genKO && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(255,176,32,.10)",
       border: `1px solid ${COL.D}55`,
@@ -8734,8 +9711,8 @@ function Onboarding({
       color: SUB,
       lineHeight: 1.5
     }
-  }, genEtat === "nonconfig" ? "La génération sur mesure n'est pas encore activée — on démarre avec le programme le plus proche. " : "La génération sur mesure n'a pas répondu — on démarre avec le programme le plus proche. ", /*#__PURE__*/React.createElement("button", {
-    onClick: genererSurMesure,
+  }, interp && interp.raison === "nonconfig" ? "La lecture de ton objectif par l'IA n'est pas activée ici : programme esthétique équilibré, tu pourras préciser dans les réglages. " : "Je n'ai pas réussi à lire ton objectif : programme esthétique équilibré, modifiable dans les réglages. ", /*#__PURE__*/React.createElement("button", {
+    onClick: relire,
     style: {
       background: "none",
       border: "none",
@@ -8859,7 +9836,8 @@ function Reglages({
   onRevoirTuto,
   onChanger,
   onFermer,
-  onNouveau
+  onNouveau,
+  onRegen
 }) {
   const [regles, setRegles] = useState(false);
   const tx = useRef(0),
@@ -9511,31 +10489,10 @@ function Reglages({
     maj: maj,
     toast: toast,
     solo: profil.solo
-  })), profil.role !== "coach" && /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      maj(s => {
-        s.programme = null;
-        return s;
-      });
-      onFermer();
-    },
-    style: {
-      width: "100%",
-      background: GLASSBG,
-      color: INK,
-      border: `1.5px solid ${LINE}`,
-      borderRadius: 12,
-      padding: "11px",
-      fontWeight: 700,
-      fontSize: 13,
-      marginBottom: 14
-    }
-  }, "Changer de programme ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: SUB,
-      fontWeight: 500
-    }
-  }, "(XP, charges et historique conservés)")), /*#__PURE__*/React.createElement("div", {
+  })), profil.role !== "coach" && /*#__PURE__*/React.createElement(SectionProgramme, {
+    st: st,
+    onRegen: onRegen
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       fontWeight: 800,
@@ -10099,200 +11056,7 @@ function Paris({
 }
 
 /* ============================ CHOIX DU PROGRAMME ============================ */
-function ChoixProgramme({
-  onChoisir,
-  onPerso,
-  code
-}) {
-  const [sel, setSel] = useState(null);
-  const [obj, setObj] = useState("");
-  const [gen, setGen] = useState(false);
-  const [err, setErr] = useState("");
-  const generer = async () => {
-    if (obj.trim().length < 8) {
-      setErr("Décris un peu plus ton objectif !");
-      return;
-    }
-    setGen(true);
-    setErr("");
-    try {
-      const r = await fetch(api(code, "/generer"), {
-        method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          objectif: obj.trim()
-        })
-      });
-      if (r.status === 503) setErr("Génération pas encore activée — choisis un programme ci-dessus en attendant.");else if (r.status === 429) setErr("Limite du jour atteinte — réessaie demain.");else if (!r.ok) setErr("Oups, réessaie dans un instant.");else {
-        const p = await r.json();
-        onPerso(p);
-      }
-    } catch {
-      setErr("Serveur injoignable (nécessite le déploiement Worker).");
-    }
-    setGen(false);
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: "100vh",
-      background: PAPER,
-      fontFamily: FONT,
-      padding: "32px 16px 56px",
-      overflowY: "auto"
-    }
-  }, /*#__PURE__*/React.createElement("style", null, `* { box-sizing:border-box; } input, button { font-family:inherit; max-width:100%; }`), /*#__PURE__*/React.createElement("div", {
-    style: {
-      maxWidth: 420,
-      margin: "0 auto"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: DISPLAY,
-      fontSize: 22
-    }
-  }, "TON PROGRAMME"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12.5,
-      color: SUB,
-      marginTop: 4
-    }
-  }, "Choisis ta base — tu pourras en changer quand tu veux, sans rien perdre.")), Object.entries(PROGRAMMES).map(([id, p]) => /*#__PURE__*/React.createElement("button", {
-    key: id,
-    onClick: () => setSel(id),
-    style: {
-      display: "flex",
-      width: "100%",
-      alignItems: "center",
-      gap: 12,
-      textAlign: "left",
-      background: sel === id ? "rgba(124,92,255,.16)" : GLASSBG,
-      border: `1.5px solid ${sel === id ? COL.G : LINE}`,
-      borderRadius: 14,
-      padding: "13px 14px",
-      marginBottom: 8
-    }
-  }, /*#__PURE__*/React.createElement(Ic, {
-    n: ICONE_PROG[id] || "star",
-    s: 24,
-    c: COL.G
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 800,
-      fontSize: 14.5
-    }
-  }, p.nom), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11.5,
-      color: SUB,
-      marginTop: 1
-    }
-  }, p.desc), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10.5,
-      color: COL.G,
-      fontWeight: 700,
-      marginTop: 3
-    }
-  }, Object.keys(p.seances).length, " séance(s)/sem · ", p.lieu === "maison" ? "🏠 à la maison" : "🏋️ en salle")), sel === id && /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: COL.G,
-      fontWeight: 800,
-      fontSize: 18
-    }
-  }, "✓"))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => sel && onChoisir(sel),
-    disabled: !sel,
-    style: {
-      width: "100%",
-      marginTop: 6,
-      background: sel ? COL.G : "rgba(255,255,255,.08)",
-      color: sel ? "#fff" : "#5A6274",
-      border: "none",
-      borderRadius: 14,
-      padding: "15px",
-      fontWeight: 800,
-      fontSize: 15
-    }
-  }, sel ? `C'est parti avec « ${PROGRAMMES[sel].nom} » !` : "Choisis un programme"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: GLASSBG,
-      border: `1.5px dashed ${COL.G}`,
-      borderRadius: 14,
-      padding: "14px",
-      marginTop: 14
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 800,
-      fontSize: 13.5,
-      marginBottom: 4
-    }
-  }, "Ou décris ton objectif, avec tes mots"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: SUB,
-      marginBottom: 8
-    }
-  }, "L'app compose un programme sur mesure à partir de nos exercices validés."), /*#__PURE__*/React.createElement("textarea", {
-    value: obj,
-    onChange: e => setObj(e.target.value),
-    rows: 2,
-    placeholder: 'Ex : « je veux un gros fessier, 3 séances par semaine, en salle »',
-    style: {
-      width: "100%",
-      border: `1.5px solid ${LINE}`,
-      borderRadius: 10,
-      padding: "10px 12px",
-      fontSize: 13,
-      background: FIELD,
-      outline: "none",
-      resize: "none",
-      fontFamily: FONT
-    }
-  }), err && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11.5,
-      color: COL.A,
-      fontWeight: 600,
-      marginTop: 6
-    }
-  }, err), /*#__PURE__*/React.createElement("button", {
-    onClick: generer,
-    disabled: gen,
-    style: {
-      width: "100%",
-      marginTop: 8,
-      background: gen ? "rgba(255,255,255,.08)" : COL.G,
-      color: gen ? "#5A6274" : "#fff",
-      border: "none",
-      borderRadius: 12,
-      padding: "12px",
-      fontWeight: 800,
-      fontSize: 13.5
-    }
-  }, gen ? /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement(Orbe, {
-    s: 20,
-    c: "#B7A8FF"
-  }), "Je compose ton programme…") : "Composer mon programme"))));
-}
+/* ChoixProgramme (templates + génération par prompt) retiré en v20.0 : le moteur génère depuis les réponses, voir Regenerer. */
 
 /* ============================ LA CAGNOTTE 🍯 ============================ */
 function Pot({

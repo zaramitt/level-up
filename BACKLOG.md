@@ -18,8 +18,9 @@ lecture, pas de la structure de l'écran.
 - **PRIORITÉ HAUTE — Remplacer un exercice en cours de séance** (machine
   indisponible, exercice non réalisable, préférence — ex : tirage vertical
   remplacé par tractions). Vécu dès la première séance en salle réelle.
-- Niveaux de difficulté des exercices : certains sont durs pour une débutante
-  (ex : deadbug, coordination). Pouvoir choisir plus simple.
+- Niveaux de difficulté des exercices : le moteur exclut désormais le dead bug
+  au niveau 1 et les régressions dès le niveau 2 (v20.0) ; reste « choisir
+  plus simple » à la main, qui rejoint « pas cette machine » (passe 2).
 - **PRIORITÉ BASSE — En-tête global trop serré à 390 px** : sur l'écran
   coachée, « LEVEL UP ! » et la ligne d'XP passent sur plusieurs lignes, coincés
   entre l'orbe de niveau et le bloc « 7 DERNIERS JOURS ». Antérieur à la v19.16
@@ -28,20 +29,29 @@ lecture, pas de la structure de l'écran.
 
 ## Programmes
 
-- **PRIORITÉ HAUTE — Générateur incohérent** : exercices hors groupe musculaire
-  (hip thrust dans poitrine/triceps), et même structure à 3 et 6 séances par
-  semaine. Programme de référence fait main disponible (PDF A/B/C/D + gainage
-  + cardio). Chantier de conception à faire avec Léo — cadrage acté dans
-  `DECISIONS.md`, « Chantier Programmes — septembre 2026 ».
+Générateur incohérent traité : le moteur (règles en code, banque étiquetée)
+est branché en v20.0, étape 3 passe 1. Ce qui reste :
+
+- **Passe 2 du branchement** : ressenti après exercice (facile / juste / trop
+  dur) qui recale le niveau observé, proposition d'incrément (double
+  progression), « pas cette machine » et « générer une variante » (règle 12,
+  fonction `remplacerExercice` prête), « Adapter ma séance » (compression
+  prête dans le moteur).
+- Trous de la banque (`MOTEUR.md`, « Trous de la banque ») : lot 2 hors salle
+  (charnière, poussée verticale et tirage au poids du corps, ischios et
+  abducteurs sans machine).
 - Relecture par un coach diplômé — prérequis avant ouverture hors du cercle
   proche.
+- Habillage des séances (nom du programme, phrase d'accompagnement) : point
+  d'extension laissé ouvert dans le moteur.
 
 ## Générateur de séances
 
 - Mode « je construis ma séance du jour » : temps disponible, intensité (charge
   lourde vs entretien, impact sur les repos), partie du corps ciblée ou au
   choix de l'app, proposition de compléments (abdos…) si minutes restantes.
-  Gros chantier produit — à concevoir avec Léo avant toute implémentation.
+  Recouvre en partie « Adapter ma séance » (passe 2 du moteur) — à cadrer
+  ensemble avec Léo avant toute implémentation.
 
 ## Onglet Progrès
 
@@ -105,16 +115,20 @@ XP, pas de la structure de l'onglet.
 
 ## Onboarding
 
-- Demander le sport pratiqué et l'objectif (progresser dans son sport vs
-  esthétique) — dépend du chantier Programmes.
+Sport, intention, matériel et temps demandés depuis la v20.0. Ce qui reste :
 
-## Écran Choix de programme (atteint depuis l'onboarding et « changer de programme »)
+- Les anciens profils passent par la carte de migration ; une fois tous les
+  profils connus migrés, retirer les templates `PROGRAMMES` du code (v20.x).
+- Prénom demandé après les questions du programme : vérifier avec les
+  testeuses que l'ordre ne fait pas décrocher (neuf écrans avant le prénom).
 
-- Choix à deux voies pour le programme : « décrire votre objectif » OU
-  « choisir un programme spécialisé », avec possibilité de changer en bas
-  (décision moteur hybride déjà actée dans `DECISIONS.md`)
-- Liste des programmes : pas de retour arrière possible ; à la sélection,
-  faire apparaître le bouton « c'est parti » sans devoir défiler
+## Écran Choix de programme
+
+Retiré en v20.0 : « Changer de programme » passe par les mêmes questions et
+un aperçu. Reste à discuter :
+
+- Programmes spécialisés nommés (« templates ») comme raccourci de réponses
+  pré-remplies, pas comme structure à part.
 
 ## Réglages
 
