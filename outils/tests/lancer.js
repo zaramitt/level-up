@@ -19,11 +19,13 @@ const html = fs.readFileSync(path.join(racine, "index.html"), "utf8")
   .replace("https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js", "/react-dom.production.min.js");
 fs.writeFileSync(path.join(ici, "app.html"), html);
 
-// 2. faux workers
-const mocks = [
+// 2. faux workers — relancés avant chaque suite : leur état (pot, paris, négos) repart à neuf
+let mocks = [];
+const lancerMocks = () => { mocks = [
   spawn(process.execPath, [path.join(ici, "mock-server.js")], { env: { ...process.env, PORT: "8323" }, stdio: "ignore" }),
   spawn(process.execPath, [path.join(ici, "mock-server.js")], { env: { ...process.env, PORT: "8324", MOCK_IA: "off" }, stdio: "ignore" })
-];
+]; };
+const arreterMocks = () => new Promise(res => { mocks.forEach(m => m.kill()); setTimeout(res, 400); });
 const attendre = port => new Promise((res, rej) => {
   let n = 0;
   const essai = () => {
@@ -34,19 +36,22 @@ const attendre = port => new Promise((res, rej) => {
 });
 
 (async () => {
-  try { await attendre(8323); await attendre(8324); } catch (e) { console.error(e.message); mocks.forEach(m => m.kill()); process.exit(2); }
   const filtres = process.argv.slice(2);
   const suites = fs.readdirSync(ici).filter(f => /^\d/.test(f) && f.endsWith(".js") && (!filtres.length || filtres.some(x => f.startsWith(x)))).sort();
   const bilan = [];
   for (const f of suites) {
     console.log(`\n########## ${f}`);
+    lancerMocks();
+    try { await attendre(8323); await attendre(8324); } catch (e) { console.error(e.message); await arreterMocks(); process.exit(2); }
     const r = spawnSync(process.execPath, [path.join(ici, f)], { cwd: ici, env: process.env, encoding: "utf8", timeout: 900000, maxBuffer: 64 * 1024 * 1024 });
     const sortie = (r.stdout || "") + (r.stderr || "");
     process.stdout.write(sortie);
-    const echecs = (sortie.match(/✘/g) || []).length + (sortie.match(/: false\b/g) || []).length;
+    // échec = « ✘ », ou une vérification numérotée à l'ancienne (« 1b. … : false ») ; les autres « false »
+    // imprimés sont des valeurs d'information
+    const echecs = (sortie.match(/✘/g) || []).length + (sortie.match(/^\s*\d+[a-z]?\.\s.*: false\b/gm) || []).length;
     bilan.push({ f, echecs, code: r.status, timeout: !!r.error });
+    await arreterMocks();
   }
-  mocks.forEach(m => m.kill());
   console.log("\n========== bilan");
   for (const b of bilan) console.log(`  ${b.echecs || b.code || b.timeout ? "✘" : "✔"} ${b.f}${b.echecs ? ` — ${b.echecs} échec(s)` : ""}${b.code ? ` — sortie ${b.code}` : ""}${b.timeout ? " — délai dépassé" : ""}`);
   const ko = bilan.filter(b => b.echecs || b.code || b.timeout).length;
