@@ -133,6 +133,7 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
     check('les polyarticulaires restent, séries −1, repos préservés', orig.exos.filter(e => e.compartiment !== 'isolation').every(o => A.seance.exos.some(e => e.id === o.id)) && A.seance.exos.every(e => { const o = orig.exos.find(x => x.id === e.id); return e.series === Math.max(2, o.series - 1) && e.repos <= o.repos; }));
     t = await texte(p);
     check('en-tête : « Séance ajustée · N min · petite forme », et le bouton d\'ajustement a disparu', /Séance ajustée · \d+ min · petite forme/.test(t) && !/On ajuste\./.test(t));
+    check('l\'en-tête garde la lettre de la séance (« SÉANCE ' + L + ' ») même ajustée', new RegExp('SÉANCE ' + L + '\\b').test(t), t.match(/SÉANCE[^\n]*/) && t.match(/SÉANCE[^\n]*/)[0]);
     await deplier(p, 'Développé couché');
     const c = await carte(p, 'Développé couché');
     check('petite forme : pas d\'incrément, charges pré-remplies à −10 % arrondies (35 kg au lieu de 40)', !/Suggestion/.test(c) && /−10 %/.test(c) && (c.match(/\b35 kg/g) || []).length >= 2, c.slice(0, 300));
