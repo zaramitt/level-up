@@ -5,6 +5,18 @@ session et à chaque test terrain. Rien ici n'est perdu ; chaque chantier sera
 traité dans une session dédiée. Vérifier `DECISIONS.md` avant de traiter un
 item.
 
+## Socle
+
+Les fondations sur lesquelles reposent plusieurs chantiers à la fois.
+
+- **PRIORITÉ HAUTE — Répétitions par série** : les logguer réellement
+  (saisie rapide par série, dernière valeur pré-remplie) à la place de la case
+  « j'ai tenu N reps partout ». Prérequis pour une double progression précise,
+  les records personnels et un graphique de volume. Standard de la catégorie
+  (Hevy, Strong).
+- **Records personnels célébrés** : meilleure charge et meilleure série par
+  exercice, avec une célébration à la séance.
+
 ## Écran Séance
 
 Accordéon, aération, gainage, « Ta base » (v19.16), puis ressenti, incrément
