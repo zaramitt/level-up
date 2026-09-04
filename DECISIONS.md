@@ -210,6 +210,28 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.2 — septembre 2026
+
+Chantier Programmes, étape 3 passe 2, commit 2 : **le suivi**.
+
+- **Graphique de charge par exercice** dans l'onglet Progrès, façon balance
+  connectée : une carte par exercice pratiqué au moins deux fois, avec la
+  charge de travail par séance (la meilleure série, comme la progression et
+  les badges) dans le temps, courbe et aire, axe des kg (min / max), dates aux
+  extrémités, badge PR quand la dernière séance bat toutes les autres. Les
+  séances ressenties « trop dur » (entrée de charge ou ressenti du jour) sont
+  marquées d'un cercle pointillé discret. Liste triée par récence. Un
+  exercice pratiqué une seule fois est listé à part (« la courbe viendra à la
+  deuxième »). Inline SVG, sans bibliothèque.
+- **Le carnet de charges est remplacé, pas dupliqué** : chaque carte reprend
+  ce qu'il montrait (nombre de notes, dernière date, dernière charge, record)
+  et y ajoute la courbe. Motif : deux listes des mêmes exercices l'une sous
+  l'autre auraient doublé la page.
+- **Les exercices remplacés apparaissent sous leur propre nom** : `nomDe`
+  cherche dans le programme courant, puis dans la banque embarquée. Leur
+  historique reste sous leur identifiant, il n'est jamais fusionné avec celui
+  du remplaçant.
+
 ## v20.1 — septembre 2026
 
 Chantier Programmes, étape 3 passe 2, commit 1 : **la séance vivante**.

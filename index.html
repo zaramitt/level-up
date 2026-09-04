@@ -3028,6 +3028,9 @@ const bipAlerte = (sons = true) => jouer(audioAlerte, sons); // 10 s avant la fi
 const nomDe = id => {
   const ex = Object.values(SEANCES).flatMap(s => s.exos).find(e => e.id === id);
   if (ex) return ex.nom;
+  // un exercice remplacé ou d'un ancien programme : son nom dans la banque embarquée
+  const b = window.BANQUE && window.BANQUE.exercices.find(e => e.id === id);
+  if (b) return b.nom;
   const h = HABITUDES.find(h => h.id === id);
   if (h) return h.label;
   if (id && id.startsWith("cardio:")) return id.slice(7);
@@ -5508,96 +5511,9 @@ function App() {
       margin: "6px 4px 8px",
       color: SUB
     }
-  }, "Ton carnet — dernières charges notées"), Object.keys(st.charges).length === 0 ? /*#__PURE__*/React.createElement(Carte, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      color: SUB
-    }
-  }, "Rien encore ! Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais.")) : /*#__PURE__*/React.createElement(Carte, {
-    style: {
-      padding: "6px 16px"
-    }
-  }, Object.entries(st.charges).map(([exId, liste], idx) => {
-    const der = liste[liste.length - 1];
-    const vals = liste.map(e => maxCharge(e)).filter(v => v > 0);
-    const maxV = Math.max(...vals),
-      minV = Math.min(...vals);
-    const pr = maxCharge(der) >= maxV && vals.length > 1;
-    const up = vals.length > 1 && vals[vals.length - 1] > vals[0];
-    const W = 74,
-      H = 26;
-    const pts = vals.length > 1 ? vals.map((v, i) => {
-      const x = i / (vals.length - 1) * W;
-      const y = H - (v - minV) / (maxV - minV || 1) * (H - 6) - 3;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ") : null;
-    return /*#__PURE__*/React.createElement("div", {
-      key: exId,
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "11px 0",
-        borderBottom: `1px solid rgba(255,255,255,.07)`
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        minWidth: 0
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontWeight: 600,
-        fontSize: 13,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      }
-    }, nomDe(exId), pr && /*#__PURE__*/React.createElement("span", {
-      style: {
-        marginLeft: 6,
-        fontSize: 8.5,
-        fontWeight: 800,
-        color: "#1A1206",
-        background: COL.D,
-        borderRadius: 4,
-        padding: "1.5px 5px",
-        verticalAlign: "middle"
-      }
-    }, "PR")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: SUB,
-        marginTop: 1
-      }
-    }, liste.length, " note", liste.length > 1 ? "s" : "", " · dernier : ", der.date.split("-").reverse().slice(0, 2).join("/"))), pts && /*#__PURE__*/React.createElement("svg", {
-      width: W,
-      height: H,
-      style: {
-        flexShrink: 0
-      }
-    }, /*#__PURE__*/React.createElement("polyline", {
-      points: pts,
-      fill: "none",
-      stroke: up ? COL.C : "#5A6274",
-      strokeWidth: "1.8",
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    }), /*#__PURE__*/React.createElement("circle", {
-      cx: W,
-      cy: H - (vals[vals.length - 1] - minV) / (maxV - minV || 1) * (H - 6) - 3,
-      r: "2.6",
-      fill: up ? COL.C : "#8A93A6"
-    })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: DISPLAY,
-        fontWeight: 700,
-        fontSize: 15,
-        minWidth: 52,
-        textAlign: "right"
-      }
-    }, fmtCharge(der)));
-  })), /*#__PURE__*/React.createElement("div", {
+  }, "Ton carnet — ta charge par exercice"), /*#__PURE__*/React.createElement(CarnetCharges, {
+    st: st
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       fontSize: 13.5,
@@ -9675,6 +9591,62 @@ function CarteNiveau({ proposition, onOui, onNon }) {
       h("button", { onClick: onNon, style: { flex: 1, ...GLASS, color: INK, borderRadius: 10, padding: "10px", fontWeight: 700, fontSize: 12.5, touchAction: "manipulation" } }, "Pas maintenant")));
 }
 
+/* ============================ PROGRÈS : LA CHARGE PAR EXERCICE (v20.2) ============================ */
+/* Remplace le carnet de charges : chaque carte reprend ce qu'il montrait (nombre de notes, dernière
+   charge, record) et ajoute la courbe, façon balance connectée. Les points « trop dur » sont marqués
+   discrètement. Un exercice remplacé apparaît sous son propre nom (banque). */
+const fmtDateCourte = d => (d || "").split("-").reverse().slice(0, 2).join("/");
+function GrapheCharge({ id, nom, l, estDur }) {
+  const vals = l.map(e => maxCharge(e));
+  const maxV = Math.max(...vals), minV = Math.min(...vals);
+  const W = 320, H = 100, pL = 36, pR = 14, pT = 14, pB = 22;
+  const x = i => pL + (l.length === 1 ? 0 : i / (l.length - 1) * (W - pL - pR));
+  const y = v => pT + (H - pT - pB) - (v - minV) / (maxV - minV || 1) * (H - pT - pB);
+  const der = l[l.length - 1];
+  const record = vals.length > 1 && vals[vals.length - 1] >= maxV && vals[vals.length - 1] > Math.max(...vals.slice(0, -1));
+  const up = vals[vals.length - 1] > vals[0], down = vals[vals.length - 1] < vals[0];
+  const couleur = up ? COL.C : down ? COL.D : "#8A93A6";
+  const durs = l.map((e, i) => estDur(e) ? i : -1).filter(i => i >= 0);
+  const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const aire = `${x(0).toFixed(1)},${(H - pB).toFixed(1)} ${pts} ${x(l.length - 1).toFixed(1)},${(H - pB).toFixed(1)}`;
+  return h("div", { className: "graphe-charge", style: { ...GLASS, borderRadius: 16, padding: "12px 14px 10px", marginBottom: 8 } },
+    h("div", { style: { display: "flex", alignItems: "baseline", gap: 8 } },
+      h("div", { style: { flex: 1, minWidth: 0, fontWeight: 700, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, nom,
+        record && h("span", { style: { marginLeft: 6, fontSize: 8.5, fontWeight: 800, color: "#1A1206", background: COL.D, borderRadius: 4, padding: "1.5px 5px", verticalAlign: "middle" } }, "PR")),
+      h("div", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 16, color: couleur, flexShrink: 0 } }, fmtKg(vals[vals.length - 1]), " kg")),
+    h("div", { style: { fontSize: 10.5, color: SUB, marginTop: 1 } }, l.length, " séances · dernier : ", fmtDateCourte(der.date), " · record : ", fmtKg(maxV), " kg"),
+    h("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, style: { display: "block", marginTop: 4 }, "aria-label": `Charge de travail, ${nom}` },
+      h("defs", null, h("linearGradient", { id: "gc-" + id, x1: "0", y1: "0", x2: "0", y2: "1" }, h("stop", { offset: "0%", stopColor: couleur, stopOpacity: .28 }), h("stop", { offset: "100%", stopColor: couleur, stopOpacity: 0 }))),
+      h("line", { x1: pL, y1: H - pB, x2: W - pR, y2: H - pB, stroke: "rgba(255,255,255,.10)", strokeWidth: 1 }),
+      h("line", { x1: pL, y1: pT, x2: W - pR, y2: pT, stroke: "rgba(255,255,255,.06)", strokeWidth: 1, strokeDasharray: "3 4" }),
+      h("polygon", { points: aire, fill: `url(#gc-${id})` }),
+      h("polyline", { points: pts, fill: "none", stroke: couleur, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" }),
+      vals.map((v, i) => h("circle", { key: i, cx: x(i), cy: y(v), r: 3, fill: PAPER, stroke: couleur, strokeWidth: 2 })),
+      durs.map(i => h("circle", { key: "d" + i, className: "point-dur", cx: x(i), cy: y(vals[i]), r: 6.5, fill: "none", stroke: COL.A, strokeWidth: 1.5, strokeDasharray: "2 2" })),
+      h("text", { x: pL - 6, y: pT + 4, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtKg(maxV)),
+      h("text", { x: pL - 6, y: H - pB + 3, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtKg(minV)),
+      h("text", { x: pL, y: H - 6, fontSize: 9, fill: SUB, fontFamily: FONT }, fmtDateCourte(l[0].date)),
+      h("text", { x: W - pR, y: H - 6, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtDateCourte(der.date))),
+    durs.length > 0 && h("div", { style: { fontSize: 10, color: SUB, marginTop: 2, display: "flex", alignItems: "center", gap: 5 } },
+      h("span", { style: { width: 10, height: 10, borderRadius: "50%", border: `1.5px dashed ${COL.A}`, display: "inline-block" } }), "séance ressentie « trop dur »"));
+}
+function CarnetCharges({ st }) {
+  const entrees = Object.entries(st.charges || {}).map(([id, l]) => ({ id, l: (l || []).filter(e => maxCharge(e) > 0) })).filter(x => x.l.length);
+  if (!entrees.length) return h(Carte, null, h("div", { style: { fontSize: 13, color: SUB } }, "Rien encore ! Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais, et ta courbe se dessinera ici."));
+  // triés par récence : le dernier exercice pratiqué en premier
+  entrees.sort((a, b) => b.l[b.l.length - 1].date.localeCompare(a.l[a.l.length - 1].date));
+  const estDur = id => e => e.ressenti === "dur" || ((st.ressentis || {})[id] || []).some(r => r.date === e.date && r.r === "dur");
+  const graphes = entrees.filter(x => x.l.length >= 2), uniques = entrees.filter(x => x.l.length === 1);
+  return h("div", null,
+    graphes.map(x => h(GrapheCharge, { key: x.id, id: x.id, nom: nomDe(x.id), l: x.l, estDur: estDur(x.id) })),
+    uniques.length > 0 && h("div", { style: { ...GLASS, borderRadius: 16, padding: "6px 14px", marginBottom: 8 } },
+      h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .6, color: SUB, padding: "6px 0 2px" } }, "UNE SEULE NOTE — la courbe viendra à la deuxième"),
+      uniques.map(x => h("div", { key: x.id, className: "note-unique", style: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: `1px solid rgba(255,255,255,.07)`, fontSize: 12.5 } },
+        h("span", { style: { flex: 1, minWidth: 0, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, nomDe(x.id)),
+        h("span", { style: { fontSize: 10.5, color: SUB } }, fmtDateCourte(x.l[0].date)),
+        h("span", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 14 } }, fmtCharge(x.l[0]))))));
+}
+
 function Onboarding({
   profils,
   onCreer,
@@ -9899,7 +9871,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.1"));
+  }, "v20.2"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {

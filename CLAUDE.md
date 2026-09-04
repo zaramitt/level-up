@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.1**
+Version actuelle : **v20.2**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.1"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.2"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -136,7 +136,7 @@ code, mais jamais les 5 à l'écran en même temps. Le coach en voit 2, le coach
 |---|---|---|---|
 | `jour` | Séance | `barbell` | coaché — séance du jour : carrousel de séances, cardio / repos, validation des exercices et preuve photo |
 | `hab` | Habitudes | `leaf` | coaché — habitudes quotidiennes à cocher |
-| `prog` | Progrès | `chart` | coaché — progression, historique et photos |
+| `prog` | Progrès | `chart` | coaché — progression, graphique de charge par exercice (v20.2), historique et photos |
 | `rec` | Récomp. (coaché) / Négos (coach) | `gift` | récompenses, négociations, paris et pot |
 | `suivi` | Suivi | `activity` | coach — état du coaché tel que publié sur `/etat` |
 
