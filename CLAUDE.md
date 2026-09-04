@@ -32,8 +32,15 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   `<script id="banque-exercices">`) : la génération se fait dans l'app,
   instantanément et hors ligne.
 - `outils/sync.js` — synchronise les copies embarquées : moteur + banque →
-  `index.html`, puis `index.html` → `worker.js` (ligne 5). **À lancer avant
-  chaque livraison** ; les copies ne s'éditent jamais à la main.
+  `index.html`, puis `index.html` → `worker.js` (ligne 5). **`node
+  outils/sync.js` avant chaque commit touchant au moteur ou à la banque ; le
+  test de synchronisation (`node outils/sync.test.js`) le vérifie.** Les
+  copies ne s'éditent jamais à la main.
+- `outils/tests/` — le harnais Playwright versionné : `mock-server.js` (faux
+  worker), `lancer.js` (construit `app.html`, lance les mocks, joue les suites
+  dans l'ordre), et les suites numérotées — `01-securite-profils-existants.js`
+  en premier (aucun profil existant ne change de programme sans action
+  explicite), puis v20.0 et les non-régressions v19.10 → v19.21.
 - `wrangler.jsonc` — configuration de déploiement (Workers Builds) : nom, point
   d'entrée, liaison KV et crons ; le secret `ANTHROPIC_API_KEY` vit côté
   Cloudflare, pas dans ce fichier
@@ -155,7 +162,8 @@ partage.
   `index.html`). Une modification d'un seul des deux fichiers est presque
   toujours un bug.
 - En session, toute modification est vérifiée sur un worker mock local
-  (Playwright) ; c'est Léo qui la valide sur l'URL Worker après déploiement.
+  (Playwright : `node outils/tests/lancer.js`) ; c'est Léo qui la valide sur
+  l'URL Worker après déploiement.
   Une modification n'est « faite » qu'après cette seconde vérification.
 - **La version affichée dans `index.html` et celle de `CLAUDE.md` doivent être
   mises à jour à chaque livraison, dans le même commit que le chantier.
