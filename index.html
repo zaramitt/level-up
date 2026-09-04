@@ -711,7 +711,9 @@
   const REPONSES_DEFAUT = { frequence: 3, objectif: "mieux", objectifLibre: "", muscu: "jamais", technique: "pas_sur", sport: null, intention: "soi", joursSport: [], materiel: "salle", tempsMin: 60, interpretation: null };
   const entreesDepuisReponses = r => {
     const x = { ...REPONSES_DEFAUT, ...(r || {}) };
-    return { frequence: x.frequence, objectif: x.objectif, objectifLibre: x.objectifLibre || "", interpretation: x.interpretation || null, sport: x.sport || null, intention: x.intention || "soi", joursSport: x.joursSport || [], materiel: x.materiel, niveau: niveauDepuisQuestions(x.muscu, x.technique), tempsMin: x.tempsMin || 60 };
+    // niveauAjuste : ±1 accepté par la personne quand ses ressentis le suggèrent (v20.1), jamais à son insu
+    const niveau = Math.max(1, Math.min(3, niveauDepuisQuestions(x.muscu, x.technique) + (parseInt(x.niveauAjuste) || 0)));
+    return { frequence: x.frequence, objectif: x.objectif, objectifLibre: x.objectifLibre || "", interpretation: x.interpretation || null, sport: x.sport || null, intention: x.intention || "soi", joursSport: x.joursSport || [], materiel: x.materiel, niveau, tempsMin: x.tempsMin || 60 };
   };
   // forme attendue par l'écran Séance : lettres, exos {id, nom, dose, repos, charge}, gainage en liste
   const PALETTE_APP = ["#FF5C4D", "#3D5AFE", "#2CE5A7", "#FFB020", "#7C5CFF", "#22D3EE", "#C2417A"];
@@ -729,7 +731,7 @@
         consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
-        id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
+        id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
       }));
       seances[s.lettre] = { nom: s.nom, couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
     });
@@ -750,6 +752,90 @@
   };
   // le tout en un : réponses de l'onboarding → programme pour l'app
   const programmePourApp = (reponses, banque) => presenterPourApp(genererProgramme(entreesDepuisReponses(reponses), banque));
+
+  /* ------------------------------------------------------------------ */
+  /* Étape 3 passe 2 (v20.1) : la séance vivante                          */
+  /* ------------------------------------------------------------------ */
+  // règle 8, double progression : quand toutes les séries de la dernière fois ont touché le haut de
+  // la fourchette avec un ressenti facile ou juste, on PROPOSE l'incrément — +2,5 kg haut du corps,
+  // +5 kg bas du corps et machines — jamais plus, jamais imposé. Un « trop dur » annule la proposition suivante.
+  const HAUT = new Set(["poussee_h", "poussee_v", "tirage_h", "tirage_v"]), ISO_HAUT_M = new Set(ISO_HAUT);
+  const surMachine = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.includes("machine"); }); };
+  const incrementDe = (x, materiel) => (x.compartiment === "isolation" ? ISO_HAUT_M.has(x.muscle) : HAUT.has(x.compartiment)) && !surMachine(x, materiel) ? 2.5 : 5;
+  const chargeDeSerie = e => e == null ? 0 : e.kg != null ? Number(e.kg) : Math.max(0, ...(e.series || []).filter(v => v != null && v !== "").map(Number));
+  const suggererCharge = (x, histo, materiel) => {
+    if (!x || !x.charge || !x.reps || !histo || !histo.length) return null;
+    const der = histo[histo.length - 1];
+    if (!der || !der.hautFourchette) return null;
+    if (der.ressenti === "dur" || der.ressenti == null) return null;
+    const base = chargeDeSerie(der);
+    if (!(base > 0)) return null;
+    const plus = incrementDe(x, materiel);
+    return { kg: base + plus, plus, base, reps: x.reps[1], raison: `+${String(plus).replace(".", ",")} kg, tu as tenu ${x.reps[1]} reps partout` };
+  };
+  // règle 7, niveau observé qui bouge : ressentis sur les GROS exercices (polyarticulaires), du plus ancien au
+  // plus récent. Quatre « facile » d'affilée → proposer +1 ; trois « trop dur » sur les six derniers → proposer −1.
+  const recalerNiveau = (ressentis, niveau) => {
+    const gros = (ressentis || []).filter(r => r && r.compose).slice(-6).map(r => r.r);
+    const fin = gros.slice(-4);
+    if (niveau < 3 && fin.length === 4 && fin.every(r => r === "facile")) return { sens: 1, message: "On dirait que tu progresses : les gros exercices te paraissent faciles depuis plusieurs séances. On monte d'un cran ?" };
+    if (niveau > 1 && gros.filter(r => r === "dur").length >= 3) return { sens: -1, message: "Plusieurs gros exercices t'ont paru trop durs ces derniers temps. On redescend d'un cran, le temps de consolider ?" };
+    return null;
+  };
+  // règle 12 côté app : un exercice remplaçant garde la dose de l'original (séries, reps, repos), sauf
+  // si la banque impose la sienne (isométrie, fourchette courte comme les négatives)
+  const remplacantPourApp = (orig, cand, materiel) => {
+    const iso = !cand.reps && cand.duree_s;
+    const reps = iso ? null : cand.reps && cand.reps[1] <= 6 ? cand.reps : orig.reps || cand.reps || [8, 12];
+    const x = { compartiment: cand.compartiment, series: orig.series || 3, reps, duree_s: iso ? cand.duree_s : null, unilateral: !!cand.unilateral };
+    return {
+      id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel),
+      series: x.series, reps, duree: x.duree_s, unilateral: x.unilateral, consigne: cand.consigne || "", erreur: cand.erreur || "",
+      compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id
+    };
+  };
+  // les 2 à 3 candidats proposés à l'écran : le phare en premier, chacun avec son muscle et son matériel.
+  // motif « materiel » : d'abord ceux qui ne demandent pas le matériel de l'original
+  const remplacantsPour = (banque, exoApp, opts = {}) => {
+    const o = banque.exercices.find(e => e.id === exoApp.id);
+    if (!o) return { candidats: [], approximatif: null, inconnu: true };
+    const materiel = opts.materiel || "salle";
+    const r = remplacerExercice(banque, o.id, { materiel, niveau: opts.niveau || 2, exclure: opts.exclure || [] });
+    let cands = r.candidats.slice();
+    if (opts.motif === "materiel") {
+      const tagsO = new Set(o.materiel.flatMap(tagsDe).filter(t => !TOUJOURS.includes(t)));
+      const autres = cands.filter(c => !c.materiel.some(alt => tagsDe(alt).some(t => tagsO.has(t))));
+      if (autres.length >= 1) cands = autres.concat(cands.filter(c => !autres.includes(c)));
+    }
+    cands.sort((a, b) => (b.echelle === "phare" ? 1 : 0) - (a.echelle === "phare" ? 1 : 0));
+    return {
+      approximatif: r.approximatif,
+      candidats: cands.slice(0, 3).map(c => ({ exo: remplacantPourApp(exoApp, c, materiel), muscle: c.muscle, materiel: c.materiel.join(" ou "), phare: c.echelle === "phare", difficulte: c.difficulte }))
+    };
+  };
+  // « Adapter ma séance » : moins de temps ou d'énergie → la séance existe au lieu d'être sautée.
+  // Ordre de DECISIONS.md : isolations, séries, repos jusqu'aux planchers, jamais les polyarticulaires.
+  // Petite forme : une série de moins, charges suggérées −10 %, repos préservés.
+  const adapterSeance = (S, opts = {}) => {
+    const tempsMin = Math.max(10, Math.round(Number(opts.tempsMin)) || S.dureeMin || 60);
+    const energie = ["fond", "normal", "petite"].includes(opts.energie) ? opts.energie : "normal";
+    // un ancien programme n'a ni reps ni durée structurées : on les lit dans la dose (« 3 × 10 », « 3 × 30-45 s »)
+    const lireDose = x => { const m = /×\s*(\d+)(?:-(\d+))?\s*(s\b)?/.exec(x.dose || ""); if (!m) return { reps: [8, 12], duree_s: null }; return m[3] ? { reps: null, duree_s: parseInt(m[2] || m[1]) } : { reps: [parseInt(m[1]), parseInt(m[2] || m[1])], duree_s: null }; };
+    const interne = (x, gainage) => { const d = x.reps || x.duree ? { reps: x.reps || null, duree_s: x.duree || null } : lireDose(x); return { ...x, compartiment: gainage ? "gainage" : x.compartiment || "inconnu", series: x.series || parseInt(x.dose) || 3, reps: d.reps, duree_s: d.duree_s, repos_s: x.repos || 0, role: x.role || null, _app: x }; };
+    const s = { exercices: [...S.exos.map(x => interne(x, false)), ...(Array.isArray(S.gainage) ? S.gainage : []).map(g => interne(g, true))] };
+    if (energie === "petite") for (const x of s.exercices) if (estForce(x) && x.compartiment !== "cardio_mobilite") x.series = Math.max(2, x.series - 1);
+    const avant = dureeSeance(s);
+    const nbMin = Math.min(3, s.exercices.filter(estForce).length);
+    const tient = comprimer(s, tempsMin, nbMin);
+    const retour = x => ({ ...x._app, series: x.series, repos: x.repos_s, dose: doseDe({ ...x, reps: x.reps, duree_s: x.duree_s }) });
+    return {
+      ...S,
+      exos: s.exercices.filter(x => x.compartiment !== "gainage").map(retour),
+      gainage: s.exercices.filter(x => x.compartiment === "gainage").map(retour),
+      dureeMin: dureeSeance(s),
+      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, avantMin: avant, tient, retires: S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - s.exercices.length }
+    };
+  };
 
   /* ------------------------------------------------------------------ */
   /* Règle 12 : remplacement d'un exercice                              */
@@ -855,7 +941,7 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
 });
 </script>
 <script id="banque-exercices">
@@ -1771,6 +1857,8 @@ const TITRES = ["Canapé Lover", "Motivé·e du lundi", "Courbaturé·e", "Habit
 /* ============================ XP & NIVEAUX ============================ */
 const XP = {
   exo: 15,
+  recupItem: 5,
+  bonusRecup: 15,
   gainageItem: 5,
   bonusSeance: 40,
   bonusGainage: 15,
@@ -3053,6 +3141,8 @@ function App() {
   const pending = useRef(null); // {type:'exo'|'cardio'|'hab', ...}
   const [chargeur, setChargeur] = useState(false);
   const [regen, setRegen] = useState(null); // flux de régénération ouvert : { mode, question }
+  const [remplacer, setRemplacer] = useState(null); // exercice en cours de remplacement (v20.1)
+  const [adapter, setAdapter] = useState(false); // panneau « Adapter ma séance » (v20.1)
 
   /* ---- chargement + migration + décroissance ---- */
   useEffect(() => {
@@ -3369,6 +3459,8 @@ function App() {
       s.programme = "perso";
       s.reponses = rep;
       s.moteurRefuse = false;
+      s.ressentisDepuis = auj();
+      s.niveauRefuse = null;
       return s;
     });
     setRegen(null);
@@ -3395,11 +3487,21 @@ function App() {
     photos: {}
   };
   const habJ = st.habitudes[jourKey] || [];
+  // la séance du jour telle qu'elle se joue : adaptée (temps / énergie) et avec les
+  // exercices remplacés d'aujourd'hui (v20.1) — la lettre reste celle du programme
+  const SJ = (() => {
+    const base = J.seance && SEANCES[J.seance];
+    if (!base) return null;
+    const S = J.adaptee && J.adaptee.seance ? J.adaptee.seance : base;
+    const rempl = J.remplacements || {};
+    return Object.keys(rempl).length ? { ...S, exos: S.exos.map(e => rempl[e.id] || e) } : S;
+  })();
+  const recupJ = !!(SJ && SJ.focus === "recup");
   // barre « Fin de séance » fixe au-dessus de la barre d'onglets, tant qu'une
   // séance est en cours avec au moins un exercice validé (le chrono se pose
   // au-dessus d'elle)
-  const barreFin = !!(role !== "coach" && tab === "jour" && estSeance(J.seance) && !J.valide && (J.faits || []).length > 0 && !reglagesOuvert);
-  const tousFaitsJ = !!(J.seance && SEANCES[J.seance] && (J.faits || []).length >= SEANCES[J.seance].exos.length);
+  const barreFin = !!(role !== "coach" && tab === "jour" && estSeance(J.seance) && !recupJ && !J.valide && (J.faits || []).length > 0 && !reglagesOuvert);
+  const tousFaitsJ = !!(SJ && (J.faits || []).length >= SJ.exos.length);
   const niveau = niveauDe(st.xp);
   const basNiveau = SEUILS[niveau - 1],
     hautNiveau = SEUILS[Math.min(niveau, MAX_NIVEAU - 1)];
@@ -3449,7 +3551,8 @@ function App() {
         date: jourKey,
         type: J.seance,
         xp: 0,
-        partiel: true
+        partiel: true,
+        ...(J.adaptee ? { adaptee: true } : {})
       });
       s.histo = s.histo.slice(0, 30);
       return s;
@@ -3466,13 +3569,13 @@ function App() {
   // récap des XP de la séance du jour, pour la popup de célébration
   const recapSeance = partiel => {
     const exos = (J.faits || []).length;
-    const xpExos = exos * XP.exo;
-    const bonus = partiel ? 0 : XP.bonusSeance;
+    const xpExos = exos * (recupJ ? XP.recupItem : XP.exo);
+    const bonus = partiel ? 0 : recupJ ? XP.bonusRecup : XP.bonusSeance;
     const gain = (J.gainage || []).length * XP.gainageItem + (J.gainValide ? XP.bonusGainage : 0);
     return {
       partiel,
       exos,
-      total: (J.seance && SEANCES[J.seance] ? SEANCES[J.seance].exos.length : exos),
+      total: (SJ ? SJ.exos.length : exos),
       xpExos,
       bonus,
       gain,
@@ -3717,11 +3820,13 @@ function App() {
         date: jourKey,
         type: J.seance,
         nomS: SEANCES[J.seance]?.nom,
-        photos: Object.values(J.photos || {})
+        photos: Object.values(J.photos || {}),
+        ...(J.adaptee ? { adaptee: true } : {}),
+        ...(recupJ ? { recup: true } : {})
       });
       return s;
     });
-    gagne(XP.bonusSeance, "· séance complète 🎉");
+    gagne(recupJ ? XP.bonusRecup : XP.bonusSeance, recupJ ? "· récupération bouclée" : "· séance complète 🎉");
     setCelebration(recapSeance(false));
     setConfetti(true);
     setTimeout(() => setConfetti(false), 4200);
@@ -3788,6 +3893,134 @@ function App() {
       return s;
     });
     toast(`−${pts} XP ${label || "· annulé"}`);
+  };
+  // ---- v20.1 : la séance vivante ----
+  // ressenti après exercice (règle 7) : par exercice et par séance, et sur l'entrée de charge du jour
+  const noterRessenti = (ex, r) => {
+    setJour(j => ({
+      ...j,
+      ressentis: {
+        ...(j.ressentis || {}),
+        [ex.id]: r
+      }
+    }));
+    maj(s => {
+      s.ressentis = s.ressentis || {};
+      const l = (s.ressentis[ex.id] || []).filter(x => x.date !== jourKey);
+      l.push({
+        date: jourKey,
+        r,
+        compose: COMPOSES_APP.has(ex.compartiment)
+      });
+      s.ressentis[ex.id] = l.slice(-40);
+      const c = s.charges[ex.id];
+      if (c && c.length && c[c.length - 1].date === jourKey) c[c.length - 1].ressenti = r;
+      return s;
+    });
+  };
+  // « j'ai tenu N reps partout » : la condition de la double progression (règle 8)
+  const noterHautFourchette = (exId, oui) => {
+    maj(s => {
+      const l = s.charges[exId] || [];
+      let e = l[l.length - 1];
+      if (!e || e.date !== jourKey) {
+        e = {
+          date: jourKey,
+          series: []
+        };
+        l.push(e);
+      }
+      e.hautFourchette = !!oui;
+      const r = ((s.jour[jourKey] || {}).ressentis || {})[exId];
+      if (r) e.ressenti = r;
+      s.charges[exId] = l.slice(-30);
+      return s;
+    });
+  };
+  // remplacement (règle 12) : pour aujourd'hui, et pour de bon si demandé
+  const remplacerExo = (exId, cand, tous) => {
+    setJour(j => ({
+      ...j,
+      remplacements: {
+        ...(j.remplacements || {}),
+        [exId]: cand.exo
+      }
+    }));
+    if (tous) maj(s => {
+      if (s.programme === "perso" && s.programmePerso) for (const L of Object.keys(s.programmePerso.seances)) {
+        const sc = s.programmePerso.seances[L];
+        sc.exos = sc.exos.map(e => e.id === exId ? cand.exo : e);
+      }
+      return s;
+    });
+    setRemplacer(null);
+    toast(`${cand.exo.nom} remplace ${nomDe(exId)}${tous ? " — pour les prochaines séances aussi" : " pour aujourd'hui"}`);
+  };
+  // « Adapter ma séance » : la séance existe au lieu d'être sautée
+  const adapterSeanceJour = opts => {
+    const base = SEANCES[J.seance];
+    if (!base) return;
+    const rempl = J.remplacements || {};
+    const S0 = {
+      ...base,
+      exos: base.exos.map(e => rempl[e.id] || e)
+    };
+    const S1 = window.Moteur.adapterSeance(S0, opts);
+    setJour(j => ({
+      ...j,
+      adaptee: {
+        tempsMin: opts.tempsMin,
+        energie: opts.energie,
+        seance: S1
+      }
+    }));
+    maj(s => {
+      s.derniereAdaptation = {
+        tempsMin: opts.tempsMin
+      };
+      return s;
+    });
+    setAdapter(false);
+    toast(`Séance ajustée : ${S1.exos.length} exercice${S1.exos.length > 1 ? "s" : ""}, ${S1.dureeMin} min`);
+  };
+  // le niveau observé bouge : proposition calculée sur les ressentis des gros exercices
+  // depuis la dernière adoption, refus mémorisé deux semaines
+  const propositionNiveau = (() => {
+    if (!(PROG.moteur && st.reponses && window.Moteur && role !== "coach")) return null;
+    const depuis = st.ressentisDepuis || "";
+    const plats = Object.values(st.ressentis || {}).flat().filter(x => x.date > depuis).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    const prop = window.Moteur.recalerNiveau(plats, PROG.moteur.entrees.niveau);
+    if (!prop) return null;
+    const ref = st.niveauRefuse;
+    if (ref && ref.sens === prop.sens && Date.now() - +new Date(ref.date) < 14 * 864e5) return null;
+    return prop;
+  })();
+  const accepterNiveau = sens => {
+    maj(s => {
+      s.reponses = {
+        ...s.reponses,
+        niveauAjuste: (s.reponses.niveauAjuste || 0) + sens
+      };
+      return s;
+    });
+    setRegen({
+      mode: "niveau",
+      direct: true
+    });
+  };
+  const faireRecup = id => {
+    setJour(j => ({
+      ...j,
+      faits: [...(j.faits || []), id]
+    }));
+    gagne(XP.recupItem, "· récupération");
+  };
+  const annulerRecup = id => {
+    setJour(j => ({
+      ...j,
+      faits: (j.faits || []).filter(x => x !== id)
+    }));
+    perdre(XP.recupItem, "· annulé");
   };
   const annulerExo = exId => {
     if (J.valide) return;
@@ -4174,11 +4407,23 @@ function App() {
       fontSize: 12,
       textDecoration: "underline"
     }
-  }, "Fermer"))), regen && /*#__PURE__*/React.createElement(Regenerer, {
+  }, "Fermer"))), remplacer && SJ && /*#__PURE__*/React.createElement(RemplacerPanneau, {
+    ex: remplacer,
+    st: st,
+    S: SJ,
+    onRemplacer: remplacerExo,
+    onFermer: () => setRemplacer(null)
+  }), adapter && SJ && /*#__PURE__*/React.createElement(AdapterPanneau, {
+    S: SJ,
+    defautMin: (st.derniereAdaptation || {}).tempsMin,
+    onAdapter: adapterSeanceJour,
+    onFermer: () => setAdapter(false)
+  }), regen && /*#__PURE__*/React.createElement(Regenerer, {
     st: st,
     code: code,
     mode: regen.mode,
     questionInitiale: regen.question,
+    direct: !!regen.direct,
     onAdopter: adopterProgramme,
     onGarder: () => {
       maj(s => {
@@ -4587,6 +4832,16 @@ function App() {
   }, "Tu vois le nouveau programme avant de décider. Charges et historique restent."))), PROG.moteur && !J.seance && /*#__PURE__*/React.createElement(AvertissementsProgramme, {
     prog: PROG,
     compact: true
+  }), propositionNiveau && !J.seance && /*#__PURE__*/React.createElement(CarteNiveau, {
+    proposition: propositionNiveau,
+    onOui: () => accepterNiveau(propositionNiveau.sens),
+    onNon: () => maj(s => {
+      s.niveauRefuse = {
+        sens: propositionNiveau.sens,
+        date: jourKey
+      };
+      return s;
+    })
   }), !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
     onClick: partagerInvite,
     style: {
@@ -4668,7 +4923,7 @@ function App() {
     }
   }, "Qu'est-ce qu'on fait aujourd'hui ?"), /*#__PURE__*/React.createElement(Carrousel, null, Object.keys(SEANCES).map(t => {
     const S = SEANCES[t];
-    const estXP = S.exos.length * XP.exo + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0);
+    const estXP = S.focus === "recup" ? S.exos.length * XP.recupItem + XP.bonusRecup : S.exos.length * XP.exo + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0);
     return /*#__PURE__*/React.createElement("button", {
       key: t,
       onClick: () => choisir(t),
@@ -4931,9 +5186,24 @@ function App() {
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "shuffle",
     s: 13
-  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), J.seance && SEANCES[J.seance] && /*#__PURE__*/React.createElement(SeanceView, {
-    S: SEANCES[J.seance],
+  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), SJ && recupJ && /*#__PURE__*/React.createElement(RecupView, {
+    S: SJ,
     J: J,
+    onFait: faireRecup,
+    onAnnuler: annulerRecup,
+    onValider: validerSeance
+  }), SJ && !recupJ && /*#__PURE__*/React.createElement(SeanceView, {
+    S: SJ,
+    J: J,
+    onRessenti: noterRessenti,
+    onHautFourchette: noterHautFourchette,
+    onRemplacer: setRemplacer,
+    onAdapter: () => setAdapter(true),
+    onAnnulerAdaptation: () => setJour(j => ({
+      ...j,
+      adaptee: null
+    })),
+    materiel: st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle",
     st: st,
     photos: photos,
     chargeur: chargeur,
@@ -5504,9 +5774,9 @@ function App() {
       alignItems: "center",
       gap: 12,
       textAlign: "left",
-      background: tousFaitsJ ? (SEANCES[J.seance] || {}).couleur || COL.C : "rgba(16,20,30,.96)",
+      background: tousFaitsJ ? (SJ || {}).couleur || COL.C : "rgba(16,20,30,.96)",
       color: "#fff",
-      border: `1.5px solid ${tousFaitsJ ? "transparent" : (SEANCES[J.seance] || {}).couleur || COL.C}`,
+      border: `1.5px solid ${tousFaitsJ ? "transparent" : (SJ || {}).couleur || COL.C}`,
       borderRadius: 16,
       padding: "12px 14px",
       boxShadow: "0 8px 24px rgba(0,0,0,.35)",
@@ -5517,7 +5787,7 @@ function App() {
       width: 32,
       height: 32,
       borderRadius: 999,
-      background: tousFaitsJ ? "rgba(255,255,255,.22)" : (SEANCES[J.seance] || {}).couleur || COL.C,
+      background: tousFaitsJ ? "rgba(255,255,255,.22)" : (SJ || {}).couleur || COL.C,
       display: "grid",
       placeItems: "center",
       flexShrink: 0
@@ -5543,7 +5813,7 @@ function App() {
       opacity: .85,
       marginTop: 1
     }
-  }, tousFaitsJ ? "tous les exercices sont faits — bonus de séance complète" : `${(J.faits || []).length}/${(SEANCES[J.seance] || {exos: []}).exos.length} exercices gardés · la séance compte, sans le bonus`))), celebration && /*#__PURE__*/React.createElement(Spotlight, {
+  }, tousFaitsJ ? "tous les exercices sont faits — bonus de séance complète" : `${(J.faits || []).length}/${(SJ || {exos: []}).exos.length} exercices gardés · la séance compte, sans le bonus`))), celebration && /*#__PURE__*/React.createElement(Spotlight, {
     onFermer: () => setCelebration(null)
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5959,7 +6229,13 @@ function SeanceView({
   validerSansPhoto,
   onPartiel,
   burst,
-  timer
+  timer,
+  onRessenti,
+  onHautFourchette,
+  onRemplacer,
+  onAdapter,
+  onAnnulerAdaptation,
+  materiel
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
   const tousFaits = J.faits.length >= S.exos.length;
@@ -6012,15 +6288,72 @@ function SeanceView({
       fontSize: 11,
       opacity: .8
     }
-  }, "/", S.exos.length))), S.exos.map((ex, i) => {
+  }, "/", S.exos.length))), S.adaptee && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      fontSize: 11.5,
+      color: SUB,
+      margin: "8px 4px 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }, "Séance ajustée · ", S.dureeMin, " min", S.adaptee.energie === "petite" ? " · petite forme" : S.adaptee.energie === "fond" ? " · à fond" : ""), !J.valide && (J.faits || []).length === 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: onAnnulerAdaptation,
+    style: {
+      background: "none",
+      border: "none",
+      color: COL.G,
+      fontWeight: 700,
+      fontSize: 11.5,
+      padding: 0,
+      textDecoration: "underline",
+      touchAction: "manipulation"
+    }
+  }, "Annuler")), !S.adaptee && !J.valide && (J.faits || []).length === 0 && S.exos.some(e => e.compartiment) && /*#__PURE__*/React.createElement("button", {
+    onClick: onAdapter,
+    className: "bouton-adapter",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 9,
+      width: "100%",
+      textAlign: "left",
+      ...GLASS,
+      borderRadius: 12,
+      padding: "10px 13px",
+      marginTop: 8,
+      color: INK,
+      touchAction: "manipulation"
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    n: "sliders",
+    s: 15,
+    c: COL.G
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 12.5,
+      fontWeight: 600
+    }
+  }, "Pas assez de temps ou d'énergie aujourd'hui ? On ajuste.")), S.exos.map((ex, i) => {
     const fait = J.faits.includes(ex.id);
     const hist = st.charges[ex.id];
     const der = hist && hist[hist.length - 1];
+    // règle 8 : incrément proposé, jamais imposé ; petite forme : charges suggérées −10 %
+    const facteur = S.adaptee ? S.adaptee.chargeFacteur || 1 : 1;
+    // pas d'incrément un jour de petite forme : les charges baissent, elles ne montent pas
+    const sugg = !fait && ex.charge && facteur === 1 && window.Moteur ? window.Moteur.suggererCharge(ex, hist, materiel) : null;
     const photoId = (J.photos || {})[ex.id];
     const photoSrc = photoId && photos[photoId];
     const ouvert = deploye === ex.id;
     // exercice déjà validé : ligne barrée, rien à déplier
-    return fait && burst !== ex.id ? /*#__PURE__*/React.createElement("div", {
+    return fait && burst !== ex.id ? /*#__PURE__*/React.createElement(React.Fragment, {
+      key: ex.id
+    }, /*#__PURE__*/React.createElement("div", {
       key: ex.id,
       style: {
         display: "flex",
@@ -6097,7 +6430,11 @@ function SeanceView({
         color: S.couleur,
         flexShrink: 0
       }
-    }, "+", XP.exo, " XP")) : /*#__PURE__*/React.createElement("div", {
+    }, "+", XP.exo, " XP")), !J.valide && /*#__PURE__*/React.createElement(Ressenti, {
+      valeur: (J.ressentis || {})[ex.id],
+      couleur: S.couleur,
+      onChoisir: r => onRessenti(ex, r)
+    })) : /*#__PURE__*/React.createElement("div", {
       key: ex.id,
       style: {
         position: "relative",
@@ -6280,7 +6617,26 @@ function SeanceView({
       n: "play",
       s: 11,
       w: 2.4
-    }), "Voir la démo"), photoSrc && /*#__PURE__*/React.createElement("img", {
+    }), "Voir la démo"), !fait && /*#__PURE__*/React.createElement("button", {
+      onClick: () => onRemplacer(ex),
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        color: INK,
+        background: "rgba(255,255,255,.08)",
+        border: `1px solid ${LINE}`,
+        borderRadius: 999,
+        padding: "6px 12px",
+        fontSize: 11.5,
+        fontWeight: 700,
+        touchAction: "manipulation"
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      n: "shuffle",
+      s: 11,
+      w: 2.4
+    }), "Remplacer"), photoSrc && /*#__PURE__*/React.createElement("img", {
       src: photoSrc,
       onClick: () => onZoom({
         src: photoSrc,
@@ -6301,11 +6657,18 @@ function SeanceView({
         marginBottom: 14
       }
     }, /*#__PURE__*/React.createElement(SerieInputs, {
+      // remonté quand la suggestion ou le facteur change (séance ajustée après l'ouverture)
+      key: ex.id + ":" + facteur + ":" + (sugg ? sugg.kg : ""),
       nb: nbSeries(ex),
       exId: ex.id,
       dernier: der,
       couleur: S.couleur,
-      onSave: onCharge
+      onSave: onCharge,
+      suggestion: sugg,
+      facteur: facteur,
+      reps: ex.reps,
+      hautFourchette: der && der.date === auj() ? !!der.hautFourchette : false,
+      onHautFourchette: v => onHautFourchette(ex.id, v)
     })), !fait && ex.repos > 0 && (() => {
       // repos en cours pour CET exercice : le bouton devient le chrono lui-même
       // (bleu, décompte en gros) — un re-tap ne remet jamais à zéro (garde dans
@@ -6745,13 +7108,21 @@ function SerieInputs({
   exId,
   dernier,
   couleur,
-  onSave
+  onSave,
+  suggestion,
+  facteur,
+  reps,
+  hautFourchette,
+  onHautFourchette
 }) {
   // nbLoc : séries affichées — nb au départ, + une à chaque « + une série »
   const [nbLoc, setNbLoc] = useState(nb);
   const [vals, setVals] = useState(Array(nb).fill(""));
   const [saved, setSaved] = useState(Array(nb).fill(false));
-  const [derniers] = useState(() => dernier ? dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || [] : []);
+  // pré-remplissage : la suggestion d'incrément si elle existe, sinon la dernière fois
+  // (× 0,9 arrondi à 2,5 kg en petite forme)
+  const f = facteur && facteur < 1 ? facteur : 1;
+  const [derniers] = useState(() => suggestion ? Array(nb).fill(suggestion.kg) : dernier ? (dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || []).map(v => v > 0 && f < 1 ? arrondir25(v * f) : v) : []);
   const sauver = i => {
     if (!vals[i]) return;
     onSave(exId, i, vals[i]);
@@ -6870,7 +7241,61 @@ function SerieInputs({
       color: "#5A6274",
       marginTop: 6
     }
-  }, "« idem » reprend la charge de la série d'avant · touche la valeur pour la taper au clavier"));
+  }, "« idem » reprend la charge de la série d'avant · touche la valeur pour la taper au clavier"), suggestion && /*#__PURE__*/React.createElement("div", {
+    className: "suggestion-charge",
+    style: {
+      marginTop: 8,
+      fontSize: 12,
+      lineHeight: 1.45,
+      color: INK,
+      padding: "8px 11px",
+      borderLeft: `3px solid ${couleur}`,
+      background: tintCss(couleur),
+      borderRadius: 8
+    }
+  }, /*#__PURE__*/React.createElement("b", null, "Suggestion : ", fmtKg(suggestion.kg), " kg"), " — ", suggestion.raison, ". Pré-rempli, tu changes si tu veux."), !suggestion && f < 1 && dernier && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontSize: 11.5,
+      color: SUB
+    }
+  }, "Petite forme : charges pré-remplies à −10 % de la dernière fois."), reps && /*#__PURE__*/React.createElement("button", {
+    onClick: () => onHautFourchette && onHautFourchette(!hautFourchette),
+    "aria-pressed": !!hautFourchette,
+    className: "haut-fourchette",
+    style: {
+      marginTop: 8,
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      background: hautFourchette ? tintCss(couleur) : "rgba(255,255,255,.04)",
+      border: `1px solid ${hautFourchette ? couleur : LINE}`,
+      borderRadius: 10,
+      padding: "8px 11px",
+      color: hautFourchette ? couleur : SUB,
+      fontSize: 11.5,
+      fontWeight: 700,
+      textAlign: "left",
+      touchAction: "manipulation"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 16,
+      height: 16,
+      borderRadius: 5,
+      border: `2px solid ${hautFourchette ? couleur : "rgba(255,255,255,.3)"}`,
+      background: hautFourchette ? couleur : "transparent",
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0
+    }
+  }, hautFourchette && /*#__PURE__*/React.createElement(Ic, {
+    n: "check",
+    s: 10,
+    c: "#fff",
+    w: 3
+  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"));
 }
 /* ---------- mise en avant (spotlight) : carte agrandie centrée, fond flouté ---------- */
 function Spotlight({
@@ -9084,7 +9509,7 @@ function ApercuProgramme({ prog, onAdopter, onGarder, libAdopter, libGarder, tit
 
 /* Régénération : les questions (pré-remplies), puis l'aperçu, puis adopter ou garder.
    Sert à la migration des anciens profils, à « Changer de programme » et aux réglages. */
-function Regenerer({ st, code, mode, questionInitiale, onAdopter, onGarder, onFermer }) {
+function Regenerer({ st, code, mode, questionInitiale, direct, onAdopter, onGarder, onFermer }) {
   const [reponses, setReponses] = useState(() => st.reponses ? { ...REPONSES_VIDES(), ...st.reponses, interpretation: null } : reponsesDepuisAncienProgramme(st));
   const [qIdx, setQIdx] = useState(() => {
     if (!questionInitiale) return 0;
@@ -9106,13 +9531,16 @@ function Regenerer({ st, code, mode, questionInitiale, onAdopter, onGarder, onFe
     setProg(genererAvecMoteur(reponsesPourMoteur(r)));
     setEtape("apercu");
   };
+  // recalage du niveau : pas de questions à reposer, l'aperçu tout de suite
+  useEffect(() => { if (direct) finir(); }, []);
   const ancien = !!(st.programme && (st.programme !== "perso" || st.programmePerso));
   return h("div", { style: { position: "fixed", inset: 0, zIndex: 90, background: PAPER, overflowY: "auto", fontFamily: FONT, color: INK } },
-    etape === "questions" && !lecture && h(QuestionsProgramme, { reponses, setReponses, qIdx, setQIdx, onFin: finir, onRetour: onFermer, etiquette: mode === "migration" ? "NOUVEAU MOTEUR" : "CHANGER DE PROGRAMME" }),
+    etape === "questions" && !lecture && !direct && h(QuestionsProgramme, { reponses, setReponses, qIdx, setQIdx, onFin: finir, onRetour: onFermer, etiquette: mode === "migration" ? "NOUVEAU MOTEUR" : "CHANGER DE PROGRAMME" }),
+    direct && etape === "questions" && !lecture && h(Cadre, null, h("div", { style: { minHeight: "70vh", display: "grid", placeItems: "center", color: SUB, fontSize: 13 } }, "Je recalcule ton programme…")),
     lecture && h(Cadre, null, h("div", { style: { minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, color: SUB, fontSize: 13 } }, h(Orbe, { s: 26, c: COL.G }), "Je lis ton objectif…")),
-    etape === "apercu" && prog && h(Cadre, { onRetour: () => setEtape("questions") },
+    etape === "apercu" && prog && h(Cadre, { onRetour: direct ? onFermer : () => setEtape("questions") },
       h(ApercuProgramme, {
-        prog, titre: mode === "migration" ? "TON NOUVEAU PROGRAMME" : "TON PROGRAMME",
+        prog, titre: mode === "migration" ? "TON NOUVEAU PROGRAMME" : mode === "niveau" ? "UN CRAN PLUS " + ((st.reponses || {}).niveauAjuste > 0 ? "HAUT" : "DOUX") : "TON PROGRAMME",
         onAdopter: () => onAdopter(prog, reponses),
         onGarder: ancien ? onGarder : null,
         libAdopter: "Adopter ce programme", libGarder: mode === "migration" ? "Garder l'ancien" : "Garder mon programme actuel"
@@ -9125,7 +9553,7 @@ function SectionProgramme({ st, onRegen }) {
   const lignes = r ? [
     ["frequence", "Séances par semaine", r.frequence === 7 ? "6 + 1 jour de récupération active" : String(r.frequence)],
     ["objectif", "Objectif", r.objectif === "libre" ? `« ${r.objectifLibre} »` : libelle(OBJECTIFS_UI, r.objectif)],
-    ["muscu", "Expérience", libelle(MUSCU_UI, r.muscu) + " · squat et pompe : " + libelle(TECHNIQUE_UI, r.technique).toLowerCase()],
+    ["muscu", "Expérience", libelle(MUSCU_UI, r.muscu) + " · squat et pompe : " + libelle(TECHNIQUE_UI, r.technique).toLowerCase() + (r.niveauAjuste > 0 ? " · relevé d'un cran" : r.niveauAjuste < 0 ? " · abaissé d'un cran" : "")],
     ["sport", "Sport", r.sport && r.sport !== "non" ? libelle(SPORTS_UI, r.sport) + (r.intention === "sport" ? " (pour progresser)" : " (pour moi)") + ((r.joursSport || []).length ? " · " + r.joursSport.map(d => JOURS_UI[d - 1]).join(", ") : "") : "Aucun"],
     ["materiel", "Matériel", r.raccourci ? libelle(RACCOURCIS_MATERIEL, r.raccourci) : `${(r.materiel || []).length} élément${(r.materiel || []).length > 1 ? "s" : ""} coché${(r.materiel || []).length > 1 ? "s" : ""}`],
     ["tempsMin", "Temps par séance", `${r.tempsMin} min`]
@@ -9141,6 +9569,110 @@ function SectionProgramme({ st, onRegen }) {
       h("div", { style: { fontSize: 10.5, color: SUB, padding: "8px 0 8px", lineHeight: 1.4 } }, "Chaque changement te propose un nouveau programme, que tu vois avant de l'adopter."))
     : h("button", { onClick: () => onRegen("migration"), style: { width: "100%", ...GLASS, border: `1.5px solid ${COL.G}`, background: tintCss(COL.G), color: INK, borderRadius: 12, padding: "11px 14px", fontWeight: 700, fontSize: 13, marginBottom: 8, textAlign: "left", lineHeight: 1.35 } }, "Nouveau moteur de programmes — régénérer le mien ", h("span", { style: { color: SUB, fontWeight: 500 } }, "(tu vois le résultat avant de décider)")),
     h("button", { onClick: () => onRegen("changer"), style: { width: "100%", background: GLASSBG, color: INK, border: `1.5px solid ${LINE}`, borderRadius: 12, padding: "11px", fontWeight: 700, fontSize: 13 } }, "Changer de programme ", h("span", { style: { color: SUB, fontWeight: 500 } }, "(XP, charges et historique conservés)")));
+}
+
+/* ============================ SÉANCE VIVANTE (v20.1) ============================ */
+const RESSENTIS = [["facile", "Facile"], ["juste", "Juste"], ["dur", "Trop dur"]];
+const COMPOSES_APP = new Set(["squat", "hinge", "poussee_h", "poussee_v", "tirage_h", "tirage_v", "unilateral"]);
+const arrondir25 = v => Math.round(v / 2.5) * 2.5;
+const fmtKg = v => String(v).replace(".", ",");
+
+/* Ressenti après validation (règle 7) : un tap, facultatif, modifiable. Vrais boutons (iOS). */
+function Ressenti({ valeur, couleur, onChoisir }) {
+  return h("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "6px 4px 2px 14px" } },
+    h("span", { style: { fontSize: 10.5, color: SUB, fontWeight: 700, flexShrink: 0 } }, valeur ? "Ressenti :" : "C'était comment ?"),
+    RESSENTIS.map(([v, l]) => h("button", {
+      key: v, onClick: () => onChoisir(v), "aria-pressed": valeur === v,
+      style: { background: valeur === v ? tintCss(v === "dur" ? COL.A : couleur) : "rgba(255,255,255,.04)", border: `1px solid ${valeur === v ? (v === "dur" ? COL.A : couleur) : LINE}`, color: valeur === v ? (v === "dur" ? COL.A : couleur) : SUB, borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 700, touchAction: "manipulation" }
+    }, l)));
+}
+
+/* « Remplacer » (règle 12) : deux motifs, 2 à 3 candidats, le phare en premier, aujourd'hui ou pour de bon */
+function RemplacerPanneau({ ex, st, S, onRemplacer, onFermer }) {
+  const [motif, setMotif] = useState(null);
+  const [tous, setTous] = useState(false);
+  const materiel = st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle";
+  const niveau = st.programmePerso && st.programmePerso.moteur ? st.programmePerso.moteur.entrees.niveau : 2;
+  const r = motif ? window.Moteur.remplacantsPour(window.BANQUE, ex, { materiel, niveau, motif, exclure: S.exos.map(e => e.id) }) : null;
+  const moteur = !!(st.programmePerso && st.programmePerso.moteur && st.programme === "perso");
+  return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
+    h("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", maxHeight: "86vh", overflowY: "auto", fontFamily: FONT, color: INK } },
+      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "Remplacer « ", ex.nom, " »"),
+      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 12px" } }, "Même geste, même muscle d'abord. Tes charges déjà notées restent sous l'ancien exercice."),
+      h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 } },
+        [["materiel", "Matériel indisponible"], ["prefere", "Je préfère autre chose"]].map(([m, l]) => h("button", { key: m, onClick: () => setMotif(m), style: { ...GLASS, border: `1.5px solid ${motif === m ? COL.G : LINE}`, background: motif === m ? tintCss(COL.G) : GLASSBG, color: motif === m ? COL.G : INK, borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 12.5, touchAction: "manipulation" } }, l))),
+      r && r.inconnu && h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.5 } }, "Cet exercice vient d'un ancien programme : le remplacement arrive avec le nouveau moteur (carte « Nouveau moteur de programmes » dans l'onglet Séance)."),
+      r && !r.inconnu && !r.candidats.length && h("div", { style: { fontSize: 12.5, color: SUB } }, "Rien de comparable avec ton matériel. Passe-le pour aujourd'hui, ou coche du matériel en plus dans les réglages."),
+      r && r.candidats.map((c, k) => h("button", { key: c.exo.id, onClick: () => onRemplacer(ex.id, c, tous), style: { display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", ...GLASS, border: `1px solid ${c.phare ? COL.G + "88" : LINE}`, borderRadius: 14, padding: "11px 13px", marginBottom: 7, color: INK, touchAction: "manipulation" } },
+        h("span", { style: { flex: 1, minWidth: 0 } },
+          h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, c.exo.nom, c.phare && h("span", { style: { marginLeft: 7, fontSize: 9, fontWeight: 800, letterSpacing: .6, color: COL.G, background: tintCss(COL.G), borderRadius: 999, padding: "2px 7px", verticalAlign: "middle" } }, "PHARE")),
+          h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, c.muscle, " · ", c.materiel, " · ", c.exo.dose)),
+        h(Ic, { n: "chevron", s: 14, w: 2.4, c: SUB, style: { transform: "rotate(180deg)" } }))),
+      r && r.approximatif && h("div", { style: { fontSize: 11, color: COL.D, marginTop: 4 } }, "Même muscle, geste différent : rien d'identique dans ce compartiment."),
+      r && r.candidats.length > 0 && moteur && h("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, marginTop: 10, color: INK } },
+        h("input", { type: "checkbox", checked: tous, onChange: e => setTous(e.target.checked), style: { accentColor: COL.G, width: 17, height: 17, margin: 0 } }), "Pour toutes les prochaines séances aussi"),
+      h("button", { onClick: onFermer, style: { width: "100%", marginTop: 14, ...GLASS, color: INK, borderRadius: 12, padding: "12px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Annuler")));
+}
+
+/* « Adapter ma séance » : temps (saisie exacte) et énergie, avant de commencer */
+function AdapterPanneau({ S, defautMin, onAdapter, onFermer }) {
+  const [temps, setTemps] = useState(defautMin || S.dureeMin || 45);
+  const [energie, setEnergie] = useState("normal");
+  const fixer = v => { const n = Math.round(Number(v)); if (!isNaN(n)) setTemps(Math.max(10, Math.min(180, n))); };
+  const apercu = window.Moteur.adapterSeance(S, { tempsMin: temps, energie });
+  return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
+    h("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", fontFamily: FONT, color: INK } },
+      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "On ajuste la séance"),
+      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 14px" } }, "Les gros exercices restent. Les isolations, les séries puis les repos s'ajustent, dans cet ordre."),
+      h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: SUB, marginBottom: 6 } }, "TEMPS DISPONIBLE"),
+      h("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+        h("input", { type: "range", min: 10, max: 120, step: 1, value: Math.min(120, temps), onChange: e => fixer(e.target.value), style: { flex: 1, accentColor: COL.G } }),
+        h("input", { type: "number", inputMode: "numeric", min: 10, max: 180, value: temps, onChange: e => fixer(e.target.value), "aria-label": "Minutes disponibles", style: { width: 64, fontFamily: DISPLAY, fontSize: 18, fontWeight: 800, textAlign: "center", background: FIELD, color: INK, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "6px 4px", outline: "none" } }),
+        h("span", { style: { fontSize: 12, color: SUB } }, "min")),
+      h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: SUB, margin: "14px 0 6px" } }, "ÉNERGIE"),
+      h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7 } },
+        [["fond", "À fond"], ["normal", "Normal"], ["petite", "Petite forme"]].map(([v, l]) => h("button", { key: v, onClick: () => setEnergie(v), style: { ...GLASS, border: `1.5px solid ${energie === v ? COL.G : LINE}`, background: energie === v ? tintCss(COL.G) : GLASSBG, color: energie === v ? COL.G : INK, borderRadius: 12, padding: "10px 6px", fontWeight: 800, fontSize: 12, touchAction: "manipulation" } }, l))),
+      h("div", { style: { fontSize: 12, color: SUB, marginTop: 12, lineHeight: 1.5 } },
+        "Résultat : ", h("b", { style: { color: INK } }, apercu.exos.length, " exercice", apercu.exos.length > 1 ? "s" : "", apercu.gainage.length ? " + gainage" : "", " · ", apercu.dureeMin, " min"),
+        energie === "petite" ? " · une série de moins, charges suggérées −10 %, repos gardés." : "",
+        !apercu.adaptee.tient ? " · même compressée, la séance dépasse un peu : à toi de voir." : ""),
+      h("button", { onClick: () => onAdapter({ tempsMin: temps, energie }), style: { width: "100%", marginTop: 14, background: COL.G, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Ajuster ma séance"),
+      h("button", { onClick: onFermer, style: { width: "100%", marginTop: 8, ...GLASS, color: INK, borderRadius: 12, padding: "11px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Laisser comme ça")));
+}
+
+/* Le jour de récupération active (7×) : pas de charge, pas de repos, des durées, un ton différent */
+function RecupView({ S, J, onFait, onAnnuler, onValider }) {
+  const total = S.exos.reduce((t, e) => t + (parseInt(e.dose) || 0), 0);
+  const faits = J.faits || [];
+  const tous = faits.length >= S.exos.length;
+  return h("div", { style: { marginTop: 14 } },
+    h("div", { style: { background: "linear-gradient(135deg, rgba(34,211,238,.25), rgba(124,92,255,.18))", border: `1px solid ${COL.K}55`, borderRadius: 16, padding: "14px 16px" } },
+      h("div", { style: { fontFamily: DISPLAY, fontSize: 16, color: INK } }, "RÉCUPÉRATION ACTIVE"),
+      h("div", { style: { fontSize: 12.5, color: SUB, marginTop: 4, lineHeight: 1.5 } }, "Pas de charge aujourd'hui : on fait circuler, on assouplit, on récupère. ", total, " min tranquilles, ", XP.recupItem, " XP par activité, ", XP.bonusRecup, " si tu boucles.")),
+    S.exos.map((e, i) => {
+      const ok = faits.includes(e.id);
+      return h("div", { key: e.id, style: { ...GLASS, borderRadius: 14, padding: "12px 14px", marginTop: 8, borderColor: ok ? COL.K + "66" : "rgba(255,255,255,.10)", background: ok ? "rgba(34,211,238,.07)" : GLASSBG } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+          h("span", { style: { flex: 1, minWidth: 0 } },
+            h("span", { style: { display: "block", fontWeight: 700, fontSize: 14, textDecoration: ok ? "line-through" : "none", color: ok ? SUB : INK } }, i + 1, ". ", e.nom),
+            h("span", { style: { display: "block", fontSize: 11.5, color: COL.K, fontWeight: 700, marginTop: 2 } }, e.dose)),
+          ok ? h("button", { onClick: () => onAnnuler(e.id), title: "Annuler", style: { background: "none", border: `1px solid ${LINE}`, borderRadius: 999, width: 30, height: 30, color: SUB, fontSize: 13, display: "grid", placeItems: "center", padding: 0, touchAction: "manipulation" } }, "↩")
+             : h("button", { onClick: () => onFait(e.id), style: { background: COL.K, color: "#04141A", border: "none", borderRadius: 999, padding: "8px 13px", fontWeight: 800, fontSize: 12, touchAction: "manipulation" } }, "Fait · +", XP.recupItem)),
+        !ok && e.consigne && h("div", { style: { fontSize: 12, lineHeight: 1.5, color: INK, marginTop: 8 } }, e.consigne));
+    }),
+    tous && !J.valide && h("button", { onClick: onValider, style: { width: "100%", marginTop: 12, background: COL.K, color: "#04141A", border: "none", borderRadius: 14, padding: "14px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Journée de récupération bouclée · +", XP.bonusRecup, " XP"),
+    J.valide && h("div", { style: { textAlign: "center", fontSize: 12.5, color: SUB, marginTop: 12 } }, "Récupération bouclée. Demain, on repart."));
+}
+
+/* Le niveau observé bouge, jamais à l'insu : la proposition, et le choix */
+function CarteNiveau({ proposition, onOui, onNon }) {
+  return h("div", { style: { ...GLASS, borderRadius: 14, padding: "12px 14px", marginBottom: 12, borderColor: COL.C + "66" } },
+    h("div", { style: { display: "flex", gap: 10, alignItems: "flex-start" } },
+      h(Ic, { n: proposition.sens > 0 ? "flame" : "moon", s: 18, c: COL.C }),
+      h("div", { style: { flex: 1, fontSize: 12.5, lineHeight: 1.5, color: INK } }, proposition.message)),
+    h("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
+      h("button", { onClick: onOui, style: { flex: 1, background: COL.C, color: "#04140D", border: "none", borderRadius: 10, padding: "10px", fontWeight: 800, fontSize: 12.5, touchAction: "manipulation" } }, proposition.sens > 0 ? "Oui, on monte d'un cran" : "Oui, on redescend"),
+      h("button", { onClick: onNon, style: { flex: 1, ...GLASS, color: INK, borderRadius: 10, padding: "10px", fontWeight: 700, fontSize: 12.5, touchAction: "manipulation" } }, "Pas maintenant")));
 }
 
 function Onboarding({
@@ -9367,7 +9899,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.0"));
+  }, "v20.1"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {

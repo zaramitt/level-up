@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.0**
+Version actuelle : **v20.1**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.0"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.1"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -104,6 +104,16 @@ l'onboarding, la migration et les réglages ; les réponses vivent dans
 `st.reponses`, le programme généré dans `st.programmePerso` (avec
 `programme: "perso"` et un bloc `moteur` : entrées, semaine, avertissements,
 limites, volume).
+
+La séance vivante (v20.1) : ressenti après chaque exercice (`st.ressentis`,
+`J.ressentis`), incrément proposé quand la dernière fois a touché le haut de
+la fourchette (`hautFourchette` sur l'entrée de charge), remplacement d'un
+exercice pour le jour (`J.remplacements`) ou pour de bon (le programme est
+réécrit), « Adapter ma séance » (`J.adaptee`, séance recompressée par le
+moteur), recalage du niveau observé proposé et jamais imposé
+(`reponses.niveauAjuste`, `st.niveauRefuse`, `st.ressentisDepuis`), jour de
+récupération active rendu par `RecupView` (XP réduits). La séance du jour
+telle qu'elle se joue est `SJ` dans `App`.
 
 Migration, option (b) : un profil d'avant la v20.0 **garde son programme tel
 quel**. Une carte dans l'onglet Séance (« Nouveau moteur de programmes —
