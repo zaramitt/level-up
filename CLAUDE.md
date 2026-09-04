@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.2**
+Version actuelle : **v20.3**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.2"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.3"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -142,7 +142,8 @@ code, mais jamais les 5 à l'écran en même temps. Le coach en voit 2, le coach
 
 `rec` est le seul onglet partagé par les deux rôles : même composant
 `Recompenses`, libellé différent dans la barre, et bulle d'aide dédiée côté
-coach (clé `rec_coach`).
+coach (clé `rec_coach`). Les six bulles (`BULLES`) sont accordées à la
+préférence elle/il/neutre via `bulleTexte` ; `rec` a une variante solo.
 
 ### Mode solo
 

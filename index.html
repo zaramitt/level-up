@@ -5889,7 +5889,7 @@ function App() {
       lineHeight: 1.65,
       color: INK
     }
-  }, BULLES[cleAide]), /*#__PURE__*/React.createElement("button", {
+  }, bulleTexte(cleAide, st, solo)), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setAideOuverte(false);
       if (!(st.vus || {})[cleAide]) maj(x => {
@@ -9871,7 +9871,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.2"));
+  }, "v20.3"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -12164,14 +12164,17 @@ const TITRES_AIDE = {
   rec_coach: "Tes outils de coach",
   suivi: "Son suivi"
 };
+// Les bulles d'aide (v20.3) : simples, chaleureuses, une idée par bulle, dans la voix de l'app.
+// Passées par accorde() à l'affichage (elle / il / neutre) ; « rec » a une variante solo.
 const BULLES = {
-  jour: "Choisis ta séance dans le carrousel, touche un exercice pour le déplier, valide-le avec une photo, et lance le repos quand TU finis ta série. Les jours off, la carte Repos compte comme un passage.",
-  hab: "+5 XP par habitude prouvée en photo. Une seule habitude cochée suffit à couvrir ta journée (pas de malus ce soir-là).",
-  prog: "Ton niveau, tes badges, ton carnet de charges. La progression se calcule sur ta meilleure série.",
-  rec: "Tout se joue ici : récompenses débloquées par niveau, table des négos (un seul aller-retour), paris et cagnotte.",
-  rec_coach: "Tes outils de coach : réponds aux négos (une seule contre-offre), accepte ou refuse les paris, garde un œil sur la cagnotte.",
-  suivi: "Son évolution en direct : XP, séances de la semaine, jokers utilisés — et ses photos de preuve, touche pour agrandir."
+  jour: "Ici, c'est ta séance du jour. Choisis-la dans le carrousel, puis touche un exercice pour le déplier : la consigne, la démo et tes charges sont dedans. Valide-le avec ta photo, puis dis en un tap si c'était facile, juste ou trop dur — c'est comme ça que l'app apprend où tu en es. Pas le temps, pas la forme ? « On ajuste » raccourcit la séance au lieu de la sauter. Et un jour off, coche Repos : ça compte aussi.",
+  hab: "Tes petites habitudes du quotidien, prouvées en photo : 5 XP chacune. Une seule cochée suffit à couvrir ta journée, donc pas de malus ce soir-là. Pas besoin de tout faire, juste de ne pas disparaître — même fatigué·e.",
+  prog: "Tout ce que tu construis, séance après séance : ton niveau, tes badges, et la courbe de charge de chaque exercice, comme sur une balance connectée. Elle monte quand tu progresses et marque les jours trop durs, pour que tu voies d'où tu viens.",
+  rec: ({ solo }) => solo ? "Ta motivation, en vrai : les récompenses que tu t'offres se débloquent à chaque niveau, et les mini-kifs sont là pour les petites victoires. Tu les choisis, tu les changes, c'est ton coin à toi." : "Ta motivation, en vrai : les récompenses de ton coach se débloquent à chaque niveau, tu négocies celles que tu veux (un aller-retour, pas plus), tu paries sur toi, et la cagnotte grossit avec tes oublis. C'est ton coin à toi, et tu y es attendu·e.",
+  rec_coach: "Tes outils de coach, tout simplement : réponds aux négos avec une seule contre-offre, accepte ou refuse les paris, et garde un œil sur la cagnotte, qui grossit à chaque oubli. Ton rôle, c'est de tenir la barre — pas de tout contrôler.",
+  suivi: "Son aventure en direct : XP, séances de la semaine, jokers utilisés, et ses photos de preuve (touche pour agrandir). Un petit mot au bon moment vaut plus qu'un long discours."
 };
+const bulleTexte = (cle, st, solo) => { const v = BULLES[cle]; return v ? accorde(typeof v === "function" ? v({ solo }) : v, st && st.adresse) : ""; };
 
 /* ============================ VISITE GUIDÉE ============================ */
 function Tour({

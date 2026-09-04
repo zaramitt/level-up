@@ -7,20 +7,15 @@ item.
 
 ## Écran Séance
 
-Accordéon, aération de la carte, gainage et « Ta base » en popup traités en
-v19.16 (passe 1). Ce qui reste relève des textes d'aide et du confort de
-lecture, pas de la structure de l'écran.
+Accordéon, aération, gainage, « Ta base » (v19.16), puis ressenti, incrément
+proposé, remplacement d'exercice, « Adapter ma séance » et récupération
+active (v20.1), textes des bulles d'aide (v20.3) : traités. Ce qui reste :
 
-- **Passe 2 — textes des bulles d'aide** : le mécanisme de popup au premier
-  passage existe depuis la v19.16 et couvre les six onglets ; restent à
-  réécrire les textes eux-mêmes, pour qu'ils soient vraiment simples et clairs
-  pour une novice.
-- **PRIORITÉ HAUTE — Remplacer un exercice en cours de séance** (machine
-  indisponible, exercice non réalisable, préférence — ex : tirage vertical
-  remplacé par tractions). Vécu dès la première séance en salle réelle.
-- Niveaux de difficulté des exercices : le moteur exclut désormais le dead bug
-  au niveau 1 et les régressions dès le niveau 2 (v20.0) ; reste « choisir
-  plus simple » à la main, qui rejoint « pas cette machine » (passe 2).
+- Vérifier en salle réelle le ressenti et « Remplacer » sur iOS Safari (tap
+  franc) — le harnais le vérifie en Chromium seulement.
+- « Temps en plus → proposer un complément » (DECISIONS, « Adapter ma
+  séance ») : non fait, seule la compression existe.
+- Supersets, dernier cran de la compression : non fait.
 - **PRIORITÉ BASSE — En-tête global trop serré à 390 px** : sur l'écran
   coachée, « LEVEL UP ! » et la ligne d'XP passent sur plusieurs lignes, coincés
   entre l'orbe de niveau et le bloc « 7 DERNIERS JOURS ». Antérieur à la v19.16
@@ -32,11 +27,10 @@ lecture, pas de la structure de l'écran.
 Générateur incohérent traité : le moteur (règles en code, banque étiquetée)
 est branché en v20.0, étape 3 passe 1. Ce qui reste :
 
-- **Passe 2 du branchement** : ressenti après exercice (facile / juste / trop
-  dur) qui recale le niveau observé, proposition d'incrément (double
-  progression), « pas cette machine » et « générer une variante » (règle 12,
-  fonction `remplacerExercice` prête), « Adapter ma séance » (compression
-  prête dans le moteur).
+- Passe 2 faite en v20.1 (ressenti, incrément, remplacement, adapter,
+  récupération active). Reste : monter d'un cran dans l'échelle d'un exercice
+  après plusieurs semaines stables (règle 9, « l'app propose de monter »),
+  non fait.
 - Trous de la banque (`MOTEUR.md`, « Trous de la banque ») : lot 2 hors salle
   (charnière, poussée verticale et tirage au poids du corps, ischios et
   abducteurs sans machine).
@@ -55,9 +49,9 @@ est branché en v20.0, étape 3 passe 1. Ce qui reste :
 
 ## Onglet Progrès
 
-- **PRIORITÉ HAUTE — Graphique d'évolution de la charge par exercice**, façon
-  balance connectée. Données déjà enregistrées par série : affichage
-  uniquement.
+- Graphique de charge par exercice : fait en v20.2 (remplace le carnet).
+  Reste : afficher aussi les reps (une seule case « haut de fourchette » est
+  notée aujourd'hui, pas les reps par série).
 - Appui long sur « tes preuves » / « tes badges » / carnet pour réorganiser
   les sections (haut/bas)
 

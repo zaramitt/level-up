@@ -210,6 +210,20 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.3 — septembre 2026
+
+Chantier Programmes, étape 3 passe 2, commit 3 : **les textes des bulles
+d'aide**. Les six bulles (Séance, Habitudes, Progrès, Récompenses côté
+coachée et côté coach, Suivi) sont réécrites : simples, chaleureuses, une
+idée par bulle, dans la voix de l'app, et **accordées à la préférence
+elle/il/neutre** à l'affichage (`bulleTexte` → `accorde`). Elles expliquent
+l'onglet à quelqu'un qui ouvre l'app pour la première fois, y compris
+l'accordéon, le ressenti et « On ajuste » arrivés en v20.1, et la courbe de
+charge de la v20.2. La bulle Récompenses a une **variante solo** (pas de
+négos, de paris ni de cagnotte à expliquer à qui se coache seul·e). Les
+bulles du coach parlent de la personne coachée sans la genrer (l'app ne
+connaît que la préférence de la personne qui lit).
+
 ## v20.2 — septembre 2026
 
 Chantier Programmes, étape 3 passe 2, commit 2 : **le suivi**.
