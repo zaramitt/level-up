@@ -2,7 +2,7 @@
 //   node outils/tests/lancer.js            toutes les suites, dans l'ordre des numéros
 //   node outils/tests/lancer.js 01 02      seulement celles dont le nom commence ainsi
 // Ce qu'il fait : construit app.html (index.html avec React servi en local), lance deux faux
-// workers (8323 normal, 8324 avec l'IA non configurée), joue chaque suite et compte les
+// workers (8323 normal, 8324 avec l'IA et les rappels push non configurés), joue chaque suite et compte les
 // échecs (« ✘ », « : false », sortie ≠ 0), puis arrête les faux workers.
 // Prérequis : Playwright et Chromium (ici : NODE_PATH=/opt/node22/lib/node_modules,
 // exécutable /opt/pw-browsers/chromium, comme dans les suites).
@@ -23,7 +23,7 @@ fs.writeFileSync(path.join(ici, "app.html"), html);
 let mocks = [];
 const lancerMocks = () => { mocks = [
   spawn(process.execPath, [path.join(ici, "mock-server.js")], { env: { ...process.env, PORT: "8323" }, stdio: "ignore" }),
-  spawn(process.execPath, [path.join(ici, "mock-server.js")], { env: { ...process.env, PORT: "8324", MOCK_IA: "off" }, stdio: "ignore" })
+  spawn(process.execPath, [path.join(ici, "mock-server.js")], { env: { ...process.env, PORT: "8324", MOCK_IA: "off", MOCK_VAPID: "off" }, stdio: "ignore" })
 ]; };
 const arreterMocks = () => new Promise(res => { mocks.forEach(m => m.kill()); setTimeout(res, 400); });
 const attendre = port => new Promise((res, rej) => {

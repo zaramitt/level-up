@@ -5,6 +5,12 @@ const path = require('path');
 
 const DIR = __dirname;
 const COACH_LIE = process.env.COACH_LIE === '1';
+// v20.4 : clé publique push injectée dans la page comme le fait le worker (MOCK_VAPID=off → aucune clé,
+// rappels indisponibles). Une clé factice suffit : les suites remplacent l'API push du navigateur.
+const VAPID_MOCK = process.env.MOCK_VAPID === 'off' ? '' : 'B' + 'A'.repeat(86);
+const CONTACT_MOCK = process.env.MOCK_CONTACT || 'contact@example.org';
+const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
+const lire = (req, cb) => { let body = ''; req.on('data', c => body += c); req.on('end', () => cb(body)); };
 
 const PROG_5 = {
   nom: 'Muscu 5 jours sur mesure',
@@ -39,6 +45,17 @@ http.createServer((req, res) => {
     });
     return;
   }
+  // v20.4 : rappels push — 503 non_configure sans clé, comme le worker
+  if (/^\/api\/[^/]+\/(abonner|testpush)$/.test(u.pathname) && req.method === 'POST') {
+    lire(req, body => {
+      console.log('MOCK ' + u.pathname.split('/').pop() + ' reçu:', body.slice(0, 160));
+      if (!VAPID_MOCK) return json(res, 503, { erreur: 'non_configure' });
+      if (u.pathname.endsWith('/abonner')) { global.__subs = global.__subs || []; try { global.__subs.push(JSON.parse(body).sub); } catch {} return json(res, 200, { ok: true }); }
+      json(res, 200, { envoyes: (global.__subs || []).length });
+    });
+    return;
+  }
+  if (/^\/api\/[^/]+\/desabonner$/.test(u.pathname) && req.method === 'POST') { lire(req, () => json(res, 200, { ok: true })); return; }
   if (/^\/api\/[^/]+\/generer$/.test(u.pathname) && req.method === 'POST') {
     let body = '';
     req.on('data', c => body += c);
@@ -130,10 +147,11 @@ http.createServer((req, res) => {
     });
     return;
   }
-  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__pot = null; global.__etat = null; res.writeHead(200); res.end('ok'); return; }
+  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__pot = null; global.__etat = null; global.__subs = []; res.writeHead(200); res.end('ok'); return; }
   if (u.pathname.startsWith('/api/')) { res.writeHead(404); res.end('route inconnue'); return; }
   const f = path.join(DIR, u.pathname === '/' ? 'app.html' : u.pathname.slice(1));
   if (!fs.existsSync(f)) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'content-type': f.endsWith('.html') ? 'text/html;charset=utf-8' : 'application/javascript' });
+  if (f.endsWith('.html')) return res.end(fs.readFileSync(f, 'utf8').replace('__VAPID_PUB__', VAPID_MOCK).replace('__CONTACT__', CONTACT_MOCK));
   res.end(fs.readFileSync(f));
 }).listen(parseInt(process.env.PORT) || 8323, () => console.log('mock sur 8323, coachLie=' + COACH_LIE));

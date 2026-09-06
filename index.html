@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0B0E14">
+<meta name="vapid-pub" content="__VAPID_PUB__">
+<meta name="contact" content="__CONTACT__">
 <title>Level Up !</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -2957,13 +2959,49 @@ const proposerNego = async (code, item, maj) => {
   return "local";
 };
 const yt = nom => "https://www.youtube.com/results?search_query=" + encodeURIComponent(nom.replace(/\(.*?\)/g, "").trim() + " exercice technique");
-const VAPID_PUB = "BFqceDQZrCxkL2itH31sa5FVflAvvc-FMtTcg-sRYqhEX5Jc9r6QNSpahe1GytCXjPfLb9bNIQPlZf8S9GkwK7E";
+/* Notifications push (v20.4) : la clé publique VAPID est injectée par le worker dans la
+   balise <meta name="vapid-pub"> — aucune clé dans le code. Sans clé (worker non configuré,
+   ou page servie hors worker), les rappels sont indisponibles et l'app le dit. */
+const metaContenu = nom => { const m = document.querySelector('meta[name="' + nom + '"]'); const v = m ? m.getAttribute("content") || "" : ""; return /^__/.test(v) ? "" : v; };
+const VAPID_PUB = metaContenu("vapid-pub");
+const CONTACT = metaContenu("contact");
 const b64uVersU8 = s => {
   const pad = "=".repeat((4 - s.length % 4) % 4);
   const b = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
   const u = new Uint8Array(b.length);
   for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
   return u;
+};
+// s'abonne aux rappels avec la clé courante (remplace un abonnement existant) et le dépose sur le worker
+const abonnerPush = async code => {
+  if (!VAPID_PUB) throw new Error("Rappels indisponibles pour le moment (clé push non configurée).");
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications (iPhone : ajoute d'abord l'app à l'écran d'accueil).");
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") throw new Error("Permission refusée dans les réglages du téléphone.");
+  const reg = await navigator.serviceWorker.ready;
+  const ancien = await reg.pushManager.getSubscription();
+  if (ancien) { try { await ancien.unsubscribe(); } catch {} }
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uVersU8(VAPID_PUB) });
+  const r = await fetch(api(code, "/abonner"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sub }) });
+  if (r.status === 503) throw new Error("Rappels indisponibles pour le moment.");
+  if (!r.ok) throw new Error("Serveur injoignable — réessaie plus tard.");
+  return sub;
+};
+// l'abonnement en place a-t-il été pris avec une autre clé que la courante (ou a-t-il disparu) ?
+// Vrai après un changement de clé côté serveur : l'app propose alors de réactiver, en un tap.
+const pushARenouveler = async () => {
+  if (!VAPID_PUB || !("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  try {
+    const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((_, rej) => setTimeout(() => rej(new Error("sw")), 6000))]);
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return true;
+    const k = sub.options && sub.options.applicationServerKey;
+    if (!k) return false;
+    const a = new Uint8Array(k), b = b64uVersU8(VAPID_PUB);
+    return a.length !== b.length || a.some((x, i) => x !== b[i]);
+  } catch {
+    return false;
+  }
 };
 const compresser = file => new Promise((res, rej) => {
   const img = new Image();
@@ -3146,11 +3184,29 @@ function App() {
   const [regen, setRegen] = useState(null); // flux de régénération ouvert : { mode, question }
   const [remplacer, setRemplacer] = useState(null); // exercice en cours de remplacement (v20.1)
   const [adapter, setAdapter] = useState(false); // panneau « Adapter ma séance » (v20.1)
+  const [pushRenouveler, setPushRenouveler] = useState(false); // abonnement push signé avec une ancienne clé (v20.4)
 
   /* ---- chargement + migration + décroissance ---- */
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
+  // rappels voulus, mais abonnement pris avec une autre clé (ou perdu) : une carte, un tap
+  const rappelsVoulus = !!(st && st.reglages && st.reglages.rappels === true);
+  useEffect(() => {
+    if (!rappelsVoulus) { setPushRenouveler(false); return; }
+    let vivant = true;
+    pushARenouveler().then(v => { if (vivant) setPushRenouveler(v); });
+    return () => { vivant = false; };
+  }, [pid, rappelsVoulus]);
+  const renouvelerPush = async () => {
+    try {
+      await abonnerPush(code);
+      setPushRenouveler(false);
+      toast("Rappels réactivés");
+    } catch (e) {
+      toast(String(e.message || e).slice(0, 80));
+    }
+  };
   useEffect(() => {
     if (!profil) return;
     let s;
@@ -4784,7 +4840,9 @@ function App() {
     style: {
       padding: "0 14px 108px"
     }
-  }, role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
+  }, pushRenouveler && /*#__PURE__*/React.createElement(CartePush, {
+    onOui: renouvelerPush
+  }), role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
     onZoom: setZoom,
     code: code,
     onAdresse: a => {
@@ -9581,6 +9639,15 @@ function RecupView({ S, J, onFait, onAnnuler, onValider }) {
 }
 
 /* Le niveau observé bouge, jamais à l'insu : la proposition, et le choix */
+/* Rappels à réactiver (v20.4) : après un changement de clé push côté serveur, l'abonnement en
+   place ne vaut plus rien. Une seule carte, un seul tap, pas de vocabulaire technique. */
+function CartePush({ onOui }) {
+  return h("div", { className: "carte-push", style: { ...GLASS, borderRadius: 14, padding: "12px 14px", marginBottom: 12, borderColor: COL.B + "66" } },
+    h("div", { style: { display: "flex", gap: 10, alignItems: "flex-start" } },
+      h(Ic, { n: "bell", s: 18, c: COL.B }),
+      h("div", { style: { flex: 1, fontSize: 12.5, lineHeight: 1.5, color: INK } }, "On a renforcé la sécurité de l'app. Réactive tes rappels en un tap, et on n'en parle plus.")),
+    h("button", { onClick: onOui, style: { width: "100%", marginTop: 10, background: COL.B, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontWeight: 800, fontSize: 13, touchAction: "manipulation" } }, "Réactiver mes rappels"));
+}
 function CarteNiveau({ proposition, onOui, onNon }) {
   return h("div", { style: { ...GLASS, borderRadius: 14, padding: "12px 14px", marginBottom: 12, borderColor: COL.C + "66" } },
     h("div", { style: { display: "flex", gap: 10, alignItems: "flex-start" } },
@@ -10372,24 +10439,7 @@ function Reglages({
     setBusyPush(true);
     try {
       if (!rappelsOn) {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications (iPhone : ajoute d'abord l'app à l'écran d'accueil).");
-        const perm = await Notification.requestPermission();
-        if (perm !== "granted") throw new Error("Permission refusée dans les réglages du téléphone.");
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: b64uVersU8(VAPID_PUB)
-        });
-        const r = await fetch(api(code, "/abonner"), {
-          method: "POST",
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify({
-            sub
-          })
-        });
-        if (!r.ok) throw new Error("Serveur injoignable — déploiement Worker requis.");
+        await abonnerPush(code);
         maj(s => {
           s.reglages = {
             ...s.reglages,

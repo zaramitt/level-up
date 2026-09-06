@@ -25,3 +25,14 @@ node outils/sync.test.js             # les copies embarquées sont-elles à jour
 Prérequis : Playwright et Chromium (`NODE_PATH=/opt/node22/lib/node_modules`,
 exécutable `/opt/pw-browsers/chromium` dans les suites). `app.html`, les
 captures `.png` et les journaux ne sont pas versionnés.
+
+## Sécurité (v20.4)
+
+- `06-securite-front.js` — clé push injectée par le serveur, carte de
+  réactivation des rappels après changement de clé, rappels indisponibles
+  sans clé (mock 8324, `MOCK_VAPID=off`).
+- `node outils/worker.test.js` — le worker importé dans Node avec un faux KV
+  et un faux `fetch` : aucun secret dans le code, jeton VAPID vérifiable,
+  routes 503 sans secret. À lancer avec le harnais.
+- Le mock injecte une clé publique factice (`meta vapid-pub`) et un contact,
+  comme le worker ; `MOCK_VAPID=off` sert la page sans clé.

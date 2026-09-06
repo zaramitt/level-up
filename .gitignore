@@ -1,0 +1,10 @@
+# secrets et environnement local : jamais dans le dépôt (les secrets vivent dans le dashboard Cloudflare)
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+# outils
+node_modules/
+.wrangler/
+# harnais : fichiers générés (voir outils/tests/.gitignore)
+*.log
