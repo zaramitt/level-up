@@ -191,6 +191,23 @@ const deB64u = s => Buffer.from(s, "base64url");
     const r = await post(env, "/api/duo-testabcd/abonner", { sub: { endpoint: "https://fcm.googleapis.com/fcm/send/abc" } });
     check("clés p256dh / auth obligatoires", r.status === 400 && (await r.json()).erreur === "endpoint_refuse"); }
 
+  console.log("\n=== Photos : JPEG en base64 seulement, identifiant filtré, nosniff, cache privé court ===");
+  { const env = envNu();
+    const jpeg = "data:image/jpeg;base64," + Buffer.from("\xff\xd8\xff\xe0 faux jpeg de test", "binary").toString("base64");
+    const r1 = await post(env, "/api/duo-testabcd/photo", { id: "ph-1", data: jpeg });
+    check("une data URL JPEG base64 est acceptée", r1.status === 200 && (await env.NEGOS.get("duo-testabcd:photo:ph-1")) === jpeg);
+    check("PNG refusé (l'app n'envoie que du JPEG réencodé)", (await post(env, "/api/duo-testabcd/photo", { id: "ph-2", data: "data:image/png;base64,iVBORw0KGgo=" })).status === 400);
+    check("texte libre refusé (pas une image)", (await post(env, "/api/duo-testabcd/photo", { id: "ph-3", data: "<script>alert(1)</script>" })).status === 400);
+    check("base64 corrompu refusé", (await post(env, "/api/duo-testabcd/photo", { id: "ph-4", data: "data:image/jpeg;base64,abc$%^&" })).status === 400);
+    check("identifiant malformé refusé", (await post(env, "/api/duo-testabcd/photo", { id: "../autre", data: jpeg })).status === 400);
+    check("au-delà de 300 000 caractères → refusé", (await post(env, "/api/duo-testabcd/photo", { id: "ph-5", data: "data:image/jpeg;base64," + "A".repeat(300100) })).status === 400);
+    check("au-delà de 400 Ko de corps → 413 avant toute lecture", (await post(env, "/api/duo-testabcd/photo", { id: "ph-6", data: "data:image/jpeg;base64," + "A".repeat(420000) })).status === 413);
+    const g = await appel(env, "/api/duo-testabcd/photo/ph-1");
+    check("lecture : text/plain, nosniff, cache privé d'une heure", g.status === 200 && /^text\/plain/.test(g.headers.get("content-type")) && g.headers.get("x-content-type-options") === "nosniff" && g.headers.get("cache-control") === "private, max-age=3600" && (await g.text()) === jpeg, [g.headers.get("content-type"), g.headers.get("cache-control")].join(" | "));
+    check("photo inconnue → 404", (await appel(env, "/api/duo-testabcd/photo/ph-9")).status === 404);
+    await post(env, "/api/duo-testabcd/supprimer", {});
+    check("/supprimer efface aussi les photos", (await appel(env, "/api/duo-testabcd/photo/ph-1")).status === 404 && [...env.NEGOS.m.keys()].every(k => !k.startsWith("duo-testabcd:"))); }
+
   console.log(`\n${ok}/${ok + ko} vérifications passent` + (ko ? ` — ${ko} en échec` : ""));
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

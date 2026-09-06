@@ -29,6 +29,7 @@ const drapeau = (v) => v ? true : undefined;
 const propre = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
 // tailles maximales du corps des requêtes, par route (caractères)
 const TAILLES = { etat: 65536, photo: 409600, defaut: 2048 };
+const PHOTO_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/;
 // services push acceptés pour /abonner : le worker n'appelle jamais une URL arbitraire
 const HOTES_PUSH = ["web.push.apple.com", "fcm.googleapis.com", "updates.push.services.mozilla.com"];
 const abonnementOk = (s) => {
@@ -238,16 +239,20 @@ export default {
       // ---------- photos ----------
       if (route === "/photo" && req.method === "POST") {
         const { b, erreur } = await lireJson(req, TAILLES.photo); if (erreur) return erreur;
-        if (!idOk(b.id) || !b.data || String(b.data).length > 300000) return new Response("photo invalide", { status: 400 });
-        await env.NEGOS.put(K("photo:" + idOk(b.id)), String(b.data),
-                            { expirationTtl: 60 * 60 * 24 * 90 });
+        // une preuve est un JPEG réencodé par l'app (canvas, 380 px, sans EXIF) : on n'accepte
+        // que cette forme — data URL JPEG en base64 — et rien d'autre
+        const data = String(b.data || "");
+        if (!idOk(b.id) || data.length > 300000 || !PHOTO_RE.test(data)) return new Response("photo invalide", { status: 400 });
+        await env.NEGOS.put(K("photo:" + idOk(b.id)), data, { expirationTtl: 60 * 60 * 24 * 90 });
         return json_({ ok: true });
       }
       const mp = route.match(/^\/photo\/([\w-]{1,40})$/);
       if (mp && req.method === "GET") {
         const d = await env.NEGOS.get(K("photo:" + mp[1]));
-        return d ? new Response(d, { headers: { "content-type": "text/plain",
-                                                "cache-control": "private, max-age=86400" } })
+        // texte (data URL) : jamais interprété autrement, cache privé court pour qu'une suppression se voie vite
+        return d ? new Response(d, { headers: { "content-type": "text/plain;charset=utf-8",
+                                                "x-content-type-options": "nosniff",
+                                                "cache-control": "private, max-age=3600" } })
                  : new Response("not found", { status: 404 });
       }
 
