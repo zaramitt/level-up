@@ -165,6 +165,27 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     check('code inconnu du serveur → enregistré à la volée puis idées obtenues (8 « Idée factice »)', (t.match(/Idée factice/g) || []).length === 8 && (await profilsMock()).codes.includes('solo-neufabcd'), t.slice(-200));
     await ctx.close(); }
 
+  console.log('\n=== Confidentialité et mentions légales : depuis les Réglages, en langage clair ; la promesse à l\'onboarding ===');
+  { const { ctx, p } = await ouvrir({ rappels: false, etat: { profilEnregistre: true } });
+    await p.locator('header button').last().tap(); await p.waitForTimeout(700);
+    await p.locator('button', { hasText: 'Confidentialité et mentions légales' }).first().tap(); await p.waitForTimeout(500);
+    const page = p.locator('.page-confidentialite');
+    check('la page s\'ouvre depuis les Réglages', (await page.count()) === 1);
+    const t = (await page.count()) ? await page.innerText() : '';
+    check('elle dit ce qui est stocké, où, combien de temps, et comment tout effacer', /Sur ton téléphone/.test(t) && /Sur le serveur, en duo/.test(t) && /90 jours/.test(t) && /Effacer les données serveur du duo/.test(t) && /Supprimer ce profil de ce téléphone/.test(t), t.slice(0, 200));
+    check('ce qui part vers l\'IA est dit, et rien d\'autre', /Ce qui part vers l'IA/.test(t) && /sans ton prénom, sans photo/.test(t));
+    check('le contact vient du serveur (variable CONTACT), l\'hébergeur est nommé', /contact@example\.org/.test(t) && /Cloudflare, Inc\./.test(t));
+    check('langage clair : ni « KV », ni « API », ni « RGPD » dans le texte', !/\bKV\b|\bAPI\b|RGPD/.test(t));
+    await p.locator('.page-confidentialite button', { hasText: 'Fermer' }).tap(); await p.waitForTimeout(400);
+    check('« Fermer » referme la page', (await p.locator('.page-confidentialite').count()) === 0);
+    await ctx.close(); }
+  { const ctx = await b.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
+    const p = await ctx.newPage();
+    await p.goto(U, { waitUntil: 'load' }); await p.waitForTimeout(1200);
+    const t = await texte(p);
+    check('onboarding : « Tes photos restent entre vous deux, effaçables à tout moment. » sous la promesse, avant « C\'est parti »', /Quelqu'un qui tient à toi/.test(t) && /Tes photos restent entre vous deux, effaçables à tout moment\./.test(t) && /C'est parti/.test(t), t.slice(0, 300));
+    await ctx.close(); }
+
   await b.close();
   console.log(`\n${ok}/${ok + ko} vérifications passent` + (ko ? ` — ${ko} en échec` : ''));
   process.exit(ko ? 1 : 0);

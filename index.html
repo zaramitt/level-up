@@ -9661,6 +9661,27 @@ function RecupView({ S, J, onFait, onAnnuler, onValider }) {
 }
 
 /* Le niveau observé bouge, jamais à l'insu : la proposition, et le choix */
+/* ============================ CONFIDENTIALITÉ ET MENTIONS LÉGALES (v20.4) ============================ */
+/* En langage clair : ce qui est gardé, où, combien de temps, comment tout effacer, qui contacter.
+   Le contact vient du worker (meta contact, variable CONTACT). Même texte dans CONFIDENTIALITE.md. */
+function Confidentialite({ onFermer }) {
+  const B = ({ t, x }) => h("div", { style: { marginBottom: 12 } },
+    h("div", { style: { fontWeight: 800, fontSize: 13 } }, t),
+    h("div", { style: { fontSize: 12, color: SUB, lineHeight: 1.55, marginTop: 2 } }, x));
+  const contact = CONTACT ? h("a", { href: "mailto:" + CONTACT, style: { color: COL.K, fontWeight: 700 } }, CONTACT) : h("span", null, "l'adresse de contact n'est pas encore renseignée");
+  return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(4,6,10,.72)", display: "grid", placeItems: "center", padding: 20 }, onClick: onFermer },
+    h("div", { className: "page-confidentialite", onClick: e => e.stopPropagation(), style: { background: PAPER, borderRadius: 20, padding: "20px 18px", maxWidth: 380, width: "100%", maxHeight: "85vh", overflowY: "auto" } },
+      h("div", { style: { fontFamily: DISPLAY, fontWeight: 800, fontSize: 17, marginBottom: 4 } }, "Confidentialité et mentions légales"),
+      h("div", { style: { fontSize: 12, color: SUB, lineHeight: 1.5, marginBottom: 14 } }, "En clair : ce que l'app garde, où, combien de temps, et comment tout effacer."),
+      h(B, { t: "Sur ton téléphone", x: "Tout ce que tu fais vit d'abord ici : ton prénom ou pseudo, ton rôle, ton code duo, ta préférence elle / il / neutre, ton programme et tes réponses, tes XP, ton historique, tes charges et ressentis, tes habitudes, et tes photos de preuve — réduites à 380 pixels, sans aucune métadonnée (ni position, ni appareil). En solo, rien de tout ça ne quitte le téléphone, sauf ce qui est écrit plus bas pour l'IA." }),
+      h(B, { t: "Sur le serveur, en duo", x: "Pour que ton coach te suive, l'app publie sous ton code duo : tes XP, tes 30 dernières séances, tes jours actifs, tes jokers, tes pauses, tes photos de preuve, les négociations, les paris, la cagnotte (un compteur, jamais d'argent), ta préférence de rappels et, si tu actives les rappels, l'adresse technique que ton navigateur donne pour les notifications. Le serveur est un Worker Cloudflare avec son espace de stockage ; les données peuvent être répliquées dans plusieurs centres de données, en Europe et ailleurs. Pas de compte, pas d'e-mail, pas de mot de passe, pas de publicité, pas de mesure d'audience : la seule clé, c'est le code duo. Quiconque le connaît peut lire et écrire ces données — ne le partage qu'avec ton coach." }),
+      h(B, { t: "Ce qui part vers l'IA", x: "Deux choses seulement, et seulement si tu les utilises : l'objectif que tu écris en texte libre (pour le traduire en programme) et le contexte que tu tapes pour des idées de récompenses. Ils sont envoyés aux serveurs d'Anthropic (États-Unis), sans ton prénom, sans photo, sans historique. Dix lectures par jour au plus." }),
+      h(B, { t: "Combien de temps", x: "Photos de preuve : 90 jours sur le serveur, puis effacées d'elles-mêmes. Le reste : tant que ton code duo existe. Sur ton téléphone : tant que tu ne l'effaces pas." }),
+      h(B, { t: "Tout effacer", x: "Réglages → Zone danger : « Effacer les données serveur du duo » efface tout ce qui est rangé sous ton code, photos comprises, pour vous deux ; « Supprimer ce profil de ce téléphone » efface ce qui est ici. Ton coach fait la même chose sur son téléphone. Il n'y a pas de compte à fermer, ni de permission à demander." }),
+      h(B, { t: "Tes droits", x: h("span", null, "Accès, rectification, effacement : tout est dans l'app, sans intermédiaire. Pour une question, une demande, ou signaler un problème de sécurité : ", contact, ".") }),
+      h(B, { t: "Mentions légales", x: "Éditeur : la personne joignable à l'adresse ci-dessus, à titre personnel et sans but lucratif. Hébergeur : Cloudflare, Inc., 101 Townsend Street, San Francisco, CA 94107, États-Unis. Le code source de l'app est public. Police Space Grotesk (licence OFL), React (licence MIT)." }),
+      h("button", { onClick: onFermer, style: { width: "100%", marginTop: 6, background: "#F2F5F9", color: "#0B0E14", border: "none", borderRadius: 12, padding: "12px", fontWeight: 800 } }, "Fermer")));
+}
 /* Rappels à réactiver (v20.4) : après un changement de clé push côté serveur, l'abonnement en
    place ne vaut plus rien. Une seule carte, un seul tap, pas de vocabulaire technique. */
 function CartePush({ onOui }) {
@@ -9851,6 +9872,14 @@ function Onboarding({
       textAlign: "center"
     }
   }, "Quelqu'un qui tient à toi devient ", /*#__PURE__*/React.createElement("b", null, "ton coach"), ". Tu prouves tes séances", /*#__PURE__*/React.createElement("b", null, " en photo"), ", tes efforts te font ", /*#__PURE__*/React.createElement("b", null, "monter de niveau"), " — et chaque niveau débloque une ", /*#__PURE__*/React.createElement("b", null, "vraie récompense"), " qu'il ou elle t'offre."), /*#__PURE__*/React.createElement("div", {
+    className: "promesse-photos",
+    style: {
+      fontSize: 11.5,
+      color: SUB,
+      marginTop: 8,
+      lineHeight: 1.45
+    }
+  }, "Tes photos restent entre vous deux, effaçables à tout moment."), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 12,
       display: "grid",
@@ -10433,6 +10462,7 @@ function Reglages({
   onRegen
 }) {
   const [regles, setRegles] = useState(false);
+  const [conf, setConf] = useState(false); // page Confidentialité et mentions légales (v20.4)
   const tx = useRef(0),
     ty = useRef(0); // swipe gauche→droite = fermer, comme dans l'onboarding
   const [pMotif, setPMotif] = useState("");
@@ -11149,7 +11179,22 @@ function Reglages({
       fontWeight: 700,
       fontSize: 12.5
     }
-  }, "Revoir le tuto")), regles && /*#__PURE__*/React.createElement(ReglesJeu, {
+  }, "Revoir le tuto")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConf(true),
+    style: {
+      width: "100%",
+      marginTop: 8,
+      background: GLASSBG,
+      color: INK,
+      border: `1.5px solid ${LINE}`,
+      borderRadius: 12,
+      padding: "11px",
+      fontWeight: 700,
+      fontSize: 12.5
+    }
+  }, "Confidentialité et mentions légales"), conf && /*#__PURE__*/React.createElement(Confidentialite, {
+    onFermer: () => setConf(false)
+  }), regles && /*#__PURE__*/React.createElement(ReglesJeu, {
     onFermer: () => setRegles(false)
   }), /*#__PURE__*/React.createElement(DangerZone, {
     profil: profil,
