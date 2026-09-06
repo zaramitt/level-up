@@ -32,16 +32,33 @@ const PROG_5 = {
 
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
+  const code = (u.pathname.match(/^\/api\/([^/]+)\//) || [])[1] || '';
+  // v20.4 : enregistrement du code ; les routes IA refusent un code jamais enregistré (403), comme le worker
+  global.__profils = global.__profils || new Set();
+  if (/^\/api\/[^/]+\/profil$/.test(u.pathname) && req.method === 'POST') { lire(req, () => { global.__profils.add(code); global.__enregistrements = (global.__enregistrements || 0) + 1; json(res, 200, { ok: true }); }); return; }
+  // garde IA commune : MOCK_IA=off → 503 ; code inconnu → 403 ; un code contenant « budget » → 429 budget, « quota » → 429 quota
+  const gardeIA = () => {
+    if (process.env.MOCK_IA === 'off') { json(res, 503, { erreur: 'non_configure' }); return true; }
+    if (!global.__profils.has(code)) { json(res, 403, { erreur: 'code_inconnu' }); return true; }
+    if (/budget/.test(code)) { json(res, 429, { erreur: 'budget' }); return true; }
+    if (/quota/.test(code)) { json(res, 429, { erreur: 'quota' }); return true; }
+    return false;
+  };
   // v20.0 : lecture IA de l'objectif libre (le programme est calculé dans l'app). MOCK_IA=off → 503, MOCK_IA=ko → 502
   if (/^\/api\/[^/]+\/interpreter$/.test(u.pathname) && req.method === 'POST') {
-    let body = '';
-    req.on('data', c => body += c);
-    req.on('end', () => {
+    lire(req, body => {
       console.log('MOCK /interpreter reçu:', body.slice(0, 160));
-      if (process.env.MOCK_IA === 'off') { res.writeHead(503, { 'content-type': 'application/json' }); res.end(JSON.stringify({ erreur: 'non_configure' })); return; }
+      if (gardeIA()) return;
       if (process.env.MOCK_IA === 'ko') { res.writeHead(502); res.end('lecture impossible'); return; }
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ base: 'tonifier', prioritaires: ['fessiers', 'quadriceps'] }));
+      json(res, 200, { base: 'tonifier', prioritaires: ['fessiers', 'quadriceps'] });
+    });
+    return;
+  }
+  if (/^\/api\/[^/]+\/idees$/.test(u.pathname) && req.method === 'POST') {
+    lire(req, body => {
+      console.log('MOCK /idees reçu:', body.slice(0, 160));
+      if (gardeIA()) return;
+      json(res, 200, [2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: 'Idée factice ' + (i + 1) })));
     });
     return;
   }
@@ -147,7 +164,8 @@ http.createServer((req, res) => {
     });
     return;
   }
-  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__pot = null; global.__etat = null; global.__subs = []; res.writeHead(200); res.end('ok'); return; }
+  if (u.pathname === '/__profils') { json(res, 200, { codes: [...global.__profils], enregistrements: global.__enregistrements || 0 }); return; }
+  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__pot = null; global.__etat = null; global.__subs = []; global.__profils = new Set(); global.__enregistrements = 0; res.writeHead(200); res.end('ok'); return; }
   if (u.pathname.startsWith('/api/')) { res.writeHead(404); res.end('route inconnue'); return; }
   const f = path.join(DIR, u.pathname === '/' ? 'app.html' : u.pathname.slice(1));
   if (!fs.existsSync(f)) { res.writeHead(404); res.end('nf'); return; }

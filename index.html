@@ -3190,6 +3190,12 @@ function App() {
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
+  // enregistrement du code côté serveur, une fois par profil (v20.4) — les routes IA le demandent
+  const profilEnregistre = !!(st && st.profilEnregistre);
+  useEffect(() => {
+    if (!st || profilEnregistre || !code) return;
+    enregistrerCode(code).then(r => { if (r.ok) maj(s => { s.profilEnregistre = true; return s; }); }).catch(() => {});
+  }, [pid, profilEnregistre, !!st]);
   // rappels voulus, mais abonnement pris avec une autre clé (ou perdu) : une carte, un tap
   const rappelsVoulus = !!(st && st.reglages && st.reglages.rappels === true);
   useEffect(() => {
@@ -9250,17 +9256,28 @@ const h = React.createElement;
 // le moteur et la banque sont embarqués dans la page (copies synchronisées par outils/sync.js)
 const genererAvecMoteur = reponses => window.Moteur.programmePourApp(reponses, window.BANQUE);
 // point d'extension IA : l'objectif en texte libre → muscles prioritaires. Toute erreur = repli honnête.
+// enregistre le code duo côté serveur (v20.4) : les routes IA refusent un code inconnu.
+// Idempotent, appelé à la création du profil, au premier démarrage, et sur un refus 403.
+const enregistrerCode = code => fetch(api(code, "/profil"), { method: "POST" });
+// raison lisible d'un refus IA : quota du code, budget de toute l'app, ou autre
+const raisonRefus = async r => {
+  if (r.status === 503) return "nonconfig";
+  if (r.status === 429) { try { const d = await r.json(); return d.erreur === "budget" ? "budget" : "quota"; } catch { return "quota"; } }
+  return "echec";
+};
 const interpreterObjectif = async (code, texte) => {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 9000);
   try {
-    const r = await fetch(api(code, "/interpreter"), {
+    const appel = () => fetch(api(code, "/interpreter"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ objectif: texte }),
       signal: ctrl.signal
     });
-    if (!r.ok) return { repli: true, raison: r.status === 503 ? "nonconfig" : "echec" };
+    let r = await appel();
+    if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
+    if (!r.ok) return { repli: true, raison: await raisonRefus(r) };
     const d = await r.json();
     if (!d || typeof d.base !== "string") return { repli: true, raison: "format" };
     return { base: d.base, prioritaires: Array.isArray(d.prioritaires) ? d.prioritaires.map(String).slice(0, 6) : [] };
@@ -10282,7 +10299,7 @@ function Onboarding({
       color: SUB,
       lineHeight: 1.5
     }
-  }, interp && interp.raison === "nonconfig" ? "La lecture de ton objectif par l'IA n'est pas activée ici : programme esthétique équilibré, tu pourras préciser dans les réglages. " : "Je n'ai pas réussi à lire ton objectif : programme esthétique équilibré, modifiable dans les réglages. ", /*#__PURE__*/React.createElement("button", {
+  }, interp && interp.raison === "nonconfig" ? "La lecture de ton objectif par l'IA n'est pas activée ici : programme esthétique équilibré, tu pourras préciser dans les réglages. " : interp && interp.raison === "budget" ? "Le quota de lecture du jour est atteint pour toute l'app : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : interp && interp.raison === "quota" ? "Tu as utilisé tes 10 lectures du jour : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : "Je n'ai pas réussi à lire ton objectif : programme esthétique équilibré, modifiable dans les réglages. ", /*#__PURE__*/React.createElement("button", {
     onClick: relire,
     style: {
       background: "none",
@@ -12131,7 +12148,7 @@ function Idees({
   const generer = async () => {
     setBusy(true);
     try {
-      const r = await fetch(api(code, "/idees"), {
+      const appel = () => fetch(api(code, "/idees"), {
         method: "POST",
         headers: {
           "content-type": "application/json"
@@ -12142,7 +12159,9 @@ function Idees({
           contexte
         })
       });
-      if (r.status === 503) toast("Génération non configurée (clé API manquante)");else if (r.status === 429) toast("Limite du jour atteinte — réessaie demain");else if (!r.ok) toast("Oups, réessaie");else setListe(await r.json());
+      let r = await appel();
+      if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
+      if (r.status === 503) toast("Génération non configurée (clé API manquante)");else if (r.status === 429) toast((await raisonRefus(r)) === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : "Tu as utilisé tes 10 idées du jour — réessaie demain");else if (!r.ok) toast("Oups, réessaie");else setListe(await r.json());
     } catch {
       toast("Serveur injoignable");
     }

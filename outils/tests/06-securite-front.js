@@ -30,7 +30,7 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     window.PushManager = function () {};
     window.Notification = { requestPermission: async () => 'granted', permission: 'granted' };
   };
-  const ouvrir = async ({ url = U, rappels = true, push }) => {
+  const ouvrir = async ({ url = U, rappels = true, push, code = 'duo-testabcd', solo = false, role = 'coachee', etat = {} }) => {
     const ctx = await b.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
     await ctx.route(/fonts\.googleapis|fonts\.gstatic|cdnjs\.cloudflare/, r => r.abort());
     const p = await ctx.newPage();
@@ -39,14 +39,16 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     if (push) await p.addInitScript(fauxPush, push);
     await p.addInitScript(([ex, jk]) => {
       if (localStorage.getItem('lvlup-actif')) return;
-      localStorage.setItem('lvlup-profils', JSON.stringify([{ id: 'x6', nom: 'Sam', role: 'coachee', solo: false, code: 'duo-testabcd' }]));
+      localStorage.setItem('lvlup-profils', JSON.stringify([{ id: 'x6', nom: 'Sam', role: ex.role, solo: ex.solo, code: ex.code }]));
       localStorage.setItem('lvlup-actif', 'x6'); localStorage.setItem('lvlup-tour:x6', '1');
-      localStorage.setItem('lvlup-s:x6', JSON.stringify({ programme: 'perso', programmePerso: ex.prog, reponses: {}, xp: 100, styles: ['soins'], kiffs: [], recompenses: [], negos: [], negosImportes: {}, drops: [], charges: {}, histo: [], jour: {}, habitudes: {}, defis: {}, activeDays: {}, decayCursor: jk, reglages: { photoOblig: false, decay: false, sons: false, rappels: ex.rappels }, adresse: 'neutre', vus: { jour: 1, hab: 1, prog: 1, rec: 1, suivi: 1, rec_coach: 1 } }));
-    }, [{ prog, rappels }, jour]);
+      localStorage.setItem('lvlup-s:x6', JSON.stringify({ programme: 'perso', programmePerso: ex.prog, reponses: {}, xp: 100, styles: ['soins'], kiffs: [], recompenses: [], negos: [], negosImportes: {}, drops: [], charges: {}, histo: [], jour: {}, habitudes: {}, defis: {}, activeDays: {}, decayCursor: jk, reglages: { photoOblig: false, decay: false, sons: false, rappels: ex.rappels }, adresse: 'neutre', vus: { jour: 1, hab: 1, prog: 1, rec: 1, suivi: 1, rec_coach: 1 }, ...ex.etat }));
+    }, [{ prog, rappels, code, solo, role, etat }, jour]);
     await p.goto(url, { waitUntil: 'load' }); await p.waitForTimeout(1500);
     return { ctx, p };
   };
   const texte = p => p.evaluate(() => document.body.innerText);
+  const etatLocal = p => p.evaluate(() => JSON.parse(localStorage.getItem('lvlup-s:x6')));
+  const profilsMock = async () => { const r = await fetch('http://127.0.0.1:8323/__profils'); return r.json(); };
 
   console.log('=== La clé publique push vient du serveur, jamais du code ===');
   { const { ctx, p } = await ouvrir({ rappels: false });
@@ -93,6 +95,39 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     await ctx.close(); }
   { const { ctx, p } = await ouvrir({ url: U_SANS, rappels: true, push: { cleAbonnement: Array(65).fill(9) } });
     check('sans clé côté serveur : pas de carte de réactivation (rien à réactiver vers)', (await p.locator('.carte-push').count()) === 0);
+    await ctx.close(); }
+
+  console.log('\n=== Routes IA : le code est enregistré côté serveur, une fois ; les refus sont dits clairement ===');
+  { await fetch('http://127.0.0.1:8323/__reset');
+    const { ctx, p } = await ouvrir({ rappels: false, code: 'duo-enregabcd' });
+    await p.waitForTimeout(600);
+    let m = await profilsMock();
+    check('un profil existant enregistre son code au premier démarrage (POST /profil)', m.codes.includes('duo-enregabcd') && m.enregistrements === 1, JSON.stringify(m));
+    check('… et s\'en souvient (profilEnregistre)', (await etatLocal(p)).profilEnregistre === true);
+    await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(1500);
+    m = await profilsMock();
+    check('au démarrage suivant, pas de nouvel enregistrement', m.enregistrements === 1, JSON.stringify(m));
+    await ctx.close(); }
+  { const { ctx, p } = await ouvrir({ rappels: false, code: 'solo-budgetabcd', solo: true, etat: { profilEnregistre: true } });
+    await p.locator('button', { hasText: 'Récomp.' }).first().tap(); await p.waitForTimeout(700);
+    const bouton = p.locator('button', { hasText: 'Générer des idées de récompenses' });
+    check('le panneau d\'idées est là (profil solo, récompenses auto-définies)', (await bouton.count()) === 1);
+    await bouton.first().tap(); await p.waitForTimeout(900);
+    const t = await texte(p);
+    check('budget de toute l\'app atteint → « Le quota d\'idées du jour est atteint pour toute l\'app — réessaie demain »', /Le quota d'idées du jour est atteint pour toute l'app — réessaie demain/.test(t), t.slice(-250));
+    await ctx.close(); }
+  { const { ctx, p } = await ouvrir({ rappels: false, code: 'solo-quotaabcd', solo: true, etat: { profilEnregistre: true } });
+    await p.locator('button', { hasText: 'Récomp.' }).first().tap(); await p.waitForTimeout(700);
+    await p.locator('button', { hasText: 'Générer des idées de récompenses' }).first().tap(); await p.waitForTimeout(900);
+    check('quota du code atteint → « Tu as utilisé tes 10 idées du jour — réessaie demain »', /Tu as utilisé tes 10 idées du jour — réessaie demain/.test(await texte(p)));
+    await ctx.close(); }
+  { // un code jamais enregistré côté serveur (mock relancé) : le premier refus 403 déclenche l'enregistrement, puis l'appel repasse
+    await fetch('http://127.0.0.1:8323/__reset');
+    const { ctx, p } = await ouvrir({ rappels: false, code: 'solo-neufabcd', solo: true, etat: { profilEnregistre: true } });
+    await p.locator('button', { hasText: 'Récomp.' }).first().tap(); await p.waitForTimeout(700);
+    await p.locator('button', { hasText: 'Générer des idées de récompenses' }).first().tap(); await p.waitForTimeout(1200);
+    const t = await texte(p);
+    check('code inconnu du serveur → enregistré à la volée puis idées obtenues (8 « Idée factice »)', (t.match(/Idée factice/g) || []).length === 8 && (await profilsMock()).codes.includes('solo-neufabcd'), t.slice(-200));
     await ctx.close(); }
 
   await b.close();
