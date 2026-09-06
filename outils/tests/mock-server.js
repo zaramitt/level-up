@@ -67,7 +67,13 @@ http.createServer((req, res) => {
     lire(req, body => {
       console.log('MOCK ' + u.pathname.split('/').pop() + ' reçu:', body.slice(0, 160));
       if (!VAPID_MOCK) return json(res, 503, { erreur: 'non_configure' });
-      if (u.pathname.endsWith('/abonner')) { global.__subs = global.__subs || []; try { global.__subs.push(JSON.parse(body).sub); } catch {} return json(res, 200, { ok: true }); }
+      if (u.pathname.endsWith('/abonner')) {
+        global.__subs = global.__subs || [];
+        let sub = null; try { sub = JSON.parse(body).sub; } catch {}
+        const hote = (() => { try { return new URL(sub.endpoint).hostname; } catch { return ''; } })();
+        if (!['web.push.apple.com', 'fcm.googleapis.com', 'updates.push.services.mozilla.com'].includes(hote)) return json(res, 400, { erreur: 'endpoint_refuse' });
+        global.__subs.push(sub); return json(res, 200, { ok: true });
+      }
       json(res, 200, { envoyes: (global.__subs || []).length });
     });
     return;

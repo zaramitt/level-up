@@ -147,6 +147,50 @@ const deB64u = s => Buffer.from(s, "base64url");
       check("budget /interpreter (100/jour) → 429 budget", r3.status === 429 && (await r3.json()).erreur === "budget" && appels2.length === 1); }
   } finally { globalThis.fetch = vraiFetch2; }
 
+  console.log("\n=== Validation : tailles bornées, liste blanche de /etat, identifiants filtrés, services push connus, no-store ===");
+  { const env = envNu();
+    const r = await post(env, "/api/duo-testabcd/etat", JSON.stringify({ xp: 1, histo: [{ date: "2026-09-01", type: "A", bourrage: "x".repeat(70000) }] }));
+    check("/etat de plus de 64 Ko → 413, rien n'est écrit", r.status === 413 && env.NEGOS.ecritures === 0);
+    const r2 = await post(env, "/api/duo-testabcd/negos", JSON.stringify({ action: "proposer", label: "x".repeat(3000), niveau: 2 }));
+    check("/negos de plus de 2 Ko → 413", r2.status === 413);
+    const r3 = await post(env, "/api/duo-testabcd/pot", "{pas du json");
+    check("JSON invalide → 400", r3.status === 400); }
+  { const env = envNu();
+    const brut = { xp: "99999999999", adresse: "elle", histo: [
+        { date: "2026-09-01", type: "A", nomS: "Haut du corps", xp: "99999999999", secret: "fuite", photos: ["ok-1", "pas bon !", "ok-2"], adaptee: 1, partiel: 0 },
+        { foo: 1 }, "texte", null, { date: "pas une date", type: "A" }],
+      photosMeta: [{ id: "p1", exId: "squat", date: "2026-09-01", extra: "fuite" }, { id: "mauvais id" }, "texte"],
+      jours: { "2026-09-01": true, "nope": true, "2026-09-02": false, "2026-09-03": 1 },
+      pauses: [{ debut: "2026-08-01", fin: "2026-08-03", motif: "m".repeat(200), autre: 1 }, { debut: "x" }],
+      jokersMois: 99, interne: "fuite" };
+    const r = await post(env, "/api/duo-testabcd/etat", brut);
+    const e = await (await appel(env, "/api/duo-testabcd/etat")).json();
+    check("/etat : XP borné à 1 000 000, jokers à 9, champ inconnu absent", r.status === 200 && e.xp === 1e6 && e.jokersMois === 9 && !("interne" in e));
+    check("histo : seuls les objets datés et typés restent, champs connus seulement, XP borné, photos filtrées, drapeaux vrais seulement", e.histo.length === 1 && !("secret" in e.histo[0]) && e.histo[0].xp === 1e6 && JSON.stringify(e.histo[0].photos) === JSON.stringify(["ok-1", "ok-2"]) && e.histo[0].adaptee === true && !("partiel" in e.histo[0]) && e.histo[0].nomS === "Haut du corps", JSON.stringify(e.histo));
+    check("photosMeta : identifiants filtrés, champ inconnu absent", e.photosMeta.length === 1 && e.photosMeta[0].id === "p1" && e.photosMeta[0].exId === "squat" && !("extra" in e.photosMeta[0]), JSON.stringify(e.photosMeta));
+    check("jours : clés AAAA-MM-JJ vraies seulement, valeurs normalisées à true", JSON.stringify(e.jours) === JSON.stringify({ "2026-09-01": true, "2026-09-03": true }), JSON.stringify(e.jours));
+    check("pauses : début et fin obligatoires, motif borné à 80", e.pauses.length === 1 && e.pauses[0].motif.length === 80 && !("autre" in e.pauses[0]), JSON.stringify(e.pauses)); }
+  { const env = envNu();
+    const r1 = await post(env, "/api/duo-testabcd/negos", { action: "proposer", label: "Un resto", niveau: 3, id: { pas: "une chaîne" } });
+    const l1 = await r1.json();
+    check("/negos : un identifiant qui n'est pas un [\\w-]{1,40} est remplacé par un UUID", r1.status === 200 && l1.length === 1 && /^[0-9a-f-]{36}$/.test(l1[0].id), JSON.stringify(l1[0]));
+    const r2 = await post(env, "/api/duo-testabcd/negos", { action: "accepter", id: { pas: "une chaîne" }, niveau: 3 });
+    const l2 = await r2.json();
+    check("… et un identifiant malformé ne trouve rien (statut inchangé)", r2.status === 200 && l2[0].statut === "proposee");
+    check("les réponses JSON portent cache-control: no-store", r2.headers.get("cache-control") === "no-store" && (await appel(env, "/api/duo-testabcd/negos")).headers.get("cache-control") === "no-store");
+    const r3 = await post(env, "/api/duo-testabcd/paris", { action: "accepter", id: ["tableau"] });
+    check("/paris : identifiant malformé, pas de plantage", r3.status === 200); }
+  { const env = envPush();
+    const essai = async (endpoint, extra) => { const r = await post(env, "/api/duo-testabcd/abonner", { sub: { endpoint, keys: { p256dh: "p", auth: "a" }, ...(extra || {}) } }); return r.status; };
+    check("/abonner refuse un endpoint http", await essai("http://fcm.googleapis.com/fcm/send/x") === 400);
+    check("/abonner refuse un hôte inconnu (le worker n'appellera jamais une URL arbitraire)", await essai("https://evil.example.com/collecte") === 400);
+    check("/abonner refuse Windows/WNS (hors liste : Apple, Google/FCM, Mozilla)", await essai("https://wns2-par02p.notify.windows.com/w/?token=x") === 400);
+    check("/abonner accepte FCM, Mozilla, Apple", await essai("https://fcm.googleapis.com/fcm/send/abc") === 200 && await essai("https://updates.push.services.mozilla.com/wpush/v2/abc") === 200 && await essai("https://web.push.apple.com/abc", { extra: "fuite", expirationTime: null }) === 200);
+    const subs = JSON.parse(await env.NEGOS.get("duo-testabcd:subs"));
+    check("seuls endpoint et keys sont conservés", subs.length === 3 && subs.every(x => JSON.stringify(Object.keys(x).sort()) === JSON.stringify(["endpoint", "keys"])), JSON.stringify(subs[2]));
+    const r = await post(env, "/api/duo-testabcd/abonner", { sub: { endpoint: "https://fcm.googleapis.com/fcm/send/abc" } });
+    check("clés p256dh / auth obligatoires", r.status === 400 && (await r.json()).erreur === "endpoint_refuse"); }
+
   console.log(`\n${ok}/${ok + ko} vérifications passent` + (ko ? ` — ${ko} en échec` : ""));
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

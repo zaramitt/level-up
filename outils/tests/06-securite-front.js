@@ -15,12 +15,12 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--disable-features=OverscrollHistoryNavigation'] });
   // remplace l'API push du navigateur : un abonnement en place pris avec `cleAbonnement`
   // (octets), et un faux gestionnaire qui note ce qu'on lui demande
-  const fauxPush = ({ cleAbonnement, sansAbonnement }) => {
+  const fauxPush = ({ cleAbonnement, sansAbonnement, endpoint }) => {
     const reg = { pushManager: {
       getSubscription: async () => window.__sub,
       subscribe: async o => {
         window.__abonneAvec = Array.from(new Uint8Array(o.applicationServerKey));
-        window.__sub = { endpoint: 'https://web.push.apple.com/nouveau', options: { applicationServerKey: o.applicationServerKey },
+        window.__sub = { endpoint: endpoint || 'https://web.push.apple.com/nouveau', options: { applicationServerKey: o.applicationServerKey },
           toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'p', auth: 'a' } }; }, unsubscribe: async () => true };
         return window.__sub;
       } } };
@@ -95,6 +95,14 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     await ctx.close(); }
   { const { ctx, p } = await ouvrir({ url: U_SANS, rappels: true, push: { cleAbonnement: Array(65).fill(9) } });
     check('sans clé côté serveur : pas de carte de réactivation (rien à réactiver vers)', (await p.locator('.carte-push').count()) === 0);
+    await ctx.close(); }
+
+  console.log('\n=== Service push hors liste (Apple, Google/FCM, Mozilla) : refusé, dit simplement ===');
+  { const { ctx, p } = await ouvrir({ rappels: false, push: { sansAbonnement: true, endpoint: 'https://wns2-par02p.notify.windows.com/w/?token=x' } });
+    await p.locator('header button').last().tap(); await p.waitForTimeout(700);
+    await p.locator('xpath=//div[div[normalize-space()="Rappel du soir"]]/following-sibling::button[1]').first().tap(); await p.waitForTimeout(800);
+    const t = await texte(p);
+    check('endpoint refusé par le serveur → « Ce service de notifications n\'est pas encore accepté par l\'app », rappels non activés', /service de notifications n'est pas encore accepté par l'app/.test(t) && (await etatLocal(p)).reglages.rappels !== true, t.slice(-200));
     await ctx.close(); }
 
   console.log('\n=== Routes IA : le code est enregistré côté serveur, une fois ; les refus sont dits clairement ===');

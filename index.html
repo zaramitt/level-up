@@ -2984,6 +2984,7 @@ const abonnerPush = async code => {
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uVersU8(VAPID_PUB) });
   const r = await fetch(api(code, "/abonner"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sub }) });
   if (r.status === 503) throw new Error("Rappels indisponibles pour le moment.");
+  if (r.status === 400) { try { await sub.unsubscribe(); } catch {} throw new Error("Ce service de notifications n'est pas encore accepté par l'app."); }
   if (!r.ok) throw new Error("Serveur injoignable — réessaie plus tard.");
   return sub;
 };
