@@ -30,9 +30,17 @@ captures `.png` et les journaux ne sont pas versionnés.
 
 - `06-securite-front.js` — clé push injectée par le serveur, carte de
   réactivation des rappels après changement de clé, rappels indisponibles
-  sans clé (mock 8324, `MOCK_VAPID=off`).
+  sans clé (mock 8324, `MOCK_VAPID=off`), service push refusé, enregistrement
+  du code (`/profil`) et messages de quota, CSP réelle rejouée sur un
+  parcours (aucune violation, aucune requête vers un tiers, police chargée),
+  page Confidentialité, phrase d'onboarding.
 - `node outils/worker.test.js` — le worker importé dans Node avec un faux KV
   et un faux `fetch` : aucun secret dans le code, jeton VAPID vérifiable,
-  routes 503 sans secret. À lancer avec le harnais.
-- Le mock injecte une clé publique factice (`meta vapid-pub`) et un contact,
-  comme le worker ; `MOCK_VAPID=off` sert la page sans clé.
+  routes 503 sans secret, quotas et budget IA, validation, photos, en-têtes,
+  limitation de débit. À lancer avec le harnais.
+- Le mock sert la page à travers `preparerPage` (exportée par `worker.js`) :
+  mêmes en-têtes et même CSP à nonce que le vrai worker ; il injecte une clé
+  publique factice (`meta vapid-pub`) et un contact ; `MOCK_VAPID=off` sert
+  la page sans clé ; les routes IA refusent un code jamais enregistré, un
+  code contenant `budget` ou `quota` provoque le refus correspondant ; la
+  police est servie depuis `outils/polices`.

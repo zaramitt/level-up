@@ -210,6 +210,63 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.4 — septembre 2026
+
+Chantier sécurité, temps 2 (l'audit est dans `SECURITE.md`). Ce qui a été
+décidé, et pourquoi :
+
+- **Aucun secret dans le code, jamais.** La clé privée VAPID était en clair
+  dans `worker.js` depuis le premier commit, dépôt public : régénérée, elle vit
+  dans le dashboard (`VAPID_PRIV`), la clé publique aussi (`VAPID_PUB`,
+  injectée dans la page). Purger l'historique git aurait été inutile : la clé
+  était déjà copiée partout. Révoquer suffit.
+- **Réactivation des rappels : une carte, un tap, sans jargon.** Un
+  abonnement pris avec l'ancienne clé ne vaut plus rien ; l'app le détecte
+  (clé de l'abonnement ≠ clé courante) et propose « On a renforcé la sécurité
+  de l'app. Réactive tes rappels en un tap ». Pas de message technique.
+- **Un code inconnu = zéro appel IA.** Le quota par code ne bornait rien
+  puisque tout code de 8 à 30 caractères était accepté. Désormais l'app
+  enregistre son code (`/profil`) et l'IA refuse les autres ; un budget
+  journalier pour toute l'app (150 idées, 100 lectures) plafonne la facture
+  quoi qu'il arrive. Le message dit quel quota est atteint (le sien, ou celui
+  de l'app pour la journée).
+- **Ce que la personne tape ne va jamais dans le prompt système.** Le
+  contexte des idées passe dans le message utilisateur, présenté comme une
+  indication de goût.
+- **Le worker n'appelle jamais une URL arbitraire.** `/abonner` n'accepte que
+  les services push d'Apple, de Google (FCM) et de Mozilla. Edge sur Windows
+  (WNS) est donc refusé, l'app le dit : à élargir si une utilisatrice le
+  demande.
+- **Le serveur ne garde que ce que l'écran Suivi lit.** Liste blanche des
+  champs de `/etat`, tailles bornées par route. Les XP restent calculés par le
+  client : un client modifié peut se mentir, la photo reste la preuve, le
+  serveur n'a pas les règles pour recalculer et ne les aura pas.
+- **Pas de séparation des rôles côté serveur pour l'instant.** La coachée
+  peut forger une action coach et inversement ; c'est une limite de
+  l'architecture « un code = une capacité », acceptée pour un duo de confiance
+  sans argent réel. Le schéma « un secret par rôle » est au backlog, priorité
+  haute, prérequis avant ouverture hors du cercle proche.
+- **Limitation de débit dans le worker, pas dans le WAF.** Sur `workers.dev`
+  il n'y a pas de zone, donc pas de règle WAF ni de limitation de débit
+  dashboard : un compteur par IP en mémoire (par isolat) freine les boucles ;
+  le budget journalier reste le vrai plafond. À revoir le jour d'un domaine
+  à soi.
+- **Space Grotesk auto-hébergée.** Google Fonts recevait l'adresse IP de
+  chaque utilisatrice à chaque ouverture (le cas jugé à Munich en 2022) ; la
+  police (OFL) est servie par le worker, embarquée par `outils/sync.js`.
+- **CSP à nonce plutôt qu'à empreintes.** Les scripts en ligne changent à
+  chaque livraison ; le nonce est posé à la volée par le worker et rejoué par
+  le mock du harnais, ce qui teste la CSP réelle sur un parcours.
+- **Page « Confidentialité et mentions légales » en langage clair**, depuis
+  les Réglages, même texte dans `CONFIDENTIALITE.md` ; ni « KV », ni « API »,
+  ni « RGPD » dans le texte. L'éditeur est désigné par l'adresse de contact
+  (variable `CONTACT`), pas par un nom en dur dans un dépôt public.
+- **Le code duo reste dans l'URL.** Passage en en-tête évalué : gain marginal
+  (seuls les journaux Cloudflare optionnels le voient), ~25 points d'appel.
+  Pas fait.
+- **Photos : pas de chiffrement côté client pour l'instant.** Ça protégerait
+  contre une fuite KV, pas contre qui a le code ; au backlog.
+
 ## v20.3 — septembre 2026
 
 Chantier Programmes, étape 3 passe 2, commit 3 : **les textes des bulles

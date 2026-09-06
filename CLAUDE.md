@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.3**
+Version actuelle : **v20.4**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.3"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.4"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -32,7 +32,9 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   `<script id="banque-exercices">`) : la génération se fait dans l'app,
   instantanément et hors ligne.
 - `outils/sync.js` — synchronise les copies embarquées : moteur + banque →
-  `index.html`, puis `index.html` → `worker.js` (ligne 5). **`node
+  `index.html`, puis `index.html` → `worker.js` (ligne 5), et la police
+  `outils/polices/space-grotesk-latin.woff2` → `worker.js` (ligne 6, base64 ;
+  le worker la sert sur `/polices/space-grotesk.woff2`). **`node
   outils/sync.js` avant chaque commit touchant au moteur ou à la banque ; le
   test de synchronisation (`node outils/sync.test.js`) le vérifie.** Les
   copies ne s'éditent jamais à la main.
@@ -40,10 +42,19 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   worker), `lancer.js` (construit `app.html`, lance les mocks, joue les suites
   dans l'ordre), et les suites numérotées — `01-securite-profils-existants.js`
   en premier (aucun profil existant ne change de programme sans action
-  explicite), puis v20.0 et les non-régressions v19.10 → v19.21.
+  explicite), puis v20.0, la séance vivante, le graphique, les bulles, la
+  sécurité côté front (`06-securite-front.js`) et les non-régressions
+  v19.10 → v19.21.
+- `outils/worker.test.js` — le worker importé dans Node avec un faux KV et un
+  faux `fetch` : secrets hors du code, en-têtes, validation, quotas, photos,
+  limitation de débit. `node outils/worker.test.js`, à chaque modification
+  de `worker.js`.
+- `SECURITE.md` — l'audit de sécurité (temps 1) et ce qui a été fait (temps 2),
+  avec les actions qui restent côté dashboard. `CONFIDENTIALITE.md` — le texte
+  de la page « Confidentialité et mentions légales » des Réglages.
 - `wrangler.jsonc` — configuration de déploiement (Workers Builds) : nom, point
-  d'entrée, liaison KV et crons ; le secret `ANTHROPIC_API_KEY` vit côté
-  Cloudflare, pas dans ce fichier
+  d'entrée, liaison KV et crons ; **aucun secret** dans ce fichier ni dans le
+  code : tout vit dans le dashboard Cloudflare (tableau ci-dessous)
 
 Configuration Cloudflare :
 
@@ -51,7 +62,10 @@ Configuration Cloudflare :
 |---|---|
 | Namespace KV | `LEVELUP` |
 | Variable de liaison (binding) | `NEGOS` ⚠️ nom historique, ne pas renommer sans migrer les clés |
-| Secret | `ANTHROPIC_API_KEY` |
+| Secret `ANTHROPIC_API_KEY` | clé de l'API Anthropic (routes IA) |
+| Secret `VAPID_PRIV` | clé privée des notifications push (paire générée par `node outils/vapid.js`) |
+| Variable `VAPID_PUB` | clé publique correspondante, injectée dans la page (`<meta name="vapid-pub">`) |
+| Variable `CONTACT` (facultative) | adresse de contact : sujet VAPID et page Confidentialité (`<meta name="contact">`) |
 | Cron rappel du soir | `0 18 * * *` |
 | Cron compléments du matin | `0 6 * * *` |
 
@@ -77,19 +91,30 @@ par le code duo (`<code>:etat`, `<code>:negos`…).
 | `/paris` | GET, POST | paris coach / coaché |
 | `/pot` | GET, POST | pot commun (cumul du mois en euros + historique), alimenté par les pertes d'XP |
 | `/pause` | GET, POST | demande de pause et pause active |
-| `/photo` | POST | dépôt d'une preuve photo (300 000 caractères max, TTL 90 jours) |
-| `/photo/<id>` | GET | lecture d'une preuve photo |
+| `/photo` | POST | dépôt d'une preuve photo : data URL **JPEG base64 seulement**, 300 000 caractères max, TTL 90 jours |
+| `/photo/<id>` | GET | lecture d'une preuve photo (texte, `nosniff`, cache privé 1 h) |
 | `/rappels` | GET, POST | préférences de rappels (drapeau `matin`) |
-| `/abonner` | POST | enregistrement d'un abonnement push (4 derniers conservés) |
+| `/abonner` | POST | enregistrement d'un abonnement push (4 derniers conservés) — **services acceptés : Apple, Google/FCM, Mozilla** ; `503` sans clé VAPID |
 | `/desabonner` | POST | retrait d'un abonnement push |
-| `/testpush` | POST | envoi d'une notification de test |
-| `/idees` | POST | idées de récompenses via l'API Anthropic (quota journalier par code) |
-| `/interpreter` | POST | lecture IA d'un objectif en texte libre → `{base, prioritaires}` pour le moteur (quota 10/jour par code). Remplace `/generer` (v20.0) |
-| `/supprimer` | POST | purge de **toutes** les clés KV du code duo |
+| `/testpush` | POST | envoi d'une notification de test (`503` sans clé VAPID) |
+| `/profil` | POST | enregistrement du code (v20.4) : l'app l'appelle à la création d'un profil et au premier démarrage ; **un code jamais enregistré n'a droit à aucun appel IA** (`403 code_inconnu`) |
+| `/idees` | POST | idées de récompenses via l'API Anthropic — 10/jour par code, puis **150/jour pour toute l'app** (`429 {"erreur":"quota"|"budget"}`) |
+| `/interpreter` | POST | lecture IA d'un objectif en texte libre → `{base, prioritaires}` pour le moteur — 10/jour par code, puis 100/jour pour toute l'app. Remplace `/generer` (v20.0) |
+| `/supprimer` | POST | purge de **toutes** les clés KV du code duo, photos comprises |
 
 `/idees` et `/interpreter` renvoient `503 {"erreur":"non_configure"}` quand
 `ANTHROPIC_API_KEY` n'est pas défini ; l'app se replie alors sur un programme
 « esthétique équilibré » et le dit.
+
+Garde-fous communs (v20.4, voir `SECURITE.md`) : corps des requêtes plafonné
+par route (`lireJson` : 64 Ko pour `/etat`, 400 Ko pour `/photo`, 2 Ko
+ailleurs, `413` au-delà), liste blanche des champs de `/etat`, identifiants
+`[\w-]{1,40}`, limitation de débit par IP en mémoire (120 écritures/min, 6/min
+sur l'IA et `/profil`, `429 {"erreur":"trop_vite"}`), `cache-control:
+no-store` et `nosniff` sur le JSON. La page est servie avec une CSP à nonce et
+le jeu d'en-têtes de sécurité (`preparerPage`, exportée par `worker.js` et
+réutilisée par le mock du harnais). Le worker sert aussi
+`/polices/space-grotesk.woff2` (plus de Google Fonts).
 
 ### Programme : onboarding, moteur, migration (v20.0)
 
@@ -160,8 +185,9 @@ lui-même au niveau atteint.
 
 En revanche **restent actifs en solo** : `/interpreter` (lecture de
 l'objectif libre ; le programme lui-même se calcule dans l'app, sans réseau),
-`/idees`, et les notifications push (`/abonner`, `/desabonner`, `/testpush`,
-`/rappels`) — aucune de ces routes n'est derrière un garde `solo`. Un profil solo possède donc bien
+`/idees`, `/profil`, et les notifications push (`/abonner`, `/desabonner`,
+`/testpush`, `/rappels`) — aucune de ces routes n'est derrière un garde
+`solo`. Un profil solo possède donc bien
 un code duo généré, utilisé comme préfixe KV ; il est simplement affiché
 « solo » au lieu du code dans la liste des profils, et jamais proposé au
 partage.
@@ -173,8 +199,12 @@ partage.
   `index.html`). Une modification d'un seul des deux fichiers est presque
   toujours un bug.
 - En session, toute modification est vérifiée sur un worker mock local
-  (Playwright : `node outils/tests/lancer.js`) ; c'est Léo qui la valide sur
-  l'URL Worker après déploiement.
+  (Playwright : `node outils/tests/lancer.js`, et `node outils/worker.test.js`
+  dès que `worker.js` change) ; c'est Léo qui la valide sur l'URL Worker
+  après déploiement.
+- **Aucun secret dans le code** : clés et contact vivent dans le dashboard
+  Cloudflare (`ANTHROPIC_API_KEY`, `VAPID_PRIV`, `VAPID_PUB`, `CONTACT`). Le
+  test du worker échoue si une clé revient dans `worker.js`.
   Une modification n'est « faite » qu'après cette seconde vérification.
 - **La version affichée dans `index.html` et celle de `CLAUDE.md` doivent être
   mises à jour à chaque livraison, dans le même commit que le chantier.
@@ -190,7 +220,8 @@ Thème **dark glass**. Ne pas improviser de couleur ni de police.
 maintenir tel quel — mais ne pas le défendre si Léo demande à en changer.
 
 - Fond : `#0B0E14`, avec halos radiaux bleu / violet
-- Police : **Space Grotesk** uniquement, pas de seconde famille
+- Police : **Space Grotesk** uniquement, pas de seconde famille — servie par
+  le worker (`outils/polices`, licence OFL), jamais depuis Google Fonts
 - Palette « électrifiée » (voir les variables en tête de `index.html`)
 - **Icônes : système SVG maison** (~30 paths façon Feather). Pour tout nouvel
   élément d'interface, une icône SVG — pas d'emoji. Il en reste des dizaines

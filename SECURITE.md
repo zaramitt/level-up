@@ -428,38 +428,148 @@ minimal).
 - Le sujet VAPID est une adresse d'exemple ; à remplacer par un vrai contact
   quand la paire sera régénérée.
 
-## Plan proposé pour le temps 2
+## Temps 2 — fait (v20.4)
 
-Commits séparés, par thème, dans cet ordre (du risque le plus élevé au plus
-faible), chacun avec ses tests :
+Huit commits sur la branche, par thème, chacun avec ses tests. Sept étaient
+prévus ; le huitième (limitation de débit par IP dans le worker) remplace la
+règle de dashboard, impossible sur `workers.dev` (voir plus bas).
 
-1. **sécurité : secrets** — nouvelle paire VAPID, clé privée en secret
-   Cloudflare, `503` sans secret, détection côté app des abonnements à
-   renouveler, `.gitignore`, contact VAPID réel. Dashboard : ajout du secret.
-2. **sécurité : routes IA** — budget global journalier, route `/profil` et
-   quota réservé aux codes enregistrés, contexte hors du prompt système,
-   corps plafonné. Dashboard : règle de limitation de débit, plafond de
-   dépense Anthropic.
-3. **sécurité : validation** — `lireJson` avec plafonds, listes blanches
-   d'`/etat`, identifiants filtrés, endpoint push vérifié, `no-store` sur
-   l'API.
-4. **sécurité : photos** — préfixe image obligatoire, `nosniff`, cache coach
-   à 1 h.
-5. **sécurité : en-têtes** — CSP avec nonce, jeu d'en-têtes, SRI sur React,
-   police auto-hébergée (retire Google Fonts).
-6. **sécurité : confidentialité** — page « Confidentialité », phrase
-   d'onboarding, `CONFIDENTIALITE.md`, backlog.
-7. **docs** — `DECISIONS.md` (limites acceptées : rôles, intégrité),
-   `CLAUDE.md` (nouveaux secrets, nouvelle route, en-têtes), `BACKLOG.md`
-   (clés par rôle, Turnstile en réserve, chiffrement des photos, mentions
-   légales complètes).
+| Commit | Ce qui a changé | Tests |
+|---|---|---|
+| `sécurité : secrets` | clé privée VAPID hors du code (`VAPID_PRIV`), clé publique et contact injectés dans la page (`VAPID_PUB`, `CONTACT`), `503` sans secret, carte « On a renforcé la sécurité de l'app. Réactive tes rappels en un tap », `outils/vapid.js`, `.gitignore` | `worker.test.js` (jeton VAPID vérifié avec la clé publique, aucun secret dans le source), suite 06 |
+| `sécurité : routes IA` | un code inconnu = 0 appel (`/profil`, `403 code_inconnu`), 10/jour par code puis budget journalier de toute l'app (150 idées, 100 lectures, `429 budget`), corps ≤ 2 Ko, contexte hors du prompt système, messages clairs | `worker.test.js`, suite 06 (enregistrement au démarrage une seule fois, messages, enregistrement à la volée sur 403) |
+| `sécurité : validation des entrées` | `lireJson` avec plafond par route (`413`), liste blanche des champs de `/etat`, identifiants `[\w-]{1,40}`, `/abonner` limité à Apple / Google (FCM) / Mozilla et aux champs utiles, `no-store` sur le JSON | `worker.test.js`, suite 06 (service refusé, dit simplement) |
+| `sécurité : photos` | JPEG base64 seulement, identifiant filtré, corps ≤ 400 Ko, `nosniff`, cache privé 1 h | `worker.test.js` (dont `/supprimer` efface les photos) |
+| `sécurité : en-têtes et police auto-hébergée` | CSP à nonce, nosniff, Referrer-Policy, Permissions-Policy, X-Frame-Options, COOP ; SRI sur React ; Space Grotesk servie par le worker, Google Fonts retiré | `worker.test.js`, suite 06 (CSP réelle rejouée par le mock : aucune violation, aucune requête vers un tiers), `sync.test.js` |
+| `sécurité : confidentialité` | page « Confidentialité et mentions légales » depuis les Réglages, `CONFIDENTIALITE.md`, phrase d'onboarding | suite 06 |
+| `sécurité : limitation de débit par IP` | compteur par IP en mémoire : 120 écritures/min, 6/min sur l'IA et `/profil`, `429 trop_vite` | `worker.test.js` |
+| `docs` | `DECISIONS.md`, `CLAUDE.md` (v20.4), `BACKLOG.md`, ce fichier | harnais complet |
 
-Tests : `outils/worker.test.js` (worker importé dans Node avec un faux KV :
-en-têtes, plafonds, quotas, validation, `503` sans secret), une suite
-Playwright `06-securite-front.js` (CSP rejouée par le mock, réabonnement push
-proposé, page Confidentialité), harnais complet au vert avant la PR.
+État des douze points de l'audit après le temps 2 :
 
-Changements visibles pour les utilisatrices, à annoncer : réactivation des
-rappels push (une fois), page « Confidentialité » et phrase d'onboarding, et
-un message clair « quota du jour atteint » si le budget IA global est
-consommé. Rien d'autre.
+| # | Point | État |
+|---|---|---|
+| 1 | Secrets | fait (reste : coller les valeurs dans le dashboard, voir ci-dessous) |
+| 2 | Accès aux données | accepté et documenté ; séparation des rôles au backlog, priorité haute |
+| 3 | Intégrité des champs | accepté (XP côté client) ; bornes posées |
+| 4 | Photos | fait ; chiffrement côté client au backlog |
+| 5 | Routes IA et coût | fait dans le code (les quatre correctifs) ; reste le plafond de dépense Anthropic, côté console |
+| 6 | Validation | fait |
+| 7 | Échappement | rien à faire |
+| 8 | Réponses | fait (liste blanche, `no-store`) |
+| 9 | En-têtes | fait ; HSTS explicite le jour d'un domaine à soi |
+| 10 | Dépendances | fait (SRI, police auto-hébergée) |
+| 11 | Bots | limitation de débit dans le worker + budget ; Turnstile en réserve au backlog ; reste : vérifier le plan Workers |
+| 12 | RGPD minimal | fait pour l'usage personnel ; mentions complètes au backlog si ouverture au public |
+
+Changements visibles pour les utilisatrices : la carte de réactivation des
+rappels (une fois, pour qui les avait activés), la page « Confidentialité »
+et la phrase d'onboarding, les messages de quota (« pour toute l'app »,
+« réessaie dans une minute »), et « Ce service de notifications n'est pas
+encore accepté par l'app » pour Edge sur Windows. Rien d'autre.
+
+## Ce qui reste de ton côté (dashboard Cloudflare, console Anthropic)
+
+Les libellés du dashboard sont ceux de l'interface en anglais ; en français,
+ils sont traduits mot à mot. Si un écran a bougé, le nom de la section reste
+le repère.
+
+### 1. La paire de clés push (obligatoire, sinon les rappels sont indisponibles)
+
+1. Sur ton ordinateur, dans le dossier du dépôt à jour : `node outils/vapid.js`
+   (Node 18 ou plus). Le script affiche deux lignes, `VAPID_PUB` et
+   `VAPID_PRIV`. Ne les colle nulle part ailleurs que dans le dashboard.
+2. Dashboard Cloudflare → **Workers & Pages** → **level-up** → onglet
+   **Settings** → section **Variables and Secrets** → **Add**.
+3. Première entrée : **Type** `Secret`, **Variable name** `VAPID_PRIV`,
+   **Value** la valeur affichée par le script → **Save** (ou **Deploy** si le
+   bouton le propose).
+4. Deuxième entrée : **Type** `Text`, **Variable name** `VAPID_PUB`, la valeur
+   affichée → **Save**.
+5. Troisième entrée, facultative mais recommandée : **Type** `Text`,
+   **Variable name** `CONTACT`, ton adresse de contact (elle apparaît sur la
+   page Confidentialité et sert de sujet VAPID auprès des services push) →
+   **Save**.
+6. Si le dashboard propose **Deploy** après l'ajout, accepte : les variables
+   ne sont prises en compte qu'au déploiement suivant. Sinon, le prochain
+   déploiement (le merge) les appliquera.
+7. Vérification : ouvre l'app → **Réglages** → active **Rappel du soir** →
+   « Rappel du soir activé ». Sur un téléphone qui avait déjà les rappels, la
+   carte « On a renforcé la sécurité de l'app… » apparaît en haut : un tap.
+8. L'ancienne clé n'a rien à révoquer nulle part : une clé VAPID n'est
+   enregistrée chez personne, la remplacer la rend inutile.
+9. Ferme le terminal où le script a affiché les valeurs.
+
+### 2. Le plafond de dépense Anthropic (le vrai filet)
+
+1. Console Anthropic (console.anthropic.com) → menu **Settings** →
+   **Limits** (le nom exact varie : « Spend limits », « Usage limits »).
+2. Pose une **limite mensuelle** basse, par exemple 10 $ : au-delà, l'API
+   refuse, l'app se replie (programme équilibré, idées indisponibles) et le
+   dit ; rien ne casse.
+3. Mieux, si la console le propose : crée un **Workspace** dédié « level-up »
+   (**Settings** → **Workspaces** → **Create**), avec sa propre limite, puis
+   une **API key** dans ce workspace (**API keys** → **Create key**), et
+   remplace le secret `ANTHROPIC_API_KEY` du Worker par cette clé (même écran
+   **Variables and Secrets** qu'au point 1, **Edit** sur la ligne). L'ancienne
+   clé se révoque ensuite dans la console (**API keys** → la clé → **Disable**
+   ou **Delete**).
+
+### 3. Limitation de débit : pourquoi elle est dans le worker
+
+Les **Rate limiting rules** du dashboard vivent dans la section **Security**
+→ **WAF** d'une **zone**, c'est-à-dire d'un domaine que tu as ajouté à
+Cloudflare. Un sous-domaine `*.workers.dev` n'est pas une zone : la section
+n'existe pas pour lui. C'est pour ça que le huitième commit met la limitation
+dans le worker (compteur par IP en mémoire, 120 écritures/min, 6/min sur
+l'IA et `/profil`).
+
+Le jour où l'app a un domaine à toi (**Workers & Pages** → **level-up** →
+**Settings** → **Domains & Routes** → **Add** → **Custom domain**), la règle
+de dashboard devient possible et plus solide (elle s'applique avant le
+worker) :
+
+1. Dashboard → ton domaine → **Security** → **WAF** → onglet **Rate limiting
+   rules** → **Create rule**.
+2. **Rule name** : `api-ecritures`.
+3. **If incoming requests match** : passe en **Edit expression** et colle
+   `(http.request.uri.path contains "/api/") and (http.request.method eq "POST")`.
+4. **With the same characteristics** : `IP` (par défaut).
+5. **When rate exceeds** : **Requests** `120`, **Period** `1 minute`.
+6. **Then take action** : `Block`, **For duration** `1 minute` (ou
+   `Managed Challenge`, moins brutal).
+7. **Deploy**. Le plan gratuit inclut une règle ; une seconde, plus stricte
+   sur `/idees`, `/interpreter` et `/profil` (6 par minute), demande le plan
+   Pro. Sur le plan gratuit, garde la première : le worker fait déjà la
+   seconde.
+8. Au même moment, ajoute HSTS : dans `worker.js`, `ENTETES_COMMUNS`, une
+   ligne `"strict-transport-security": "max-age=31536000; includeSubDomains"`
+   (sur `workers.dev` elle est inutile, le domaine est préchargé).
+
+### 4. Trois vérifications, cinq minutes
+
+1. **Le plan Workers** : **Workers & Pages** → **Plans**. Sur le plan gratuit,
+   KV accepte 1 000 écritures par jour pour toute l'app ; chaque séance
+   publiée, chaque photo, chaque négo en consomme une. Dès que vous êtes plus
+   de quelques duos actifs, le plan payant (5 $/mois, 1 M d'écritures/jour)
+   s'impose, et il enlève le risque de déni de service par épuisement du
+   quota.
+2. **Workers Logs** : **level-up** → **Settings** → **Observability** (ou
+   **Logs**). S'il est activé, les URL des requêtes (donc les codes duo) sont
+   conservées quelques jours. Laisse-le désactivé, ou active-le le temps d'un
+   diagnostic puis coupe-le.
+3. **Le déploiement** : après le merge, **level-up** → **Deployments** montre
+   la version ; ouvre l'app, **Réglages** → **Confidentialité et mentions
+   légales** doit afficher ton adresse de contact (sinon la variable
+   `CONTACT` n'est pas prise en compte : redéploie).
+
+### 5. En réserve
+
+- **Turnstile** (Cloudflare → **Turnstile** → **Add site**, mode
+  **Managed**) sur les routes IA et `/profil`, si le budget journalier et la
+  limitation de débit ne suffisent pas. Demande une clé de site (publique,
+  dans `index.html`) et un secret (`TURNSTILE_SECRET`, dashboard), plus une
+  vérification `siteverify` dans le worker. Au backlog.
+- **Edge sur Windows** : `/abonner` refuse les services hors Apple / Google /
+  Mozilla ; l'app le dit. Si une utilisatrice le demande, ajouter
+  `*.notify.windows.com` à `HOTES_PUSH` (avec une vérification de suffixe).
