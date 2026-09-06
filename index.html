@@ -11,11 +11,15 @@
 <title>Level Up !</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
 <style>
+  /* Space Grotesk servie par le worker (licence OFL, fichier dans outils/polices) : plus aucun
+     appel à Google Fonts, donc plus d'adresse IP envoyée à un tiers à chaque ouverture */
+  @font-face {
+    font-family: 'Space Grotesk'; font-style: normal; font-weight: 300 700; font-display: swap;
+    src: url(/polices/space-grotesk.woff2) format('woff2-variations'), url(/polices/space-grotesk.woff2) format('woff2');
+  }
   html, body {
     margin:0; padding:0; background:#0B0E14; color:#F2F5F9;
     background-image:

@@ -208,6 +208,30 @@ const deB64u = s => Buffer.from(s, "base64url");
     await post(env, "/api/duo-testabcd/supprimer", {});
     check("/supprimer efface aussi les photos", (await appel(env, "/api/duo-testabcd/photo/ph-1")).status === 404 && [...env.NEGOS.m.keys()].every(k => !k.startsWith("duo-testabcd:"))); }
 
+  console.log("\n=== En-têtes : CSP avec nonce, jeu d'en-têtes, SRI sur React, police servie par le worker, plus de Google Fonts ===");
+  { const env = envPush();
+    const r1 = await appel(env, "/"), h1 = await r1.text();
+    const r2 = await appel(env, "/"), h2 = await r2.text();
+    const csp1 = r1.headers.get("content-security-policy") || "";
+    const nonce1 = (csp1.match(/'nonce-([^']+)'/) || [])[1];
+    const nonce2 = ((r2.headers.get("content-security-policy") || "").match(/'nonce-([^']+)'/) || [])[1];
+    check("la page porte une CSP avec un nonce, différent à chaque réponse", !!nonce1 && !!nonce2 && nonce1 !== nonce2, csp1.slice(0, 80));
+    const scripts = h1.match(/<script[^>]*>/g) || [];
+    check("chaque balise <script> de la page porte le nonce de sa réponse (" + scripts.length + " balises)", scripts.length >= 5 && scripts.every(t => t.includes(`nonce="${nonce1}"`)) && !h2.includes(`nonce="${nonce1}"`), scripts.find(t => !t.includes("nonce")));
+    check("CSP : scripts limités à l'origine, au nonce et à cdnjs ; pas d'unsafe-inline sur les scripts ; frame-ancestors 'none' ; object-src 'none'", /script-src 'self' 'nonce-[^']+' https:\/\/cdnjs\.cloudflare\.com(;|$)/.test(csp1) && !/script-src[^;]*unsafe-inline/.test(csp1) && /frame-ancestors 'none'/.test(csp1) && /object-src 'none'/.test(csp1) && /base-uri 'none'/.test(csp1));
+    check("CSP : data: et blob: là où l'app en a besoin (images, sons, partage), polices depuis l'origine seulement", /img-src 'self' data: blob:/.test(csp1) && /media-src data:/.test(csp1) && /connect-src 'self' data: blob:/.test(csp1) && /font-src 'self'(;|$)/.test(csp1) && !/googleapis|gstatic/.test(csp1));
+    check("en-têtes : nosniff, Referrer-Policy, Permissions-Policy (caméra, micro, position, paiement coupés), X-Frame-Options, COOP", r1.headers.get("x-content-type-options") === "nosniff" && r1.headers.get("referrer-policy") === "strict-origin-when-cross-origin" && /camera=\(\)/.test(r1.headers.get("permissions-policy")) && /geolocation=\(\)/.test(r1.headers.get("permissions-policy")) && r1.headers.get("x-frame-options") === "DENY" && r1.headers.get("cross-origin-opener-policy") === "same-origin");
+    check("React et ReactDOM : empreintes SRI (sha384) et crossorigin=anonymous", /react\.production\.min\.js" integrity="sha384-[A-Za-z0-9+/=]{64}" crossorigin="anonymous"/.test(h1) && /react-dom\.production\.min\.js" integrity="sha384-[A-Za-z0-9+/=]{64}" crossorigin="anonymous"/.test(h1));
+    check("plus aucune référence à Google Fonts dans la page", !/fonts\.googleapis|fonts\.gstatic/.test(h1));
+    check("la page déclare la police en @font-face depuis l'origine", /@font-face\s*\{[^}]*Space Grotesk[^}]*url\(\/polices\/space-grotesk\.woff2\)/.test(h1));
+    const f = await appel(env, "/polices/space-grotesk.woff2");
+    const octets = new Uint8Array(await f.arrayBuffer());
+    check("la police est servie par le worker : font/woff2, immuable un an, nosniff, signature wOF2", f.status === 200 && f.headers.get("content-type") === "font/woff2" && /immutable/.test(f.headers.get("cache-control")) && f.headers.get("x-content-type-options") === "nosniff" && String.fromCharCode(...octets.slice(0, 4)) === "wOF2" && octets.length > 15000, [f.status, f.headers.get("content-type"), octets.length].join(" "));
+    const sw = await appel(env, "/sw.js");
+    check("le service worker porte aussi nosniff et n'est pas mis en cache", sw.headers.get("x-content-type-options") === "nosniff" && sw.headers.get("cache-control") === "no-cache");
+    const j = await appel(env, "/api/duo-testabcd/negos");
+    check("les réponses JSON portent nosniff en plus de no-store", j.headers.get("x-content-type-options") === "nosniff" && j.headers.get("cache-control") === "no-store"); }
+
   console.log(`\n${ok}/${ok + ko} vérifications passent` + (ko ? ` — ${ko} en échec` : ""));
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

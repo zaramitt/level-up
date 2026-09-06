@@ -97,6 +97,33 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     check('sans clé côté serveur : pas de carte de réactivation (rien à réactiver vers)', (await p.locator('.carte-push').count()) === 0);
     await ctx.close(); }
 
+  console.log('\n=== En-têtes et CSP du worker, rejoués par le mock : rien ne casse, rien ne part vers un tiers ===');
+  { const ctx = await b.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
+    const p = await ctx.newPage();
+    const violations = [], tiers = [];
+    p.on('console', m => { if (/Content Security Policy|Refused to/i.test(m.text())) violations.push(m.text().slice(0, 160)); });
+    p.on('request', r => { const h = new URL(r.url()).hostname; if (h !== '127.0.0.1') tiers.push(h); });
+    p.on('pageerror', e => console.log('  ⛔ PAGE ERR:', String(e).slice(0, 240)));
+    const prog = M.programmePourApp({ frequence: 3, objectif: 'mieux', muscu: 'jamais', technique: 'pas_sur', materiel: 'salle', tempsMin: 60 }, banque);
+    await p.addInitScript(([ex, jk]) => {
+      if (localStorage.getItem('lvlup-actif')) return;
+      localStorage.setItem('lvlup-profils', JSON.stringify([{ id: 'x6', nom: 'Sam', role: 'coachee', solo: true, code: 'solo-cspabcd' }]));
+      localStorage.setItem('lvlup-actif', 'x6'); localStorage.setItem('lvlup-tour:x6', '1');
+      localStorage.setItem('lvlup-s:x6', JSON.stringify({ programme: 'perso', programmePerso: ex.prog, reponses: {}, xp: 100, styles: ['soins'], kiffs: [], recompenses: [], negos: [], negosImportes: {}, drops: [], charges: {}, histo: [], jour: {}, habitudes: {}, defis: {}, activeDays: {}, decayCursor: jk, reglages: { photoOblig: false, decay: false, sons: true }, adresse: 'neutre', vus: { jour: 1, hab: 1, prog: 1, rec: 1, suivi: 1, rec_coach: 1 }, profilEnregistre: true }));
+    }, [{ prog }, jour]);
+    const rep = await p.goto(U, { waitUntil: 'load' }); await p.waitForTimeout(1500);
+    const csp = rep.headers()['content-security-policy'] || '';
+    check('la page arrive avec la CSP et les en-têtes du worker', /script-src 'self' 'nonce-/.test(csp) && rep.headers()['x-content-type-options'] === 'nosniff' && rep.headers()['x-frame-options'] === 'DENY', csp.slice(0, 80));
+    check('l\'app se rend sous cette CSP (React, moteur, banque en ligne avec nonce)', (await p.locator('.carte-seance').count()) === 3);
+    check('la police Space Grotesk est chargée depuis l\'origine', await p.evaluate(async () => { await document.fonts.ready; return document.fonts.check("16px 'Space Grotesk'"); }));
+    // un parcours qui touche les data: (icônes, sons) et les blob:
+    await p.locator('.carte-seance').first().tap(); await p.waitForTimeout(600);
+    await p.locator('button[aria-expanded]').first().tap(); await p.waitForTimeout(500);
+    await p.locator('button', { hasText: 'Progrès' }).first().tap(); await p.waitForTimeout(500);
+    check('aucune violation de CSP sur le parcours (démarrage, séance, exercice déplié, progrès)', violations.length === 0, violations.join(' | '));
+    check('aucune requête vers un tiers : ni Google Fonts, ni personne', tiers.length === 0, [...new Set(tiers)].join(', '));
+    await ctx.close(); }
+
   console.log('\n=== Service push hors liste (Apple, Google/FCM, Mozilla) : refusé, dit simplement ===');
   { const { ctx, p } = await ouvrir({ rappels: false, push: { sansAbonnement: true, endpoint: 'https://wns2-par02p.notify.windows.com/w/?token=x' } });
     await p.locator('header button').last().tap(); await p.waitForTimeout(700);
