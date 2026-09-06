@@ -9267,7 +9267,7 @@ const enregistrerCode = code => fetch(api(code, "/profil"), { method: "POST" });
 // raison lisible d'un refus IA : quota du code, budget de toute l'app, ou autre
 const raisonRefus = async r => {
   if (r.status === 503) return "nonconfig";
-  if (r.status === 429) { try { const d = await r.json(); return d.erreur === "budget" ? "budget" : "quota"; } catch { return "quota"; } }
+  if (r.status === 429) { try { const d = await r.json(); return d.erreur === "budget" ? "budget" : d.erreur === "trop_vite" ? "trop_vite" : "quota"; } catch { return "quota"; } }
   return "echec";
 };
 const interpreterObjectif = async (code, texte) => {
@@ -10333,7 +10333,7 @@ function Onboarding({
       color: SUB,
       lineHeight: 1.5
     }
-  }, interp && interp.raison === "nonconfig" ? "La lecture de ton objectif par l'IA n'est pas activée ici : programme esthétique équilibré, tu pourras préciser dans les réglages. " : interp && interp.raison === "budget" ? "Le quota de lecture du jour est atteint pour toute l'app : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : interp && interp.raison === "quota" ? "Tu as utilisé tes 10 lectures du jour : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : "Je n'ai pas réussi à lire ton objectif : programme esthétique équilibré, modifiable dans les réglages. ", /*#__PURE__*/React.createElement("button", {
+  }, interp && interp.raison === "nonconfig" ? "La lecture de ton objectif par l'IA n'est pas activée ici : programme esthétique équilibré, tu pourras préciser dans les réglages. " : interp && interp.raison === "budget" ? "Le quota de lecture du jour est atteint pour toute l'app : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : interp && interp.raison === "quota" ? "Tu as utilisé tes 10 lectures du jour : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : interp && interp.raison === "trop_vite" ? "Trop de demandes d'un coup : programme esthétique équilibré pour l'instant, réessaie dans une minute. " : "Je n'ai pas réussi à lire ton objectif : programme esthétique équilibré, modifiable dans les réglages. ", /*#__PURE__*/React.createElement("button", {
     onClick: relire,
     style: {
       background: "none",
@@ -12211,7 +12211,7 @@ function Idees({
       });
       let r = await appel();
       if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
-      if (r.status === 503) toast("Génération non configurée (clé API manquante)");else if (r.status === 429) toast((await raisonRefus(r)) === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : "Tu as utilisé tes 10 idées du jour — réessaie demain");else if (!r.ok) toast("Oups, réessaie");else setListe(await r.json());
+      if (r.status === 503) toast("Génération non configurée (clé API manquante)");else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain"); }else if (!r.ok) toast("Oups, réessaie");else setListe(await r.json());
     } catch {
       toast("Serveur injoignable");
     }

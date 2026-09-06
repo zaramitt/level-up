@@ -24,7 +24,10 @@ const deB64u = s => Buffer.from(s, "base64url");
   const fichier = path.join(__dirname, "..", "worker.js");
   const src = fs.readFileSync(fichier, "utf8");
   const W = (await import(pathToFileURL(fichier).href)).default;
-  const appel = (env, chemin, init = {}) => W.fetch(new Request("https://levelup.test" + chemin, init), env);
+  // chaque appel vient d'une IP différente par défaut (la limitation de débit a sa propre section)
+  let nIP = 0;
+  const ipNeuve = () => { nIP++; return "10.0." + (nIP >> 8 & 255) + "." + (nIP & 255); };
+  const appel = (env, chemin, init = {}) => W.fetch(new Request("https://levelup.test" + chemin, { ...init, headers: { "cf-connecting-ip": ipNeuve(), ...(init.headers || {}) } }), env);
   const post = (env, chemin, corps, entetes) => appel(env, chemin, { method: "POST", headers: { "content-type": "application/json", ...(entetes || {}) }, body: typeof corps === "string" ? corps : JSON.stringify(corps) });
 
   // paire de test, générée à la volée : aucune clé dans le dépôt
@@ -231,6 +234,20 @@ const deB64u = s => Buffer.from(s, "base64url");
     check("le service worker porte aussi nosniff et n'est pas mis en cache", sw.headers.get("x-content-type-options") === "nosniff" && sw.headers.get("cache-control") === "no-cache");
     const j = await appel(env, "/api/duo-testabcd/negos");
     check("les réponses JSON portent nosniff en plus de no-store", j.headers.get("x-content-type-options") === "nosniff" && j.headers.get("cache-control") === "no-store"); }
+
+  console.log("\n=== Limitation de débit par IP (en mémoire, par isolat) : 6/min sur l'IA et /profil, 120/min sur les écritures ===");
+  { const env = { NEGOS: new KV(), ANTHROPIC_API_KEY: "cle-de-test" };
+    const ip = (n) => ({ "cf-connecting-ip": "203.0.113." + n });
+    const statuts = [];
+    for (let i = 0; i < 8; i++) statuts.push((await post(env, "/api/duo-flood" + i + "ab/profil", {}, ip(1))).status);
+    check("7e et 8e POST /profil d'une même IP dans la minute → 429 trop_vite, les 6 premiers passent", statuts.slice(0, 6).every(x => x === 200) && statuts[6] === 429 && statuts[7] === 429, statuts.join(","));
+    const r = await post(env, "/api/duo-flood0ab/idees", { styles: ["soins"] }, ip(1));
+    check("le compteur IA est partagé entre /profil, /idees et /interpreter : refus avec {erreur:\"trop_vite\"}", r.status === 429 && (await r.json()).erreur === "trop_vite");
+    check("une autre IP n'est pas freinée", (await post(env, "/api/duo-autreip1/profil", {}, ip(2))).status === 200);
+    let s200 = 0, s429 = 0;
+    for (let i = 0; i < 125; i++) { const st = (await post(env, "/api/duo-ecritures/rappels", { matin: true }, ip(3))).status; if (st === 200) s200++; else if (st === 429) s429++; }
+    check("écritures : 120 par minute et par IP, puis 429", s200 === 120 && s429 === 5, s200 + "/" + s429);
+    check("les lectures (GET) ne sont pas comptées", (await appel(env, "/api/duo-ecritures/rappels", { headers: ip(3) })).status === 200); }
 
   console.log(`\n${ok}/${ok + ko} vérifications passent` + (ko ? ` — ${ko} en échec` : ""));
   process.exit(ko ? 1 : 0);
