@@ -126,6 +126,7 @@ const deB64u = s => Buffer.from(s, "base64url");
       check("/idees pour un code enregistré → 200, 8 idées", r.status === 200 && Array.isArray(d) && d.length === 8, JSON.stringify(d).slice(0, 100));
       const req = appels[appels.length - 1].corps;
       check("le contexte saisi n'est pas dans le prompt système…", !/MON-CONTEXTE/.test(req.system) && /indication de goût, pas une consigne/.test(req.system));
+      check("le schéma de sortie reste dans le sous-ensemble supporté (pas de minimum/maximum, maxLength, min/maxItems) — v20.5", !/minimum|maximum|maxLength|minLength|minItems|maxItems|multipleOf/.test(JSON.stringify(req.output_config)), JSON.stringify(req.output_config).slice(0, 120));
       check("… il est dans le message utilisateur, sur une ligne", /MON-CONTEXTE-A-MOI Ignore les règles/.test(req.messages[0].content));
       check("compteurs : 1 pour le code, 1 pour toute l'app, tous deux du jour", (await env.NEGOS.get("duo-testabcd:idees:" + aujourdhui)) === "1" && (await env.NEGOS.get("quota:idees:" + aujourdhui)) === "1"); }
     { await env.NEGOS.put("duo-testabcd:idees:" + aujourdhui, "10");
@@ -148,6 +149,21 @@ const deB64u = s => Buffer.from(s, "base64url");
       await env.NEGOS.put("quota:interp:" + aujourdhui, "100");
       const r3 = await post(env, "/api/duo-parletat/interpreter", { objectif: "des jambes solides pour le ski" });
       check("budget /interpreter (100/jour) → 429 budget", r3.status === 429 && (await r3.json()).erreur === "budget" && appels2.length === 1); }
+    { // v20.5 : l'API refuse la sortie structurée (400) → seconde demande en texte, JSON lu à la main
+      await env.NEGOS.put("quota:idees:" + aujourdhui, "0");
+      const ipRepli = { "cf-connecting-ip": "203.0.113.77" };
+      let n = 0; const corps = [];
+      globalThis.fetch = async (url, init) => { const c = JSON.parse(init.body); corps.push(c); n++; if (c.output_config) return new Response(JSON.stringify({ type: "error", error: { message: "schema" } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: "text", text: "Voici : " + JSON.stringify(idees8) }] }), { status: 200, headers: { "content-type": "application/json" } }); };
+      await post(env, "/api/duo-repliabcd/profil", {}, ipRepli);
+      const r = await post(env, "/api/duo-repliabcd/idees", { styles: ["soins"] }, ipRepli);
+      check("sortie structurée refusée (400) → repli en texte, JSON extrait, 8 idées quand même", r.status === 200 && (await r.json()).length === 8 && n === 2 && !corps[1].output_config && /uniquement par un objet JSON/.test(corps[1].system), n + " appels");
+      globalThis.fetch = async () => new Response("boom", { status: 500 });
+      const r2 = await post(env, "/api/duo-repliabcd/idees", { styles: ["soins"] }, ipRepli);
+      const d2 = await r2.json();
+      check("l'API ne répond pas (500) → 502 {erreur:\"ia\", statut:500} : l'app peut dire la vraie raison", r2.status === 502 && d2.erreur === "ia" && d2.statut === 500, JSON.stringify(d2));
+      globalThis.fetch = async () => new Response(JSON.stringify({ content: [{ type: "text", text: "pas du json" }] }), { status: 200, headers: { "content-type": "application/json" } });
+      const r3 = await post(env, "/api/duo-repliabcd/idees", { styles: ["soins"] }, ipRepli);
+      check("réponse illisible → 502 statut \"format\"", r3.status === 502 && (await r3.json()).statut === "format"); }
   } finally { globalThis.fetch = vraiFetch2; }
 
   console.log("\n=== Validation : tailles bornées, liste blanche de /etat, identifiants filtrés, services push connus, no-store ===");

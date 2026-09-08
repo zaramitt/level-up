@@ -91,7 +91,7 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     await p.locator('xpath=//div[div[normalize-space()="Rappel du soir"]]/following-sibling::button[1]').first().tap();
     await p.waitForTimeout(600);
     const t = await texte(p);
-    check('activer les rappels → « Rappels indisponibles pour le moment »', /Rappels indisponibles pour le moment/.test(t), t.slice(t.indexOf('Rappel du soir'), t.indexOf('Rappel du soir') + 200));
+    check('activer les rappels → « Rappels indisponibles pour le moment »', /Rappels indisponibles côté serveur/.test(t), t.slice(t.indexOf('Rappel du soir'), t.indexOf('Rappel du soir') + 200));
     await ctx.close(); }
   { const { ctx, p } = await ouvrir({ url: U_SANS, rappels: true, push: { cleAbonnement: Array(65).fill(9) } });
     check('sans clé côté serveur : pas de carte de réactivation (rien à réactiver vers)', (await p.locator('.carte-push').count()) === 0);

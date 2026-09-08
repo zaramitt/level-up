@@ -58,7 +58,7 @@ const jour = new Date().toISOString().slice(0, 10);
   { const { ctx, p } = await ouvrir();
     await p.locator('.carte-seance').first().tap(); await p.waitForTimeout(900);
     await p.locator('button[aria-expanded]').first().tap(); await p.waitForTimeout(600);
-    await p.locator('button', { hasText: 'Fin de série — repos' }).first().tap(); await p.waitForTimeout(600);
+    await p.locator('button', { hasText: 'Fin de série' }).first().tap(); await p.waitForTimeout(600);
     console.log('  repos lancé:', await overlay(p));
     await avancer(p, 112); // 2:00 → reste 8 s : l'alerte 10 s a dû sonner
     console.log('  à 8 s de la fin, affiche', await overlay(p));

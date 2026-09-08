@@ -33,7 +33,7 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
   console.log('=== Coachée en duo, préférence « elle » : le tour des quatre onglets ===');
   { const { ctx, p } = await ouvrir({ adresse: 'elle', solo: false });
     let t = await bulle(p);
-    check('Séance : consigne, photo, ressenti facile / juste / trop dur, « On ajuste », Repos', /touche un exercice pour le déplier/.test(t) && /facile, juste ou trop dur/.test(t) && /On ajuste/.test(t) && /coche Repos/.test(t), t.slice(0, 200));
+    check('Séance : consigne, photo, ressenti facile / juste / trop dur, « On ajuste », Repos', /touche un exercice/.test(t) && /facile, juste ou trop dur/.test(t) && /On ajuste/.test(t) && /[Cc]oche Repos/.test(t), t.slice(0, 200));
     check('titre « Ta base »', /Ta base/.test(t));
     await fermer(p); await onglet(p, 'Habitudes');
     t = await bulle(p);

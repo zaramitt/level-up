@@ -33,6 +33,10 @@
   button { touch-action: manipulation; }
   input, button, textarea { font-family:inherit; }
   input, textarea { color:#F2F5F9 !important; font-size:16px !important; }
+  /* onboarding (v20.5) : chaque écran remplit le viewport RÉEL (dvh : barres Safari et
+     encoche comprises) et tient sans défiler — vérifié par le harnais sur 390×664 et 390×844 */
+  .cadre-onb { min-height:100vh; min-height:100dvh; padding-bottom:calc(24px + env(safe-area-inset-bottom)); padding-top:calc(18px + env(safe-area-inset-top)); }
+  @keyframes apparait { 0%{opacity:0;transform:translateY(-8px)} 100%{opacity:1;transform:none} }
   input::placeholder, textarea::placeholder { color:#5A6274; }
   .carrousel { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
     padding:10px 2px 12px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
@@ -2978,16 +2982,17 @@ const b64uVersU8 = s => {
 };
 // s'abonne aux rappels avec la clé courante (remplace un abonnement existant) et le dépose sur le worker
 const abonnerPush = async code => {
-  if (!VAPID_PUB) throw new Error("Rappels indisponibles pour le moment (clé push non configurée).");
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications (iPhone : ajoute d'abord l'app à l'écran d'accueil).");
+  if (!VAPID_PUB) throw new Error("Rappels indisponibles côté serveur pour le moment (configuration en cours). Réessaie plus tard.");
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications. Sur iPhone : ajoute d'abord l'app à l'écran d'accueil, puis réessaie.");
+  if (typeof Notification !== "undefined" && Notification.permission === "denied") throw new Error("Notifications refusées dans les réglages du téléphone. Autorise-les pour Level Up, puis réessaie.");
   const perm = await Notification.requestPermission();
-  if (perm !== "granted") throw new Error("Permission refusée dans les réglages du téléphone.");
+  if (perm !== "granted") throw new Error("Permission refusée : sans elle, pas de rappel. Tu peux la donner dans les réglages du téléphone.");
   const reg = await navigator.serviceWorker.ready;
   const ancien = await reg.pushManager.getSubscription();
   if (ancien) { try { await ancien.unsubscribe(); } catch {} }
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uVersU8(VAPID_PUB) });
   const r = await fetch(api(code, "/abonner"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sub }) });
-  if (r.status === 503) throw new Error("Rappels indisponibles pour le moment.");
+  if (r.status === 503) throw new Error("Rappels indisponibles côté serveur pour le moment (configuration en cours). Réessaie plus tard.");
   if (r.status === 400) { try { await sub.unsubscribe(); } catch {} throw new Error("Ce service de notifications n'est pas encore accepté par l'app."); }
   if (!r.ok) throw new Error("Serveur injoignable — réessaie plus tard.");
   return sub;
@@ -3029,13 +3034,13 @@ const compresser = file => new Promise((res, rej) => {
    c'est ce qui permet au bip de sonner en salle, téléphone en silencieux.
    Safari refuse toute lecture non initiée par un tap : debloquerSon() joue les
    deux sons en muet au premier geste (lancement d'un repos ou d'une série). */
-const wavDataUri = notes => {
+const wavDataUri = (notes, amp = 0.7) => {
   const sr = 22050, echs = [];
   notes.forEach(([f, d]) => {
     const n = Math.round(sr * d);
     for (let i = 0; i < n; i++) {
       const env = Math.min(1, i / 200, (n - i) / 400);
-      echs.push(f ? Math.sin(2 * Math.PI * f * i / sr) * env * 0.7 : 0);
+      echs.push(f ? Math.sin(2 * Math.PI * f * i / sr) * env * amp : 0);
     }
   });
   const buf = new ArrayBuffer(44 + echs.length * 2), v = new DataView(buf);
@@ -3048,26 +3053,34 @@ const wavDataUri = notes => {
   let b = ""; new Uint8Array(buf).forEach(x => b += String.fromCharCode(x));
   return "data:audio/wav;base64," + btoa(b);
 };
-const audioFin = typeof Audio !== "undefined" ? new Audio(wavDataUri([[880, .18], [0, .06], [880, .18], [0, .06], [880, .24]])) : null;
-const audioAlerte = typeof Audio !== "undefined" ? new Audio(wavDataUri([[660, .14], [0, .08], [660, .14]])) : null;
+// v20.5 : des sons plus doux (amplitude 0,5 au lieu de 0,7), un « go » discret à la fin de la mise
+// en place, un tic à chacune des 3 dernières secondes de travail, trois notes montantes à la fin
+const audioFin = typeof Audio !== "undefined" ? new Audio(wavDataUri([[880, .18], [0, .06], [880, .18], [0, .06], [880, .24]], .5)) : null;
+const audioAlerte = typeof Audio !== "undefined" ? new Audio(wavDataUri([[660, .14], [0, .08], [660, .14]], .5)) : null;
+const audioGo = typeof Audio !== "undefined" ? new Audio(wavDataUri([[660, .12]], .3)) : null;
+const audioTic = typeof Audio !== "undefined" ? new Audio(wavDataUri([[1320, .04]], .22)) : null;
+const audioFinTravail = typeof Audio !== "undefined" ? new Audio(wavDataUri([[523, .14], [0, .04], [659, .14], [0, .04], [784, .3]], .5)) : null;
 let sonDebloque = false;
 const debloquerSon = () => {
   if (sonDebloque) return;
   sonDebloque = true;
-  [audioFin, audioAlerte].forEach(a => {
+  [audioFin, audioAlerte, audioGo, audioTic, audioFinTravail].forEach(a => {
     if (!a) return;
     a.muted = true;
     a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
   });
 };
-const jouer = (a, sons) => {
+const jouer = (a, sons, vibre = true) => {
   if (sons && a) {
     try { a.currentTime = 0; a.play().catch(() => {}); } catch (e) {}
   }
-  if (navigator.vibrate) navigator.vibrate(sons ? [200, 100, 200] : [200, 100, 200]);
+  if (vibre && navigator.vibrate) navigator.vibrate([200, 100, 200]);
 };
-const bip = (sons = true) => jouer(audioFin, sons); // fin de repos / de série
+const bip = (sons = true) => jouer(audioFin, sons); // fin de repos
 const bipAlerte = (sons = true) => jouer(audioAlerte, sons); // 10 s avant la fin du repos
+const bipGo = (sons = true) => jouer(audioGo, sons, false); // fin de la mise en place : c'est parti
+const bipTic = (sons = true) => jouer(audioTic, sons, false); // 3, 2, 1
+const bipFinTravail = (sons = true) => jouer(audioFinTravail, sons); // fin du travail de gainage
 const nomDe = id => {
   const ex = Object.values(SEANCES).flatMap(s => s.exos).find(e => e.id === id);
   if (ex) return ex.nom;
@@ -3215,7 +3228,7 @@ function App() {
       setPushRenouveler(false);
       toast("Rappels réactivés");
     } catch (e) {
-      toast(String(e.message || e).slice(0, 80));
+      toast(String(e.message || e), { erreur: true });
     }
   };
   useEffect(() => {
@@ -3250,7 +3263,17 @@ function App() {
     const hier = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
     const debut = s.decayCursor || auj();
     let perdu = 0,
-      jours = 0;
+      jours = 0, // jours de séance PRÉVUS manqués : les seuls que la cagnotte compte (v20.5)
+      joursSans = 0; // jours sans aucun passage : la décroissance d'XP
+    // un jour est « prévu » si la semaine du moteur y place une séance ; un programme sans
+    // semaine (modèle d'avant la v20.0) compte tous les jours, comme avant
+    const semaine = s.programmePerso && s.programmePerso.moteur && s.programmePerso.moteur.semaine;
+    const seancePrevue = k => {
+      if (!semaine || !semaine.length) return true;
+      const g = new Date(k + "T12:00:00").getDay();
+      const e = semaine.find(x => x.jour === (g === 0 ? 7 : g));
+      return !!(e && e.lettre);
+    };
     let d = new Date(debut);
     d.setDate(d.getDate() + 1);
     while (d.toISOString().slice(0, 10) <= hier) {
@@ -3258,7 +3281,8 @@ function App() {
       const pausee = (s.pauses || []).some(p => k >= p.debut && k <= p.fin);
       if (!(s.activeDays || {})[k] && !pausee) {
         perdu += DECAY;
-        jours++;
+        joursSans++;
+        if (seancePrevue(k)) jours++;
       }
       d.setDate(d.getDate() + 1);
     }
@@ -3267,8 +3291,8 @@ function App() {
     setSt(s);
     localStorage.setItem(SKEY(profil.id), JSON.stringify(s));
     setPhotos(lirePhotos(profil.id));
-    if (perdu > 0) setTimeout(() => toast(`−${perdu} XP · ${jours} jour${jours > 1 ? "s" : ""} sans passage 😴`), 600);
-    if (perdu > 0 && !profil.solo && s.reglages.pot !== false) {
+    if (perdu > 0) setTimeout(() => toast(`−${perdu} XP · ${joursSans} jour${joursSans > 1 ? "s" : ""} sans passage 😴`), 600);
+    if (jours > 0 && !profil.solo && s.reglages.pot !== false) {
       fetch(api(profil.code, "/pot"), {
         method: "POST",
         headers: {
@@ -3346,15 +3370,17 @@ function App() {
       }
       if (!tm.fin) return tm;
       const reste = Math.max(0, Math.ceil((tm.fin - Date.now()) / 1000));
+      const sons = stRef.current?.reglages?.sons !== false;
       if (reste > 0) {
-        if (tm.mode === "repos" && tm.reste > 10 && reste <= 10) bipAlerte(stRef.current?.reglages?.sons !== false);
+        if (tm.mode === "repos" && tm.reste > 10 && reste <= 10) bipAlerte(sons);
+        if (tm.mode === "travail" && reste <= 3 && reste !== tm.reste) bipTic(sons);
         return reste === tm.reste ? tm : {
           ...tm,
           reste
         };
       }
-      // segment terminé
-      bip(stRef.current?.reglages?.sons !== false);
+      // segment terminé : un son par nature de segment
+      if (tm.mode === "prep") bipGo(sons);else if (tm.mode === "travail") bipFinTravail(sons);else bip(sons);
       if (tm.mode === "travail" && apresTravail.current) {
         const f = apresTravail.current;
         apresTravail.current = null;
@@ -3411,13 +3437,17 @@ function App() {
     }, 400);
     return nx;
   });
-  const toast = txt => {
+  // v20.5 : tout message reste 4 s et se ferme au tap ; une erreur reste jusqu'au tap
+  const fermerToast = id => setToasts(t => t.filter(x => x.id !== id));
+  const toast = (txt, opts) => {
+    const erreur = !!(opts && opts.erreur);
     const id = Math.random();
-    setToasts(t => [...t, {
+    setToasts(t => [...t.filter(x => x.txt !== txt).slice(-3), {
       id,
-      txt
+      txt,
+      erreur
     }]);
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 1900);
+    if (!erreur) setTimeout(() => fermerToast(id), 4000);
   };
   const pushT = useRef(null);
   const stRef = useRef(null);
@@ -3693,7 +3723,7 @@ function App() {
     } catch (err) {}
     setChargeur(false);
     if (!data) {
-      toast("Photo illisible, réessaie 📷");
+      toast("Photo illisible, réessaie 📷", { erreur: true });
       return;
     }
     const photoId = String(Date.now());
@@ -3941,7 +3971,8 @@ function App() {
   };
   const noterChargeSerie = (exId, idx, kg) => {
     const v = parseFloat(String(kg).replace(",", "."));
-    if (!v || v <= 0) return;
+    // 0 est une valeur : revenir à 0 avec les boutons efface la charge de la série
+    if (isNaN(v) || v < 0) return;
     maj(s => {
       const l = s.charges[exId] || [];
       let e = l[l.length - 1];
@@ -4627,28 +4658,45 @@ function App() {
   }, "Je prends !"))), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
-      top: 14,
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: 70,
+      top: "calc(12px + env(safe-area-inset-top))",
+      left: 12,
+      right: 12,
+      zIndex: 120,
       display: "flex",
       flexDirection: "column",
       gap: 6,
-      alignItems: "center"
+      alignItems: "center",
+      pointerEvents: "none"
     }
   }, toasts.map(t => /*#__PURE__*/React.createElement("div", {
     key: t.id,
+    className: t.erreur ? "toast toast-erreur" : "toast",
+    onClick: () => fermerToast(t.id),
     style: {
-      background: "#F2F5F9",
-      color: "#0B0E14",
-      padding: "8px 16px",
-      borderRadius: 999,
+      pointerEvents: "auto",
+      cursor: "pointer",
+      maxWidth: "100%",
+      background: t.erreur ? "#2A1215" : "#F2F5F9",
+      color: t.erreur ? "#FFD5D0" : "#0B0E14",
+      border: t.erreur ? "1.5px solid #FF5C4D" : "none",
+      padding: "10px 16px",
+      borderRadius: 16,
       fontWeight: 600,
-      fontSize: 14,
-      animation: "rise 1.9s ease-out forwards",
-      whiteSpace: "nowrap"
+      fontSize: 13.5,
+      lineHeight: 1.4,
+      textAlign: "center",
+      whiteSpace: "normal",
+      boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+      animation: "apparait .25s ease-out"
     }
-  }, t.txt))), role === "coach" ? /*#__PURE__*/React.createElement("header", {
+  }, t.txt, t.erreur && /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 10.5,
+      opacity: .7,
+      marginTop: 3
+    }
+  }, "touche pour fermer")))), role === "coach" ? /*#__PURE__*/React.createElement("header", {
     style: {
       padding: "22px 18px 10px",
       display: "flex",
@@ -4901,9 +4949,13 @@ function App() {
       color: SUB,
       marginTop: 2
     }
-  }, "Tu vois le nouveau programme avant de décider. Charges et historique restent."))), PROG.moteur && !J.seance && /*#__PURE__*/React.createElement(AvertissementsProgramme, {
+  }, "Tu vois le nouveau programme avant de décider. Charges et historique restent."))), PROG.moteur && !J.seance && st.avertissementsFermes !== signatureAvertissements(PROG) && /*#__PURE__*/React.createElement(AvertissementsProgramme, {
     prog: PROG,
-    compact: true
+    compact: true,
+    onFermer: () => maj(s => {
+      s.avertissementsFermes = signatureAvertissements(PROG);
+      return s;
+    })
   }), propositionNiveau && !J.seance && /*#__PURE__*/React.createElement(CarteNiveau, {
     proposition: propositionNiveau,
     onOui: () => accepterNiveau(propositionNiveau.sens),
@@ -5958,7 +6010,7 @@ function App() {
       lineHeight: 1.65,
       color: INK
     }
-  }, bulleTexte(cleAide, st, solo)), /*#__PURE__*/React.createElement("button", {
+  }, rendreBulle(bulleTexte(cleAide, st, solo))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setAideOuverte(false);
       if (!(st.vus || {})[cleAide]) maj(x => {
@@ -5984,9 +6036,9 @@ function App() {
     style: {
       position: "fixed",
       bottom: barreFin ? 152 : 84,
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "calc(100% - 24px)",
+      left: 12,
+      right: 12,
+      margin: "0 auto",
       maxWidth: 496,
       zIndex: 55,
       background: timer.mode === "depasse" ? COL.C : timer.mode === "fini" ? COL.G : timer.mode === "travail" ? COL.G : timer.mode === "prep" ? COL.D : COL.B,
@@ -6662,11 +6714,13 @@ function SeanceView({
       const reposDepasse = timer && timer.mode === "depasse" && timer.exId === ex.id;
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => onRepos(ex),
+        className: "bouton-repos",
         style: {
           width: "100%",
-          background: reposDepasse ? COL.C : reposActif ? COL.B : GLASSBG,
-          color: reposActif || reposDepasse ? "#fff" : INK,
-          border: `1.5px solid ${reposDepasse ? COL.C : reposActif ? COL.B : LINE}`,
+          background: reposDepasse ? COL.C : reposActif ? COL.B : tintCss(S.couleur),
+          color: reposActif || reposDepasse ? "#fff" : S.couleur,
+          border: `1.5px solid ${reposDepasse ? COL.C : reposActif ? COL.B : S.couleur}`,
+          boxShadow: reposActif || reposDepasse ? "none" : `0 6px 18px ${tintCss(S.couleur)}`,
           borderRadius: 12,
           padding: "12px",
           fontWeight: 700,
@@ -6702,9 +6756,10 @@ function SeanceView({
           gap: 7
         }
       }, /*#__PURE__*/React.createElement(Ic, {
-        n: "clock",
-        s: 13
-      }), "Fin de série — repos ", fmtSec(ex.repos)));
+        n: "play",
+        s: 13,
+        w: 2.4
+      }), "Fin de série → lancer le repos ", fmtSec(ex.repos)));
     })(), !fait ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
@@ -7124,7 +7179,7 @@ function SerieInputs({
       fontWeight: 600,
       marginBottom: 4
     }
-  }, "CHARGE PAR SÉRIE (KG)"), /*#__PURE__*/React.createElement("div", {
+  }, "CHARGE PAR SÉRIE (KG) · facultatif"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: nbLoc > 2 ? "1fr 1fr" : `repeat(${nbLoc},1fr)`,
@@ -7280,7 +7335,15 @@ function SerieInputs({
     s: 10,
     c: "#fff",
     w: 3
-  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"));
+  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"), reps && /*#__PURE__*/React.createElement("div", {
+    className: "haut-fourchette-aide",
+    style: {
+      fontSize: 11,
+      color: SUB,
+      lineHeight: 1.45,
+      marginTop: 6
+    }
+  }, "Tout tenu ? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures."));
 }
 /* ---------- mise en avant (spotlight) : carte agrandie centrée, fond flouté ---------- */
 function Spotlight({
@@ -8061,7 +8124,7 @@ function Negos({
         });
         if (r.ok) setRemote(await r.json());
       } catch {
-        toast("Réseau capricieux — réessaie");
+        toast("Réseau capricieux — réessaie", { erreur: true });
       }
       setBusy(false);
     } else {
@@ -9222,7 +9285,9 @@ const BoutonRetour = ({
 }), "Retour");
 const Cadre = ({
   children,
-  onRetour
+  onRetour,
+  pied,
+  centre
 }) => {
   // swipe gauche→droite = retour, sur tout l'onboarding (le geste iOS natif)
   const tx = useRef(0);
@@ -9238,22 +9303,44 @@ const Cadre = ({
       const dy = Math.abs(e.changedTouches[0].clientY - ty.current);
       if (dx > 55 && dy < 45) onRetour();
     },
+    className: "cadre-onb",
     style: {
-      minHeight: "100vh",
       background: PAPER,
       fontFamily: FONT,
-      padding: "18px 20px 32px",
-      overflowY: "auto"
+      padding: "18px 20px 24px",
+      display: "flex",
+      flexDirection: "column"
     }
   }, /*#__PURE__*/React.createElement("style", null, `* { box-sizing:border-box; } input, button, textarea { font-family:inherit; max-width:100%; }`), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 380,
       width: "100%",
-      margin: "0 auto"
+      margin: "0 auto",
+      flex: 1,
+      display: "flex",
+      flexDirection: "column"
     }
   }, onRetour && /*#__PURE__*/React.createElement(BoutonRetour, {
     onTap: onRetour
-  }), children));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "cadre-corps",
+    style: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: centre ? "center" : "flex-start"
+    }
+  }, children), pied && /*#__PURE__*/React.createElement("div", {
+    className: "cadre-pied",
+    style: {
+      marginTop: "auto",
+      paddingTop: 14,
+      textAlign: "center",
+      fontSize: 10.5,
+      color: SUB,
+      lineHeight: 1.4
+    }
+  }, pied)));
 };
 /* ============================ PROGRAMME PAR LE MOTEUR (v20.0) ============================ */
 /* Composants écrits à la main (pas de JSX précompilé) : h = React.createElement. */
@@ -9415,13 +9502,13 @@ function QuestionsProgramme({ reponses, setReponses, qIdx, setQIdx, onFin, onRet
     if (Q.type === "materiel") {
       const coche = t => (reponses.materiel || []).includes(t);
       return h("div", null,
-        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 } }, RACCOURCIS_MATERIEL.map(([id, l, tags]) => h("button", {
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 } }, RACCOURCIS_MATERIEL.map(([id, l, tags]) => h("button", {
           key: id, onClick: () => setReponses(r => ({ ...r, raccourci: id, materiel: tags.slice() })),
-          style: { ...GLASS, border: `1.5px solid ${reponses.raccourci === id ? COL.G : LINE}`, background: reponses.raccourci === id ? tintCss(COL.G) : GLASSBG, color: reponses.raccourci === id ? COL.G : INK, borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 12.5 }
+          style: { ...GLASS, border: `1.5px solid ${reponses.raccourci === id ? COL.G : LINE}`, background: reponses.raccourci === id ? tintCss(COL.G) : GLASSBG, color: reponses.raccourci === id ? COL.G : INK, borderRadius: 12, padding: "9px 8px", fontWeight: 800, fontSize: 12.5 }
         }, l))),
-        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" } }, MATERIEL_UI.map(([t, l]) => h("label", { key: t, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, padding: "5px 0", color: coche(t) ? INK : SUB } },
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px 10px" } }, MATERIEL_UI.map(([t, l]) => h("label", { key: t, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12, lineHeight: 1.25, padding: "3px 0", color: coche(t) ? INK : SUB } },
           h("input", { type: "checkbox", checked: coche(t), onChange: () => setReponses(r => ({ ...r, raccourci: null, materiel: coche(t) ? r.materiel.filter(x => x !== t) : [...r.materiel, t] })), style: { accentColor: COL.G, width: 16, height: 16, margin: 0 } }), l))),
-        h("div", { style: { fontSize: 11, color: SUB, marginTop: 8 } }, "Le poids du corps est toujours disponible.", (reponses.materiel || []).length ? "" : " Sans rien du tout, l'app te dira ce qui manque."),
+        h("div", { style: { fontSize: 11, color: SUB, marginTop: 6 } }, "Le poids du corps est toujours disponible.", (reponses.materiel || []).length ? "" : " Sans rien du tout, l'app te dira ce qui manque."),
         h(BoutonContinuer, { onTap: suivant }));
     }
     if (Q.type === "temps") {
@@ -9439,11 +9526,11 @@ function QuestionsProgramme({ reponses, setReponses, qIdx, setQIdx, onFin, onRet
     }
     return null;
   };
-  return h(Cadre, { onRetour: () => i > 0 ? setQIdx(i - 1) : onRetour() },
-    h("div", { style: { minHeight: "78vh", display: "flex", flexDirection: "column", justifyContent: "center" } },
-      h("div", { style: { display: "flex", gap: 4, marginBottom: 22 } }, QS.map((q, k) => h("div", { key: q.cle, style: { flex: 1, height: 4, borderRadius: 2, background: k <= i ? COL.G : "rgba(255,255,255,.10)", transition: "background .3s" } }))),
+  return h(Cadre, { onRetour: () => i > 0 ? setQIdx(i - 1) : onRetour(), pied: "Tu pourras tout modifier plus tard : Réglages → Mon programme." },
+    h("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" } },
+      h("div", { style: { display: "flex", gap: 4, marginBottom: 16 } }, QS.map((q, k) => h("div", { key: q.cle, style: { flex: 1, height: 4, borderRadius: 2, background: k <= i ? COL.G : "rgba(255,255,255,.10)", transition: "background .3s" } }))),
       h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: 1.4, color: SUB } }, etiquette || "TON PROGRAMME", " · ", i + 1, "/", QS.length),
-      h("div", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 26, lineHeight: 1.15, margin: "8px 0 8px" } }, Q.titre),
+      h("div", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 24, lineHeight: 1.15, margin: "8px 0 8px" } }, Q.titre),
       Q.sous && h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.45, marginBottom: 14 } }, Q.sous),
       !Q.sous && h("div", { style: { height: 10 } }),
       corps()));
@@ -9459,11 +9546,14 @@ function ErreurFrequente({ texte, couleur }) {
 }
 
 /* Les avertissements du moteur, en langage clair, jamais cachés */
-function AvertissementsProgramme({ prog, compact }) {
+const signatureAvertissements = prog => (prog && prog.moteur ? prog.moteur.avertissements || [] : []).join("|");
+function AvertissementsProgramme({ prog, compact, onFermer }) {
   const l = prog && prog.moteur ? prog.moteur.avertissements || [] : [];
   if (!l.length) return null;
-  return h("div", { style: { ...GLASS, borderRadius: 14, padding: "11px 14px", marginBottom: compact ? 10 : 14, borderColor: "rgba(255,176,32,.35)" } },
-    h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: COL.D, marginBottom: 6 } }, "À SAVOIR SUR CE PROGRAMME"),
+  return h("div", { className: "avertissements-programme", style: { ...GLASS, borderRadius: 14, padding: "11px 14px", marginBottom: compact ? 10 : 14, borderColor: "rgba(255,176,32,.35)" } },
+    h("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 } },
+      h("div", { style: { flex: 1, fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: COL.D } }, "À SAVOIR SUR CE PROGRAMME"),
+      onFermer && h("button", { onClick: onFermer, className: "fermer-avertissements", style: { background: "none", border: `1px solid ${LINE}`, borderRadius: 999, padding: "4px 10px", fontSize: 10.5, fontWeight: 800, color: SUB, touchAction: "manipulation" } }, "Compris")),
     l.map((a, k) => h("div", { key: k, style: { fontSize: 12, lineHeight: 1.5, color: INK, marginTop: k ? 5 : 0, display: "flex", gap: 7 } }, h("span", { style: { color: COL.D, flexShrink: 0 } }, "•"), h("span", null, a))));
 }
 
@@ -9556,6 +9646,7 @@ function SectionProgramme({ st, onRegen }) {
   ] : null;
   return h("div", { style: { marginBottom: 14 } },
     h("div", { style: { fontSize: 11, fontWeight: 800, color: SUB, letterSpacing: .4, marginBottom: 6 } }, "MON PROGRAMME"),
+    h(AvertissementsProgramme, { prog: st.programmePerso, compact: true }),
     lignes ? h("div", { style: { ...GLASS, borderRadius: 14, padding: "2px 14px", marginBottom: 8 } },
       lignes.map(([cle, t, v]) => h("button", { key: cle, onClick: () => onRegen("reglage", cle), style: { display: "flex", width: "100%", alignItems: "center", gap: 10, background: "none", border: "none", borderBottom: `1px solid ${LINE}`, padding: "10px 0", textAlign: "left", color: INK } },
         h("span", { style: { flex: 1, minWidth: 0 } },
@@ -9799,7 +9890,10 @@ function Onboarding({
   if (etape === "promesse") return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
-      paddingTop: 2
+      paddingTop: 2,
+      flex: 1,
+      display: "flex",
+      flexDirection: "column"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9812,7 +9906,11 @@ function Onboarding({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
-      zIndex: 1
+      zIndex: 1,
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-evenly"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9989,14 +10087,15 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.4"));
+  }, "v20.5"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    pied: "Tu pourras changer d'avis plus tard — rien n'est définitif."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      minHeight: "calc(100vh - 112px)",
+      flex: 1,
       display: "flex",
       flexDirection: "column"
     }
@@ -10015,12 +10114,13 @@ function Onboarding({
       margin: "7px 0 16px",
       lineHeight: 1.45
     }
-  }, "Tu pourras changer d'avis plus tard — rien n'est définitif."), /*#__PURE__*/React.createElement("div", {
+  }, "Trois façons de jouer. Choisis la tienne."), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       display: "flex",
       flexDirection: "column",
-      gap: 11
+      justifyContent: "center",
+      gap: 10
     }
   }, [["duo", "users", "En duo", "quelqu'un me coache : il vérifie mes preuves, on négocie mes récompenses, on parie"], ["solo", "zap", "En solo", "je me coache moi-même : XP, série, défis et récompenses auto-définies"], ["coach", "activity", "Je supervise quelqu'un", "pas besoin d'être un vrai coach : partenaire, pote, parent… tu vérifies les preuves et tu offres les récompenses"]].map(([m, e, t, d]) => /*#__PURE__*/React.createElement("button", {
     key: m,
@@ -10030,24 +10130,34 @@ function Onboarding({
     },
     className: "carte-mode",
     style: {
-      flex: 1,
       display: "flex",
       width: "100%",
       alignItems: "center",
-      gap: 13,
+      gap: 12,
       textAlign: "left",
       background: GLASSBG,
       border: `1.5px solid ${LINE}`,
       borderRadius: 16,
-      padding: "16px 15px"
+      padding: "14px 13px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 44,
+      height: 44,
+      borderRadius: 13,
+      flexShrink: 0,
+      background: "rgba(124,92,255,.16)",
+      display: "grid",
+      placeItems: "center"
     }
   }, /*#__PURE__*/React.createElement(Ic, {
     n: e,
-    s: 26,
+    s: 22,
     c: COL.G
-  }), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
-      flex: 1
+      flex: 1,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -10061,11 +10171,21 @@ function Onboarding({
       marginTop: 3,
       lineHeight: 1.4
     }
-  }, d)))))));
+  }, d)), /*#__PURE__*/React.createElement(Ic, {
+    n: "chevron",
+    s: 16,
+    c: SUB,
+    style: {
+      transform: "rotate(180deg)",
+      flexShrink: 0
+    }
+  }))))));
 
   /* ---- écran coach : nom + code ---- */
   if (etape === "coach") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    centre: true,
+    pied: "Tu pourras aussi t'entraîner, plus tard, depuis les Réglages."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
@@ -10165,10 +10285,11 @@ function Onboarding({
 
   /* ---- écran graine d'invitation (duo) : intention seule, aucun envoi ---- */
   if (etape === "invitation") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    pied: "Le lien contient ton code duo, rien d'autre."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      minHeight: "78vh",
+      flex: 1,
       display: "flex",
       flexDirection: "column",
       justifyContent: "center"
@@ -10231,7 +10352,9 @@ function Onboarding({
   }, "Je verrai plus tard")));
   /* ---- écran prénom : dernier pas avant la création ---- */
   if (etape === "prenom") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    centre: true,
+    pied: "Ton prénom reste sur ton téléphone."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
@@ -10370,7 +10493,9 @@ function Onboarding({
 
   /* ---- écran styles : entièrement dédié au choix des récompenses ---- */
   return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    centre: true,
+    pied: "Tu pourras changer de style dans les Réglages."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
@@ -10481,7 +10606,7 @@ function Reglages({
         toast("⏸️ C'est noté");
       }
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
   };
   const [busyPush, setBusyPush] = useState(false);
@@ -10525,7 +10650,7 @@ function Reglages({
         toast("🔕 Rappel désactivé");
       }
     } catch (e) {
-      toast(String(e.message || e).slice(0, 80));
+      toast(String(e.message || e), { erreur: true });
     }
     setBusyPush(false);
   };
@@ -10537,7 +10662,7 @@ function Reglages({
       const d = await r.json();
       toast(d.envoyes > 0 ? "📨 Test envoyé — la notif arrive !" : "Aucun abonnement actif côté serveur");
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
   };
   const r = st.reglages || {};
@@ -10831,7 +10956,7 @@ function Reglages({
         });
         toast(!on ? "💊 Rappel du matin activé" : "Rappel du matin désactivé");
       } catch {
-        toast("Serveur injoignable");
+        toast("Serveur injoignable", { erreur: true });
       }
     },
     style: {
@@ -11268,7 +11393,7 @@ function Paris({
       });
       if (r.ok) setListe(await r.json());
     } catch {
-      toast("Réseau capricieux — réessaie");
+      toast("Réseau capricieux — réessaie", { erreur: true });
     }
     setBusy(false);
   };
@@ -11716,7 +11841,7 @@ function Pot({
       });
       if (r.ok) setPot(await r.json());
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
   };
   if (pot === false) return null;
@@ -12049,9 +12174,9 @@ function DangerZone({
       const r = await fetch(api(code, "/supprimer"), {
         method: "POST"
       });
-      if (r.ok) toast("🗑️ Données serveur du duo effacées");else toast("Échec — réessaie");
+      if (r.ok) toast("🗑️ Données serveur du duo effacées");else toast("Échec — réessaie", { erreur: true });
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
     setC1(false);
   };
@@ -12211,9 +12336,9 @@ function Idees({
       });
       let r = await appel();
       if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
-      if (r.status === 503) toast("Génération non configurée (clé API manquante)");else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain"); }else if (!r.ok) toast("Oups, réessaie");else setListe(await r.json());
+      if (r.status === 503) toast("Génération non configurée (clé API manquante)", { erreur: true });else if (r.status === 502) { let d = null; try { d = await r.json(); } catch {} toast(d && d.statut ? `L'IA n'a pas répondu (erreur ${d.statut}) — réessaie plus tard` : "L'IA a répondu dans un format inattendu — réessaie", { erreur: true }); }else if (r.status === 403) toast("Code duo inconnu du serveur — réessaie dans un instant", { erreur: true });else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain", { erreur: true }); }else if (!r.ok) toast("Oups, réessaie", { erreur: true });else setListe(await r.json());
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
     setBusy(false);
   };
@@ -12286,14 +12411,17 @@ const TITRES_AIDE = {
 // Les bulles d'aide (v20.3) : simples, chaleureuses, une idée par bulle, dans la voix de l'app.
 // Passées par accorde() à l'affichage (elle / il / neutre) ; « rec » a une variante solo.
 const BULLES = {
-  jour: "Ici, c'est ta séance du jour. Choisis-la dans le carrousel, puis touche un exercice pour le déplier : la consigne, la démo et tes charges sont dedans. Valide-le avec ta photo, puis dis en un tap si c'était facile, juste ou trop dur — c'est comme ça que l'app apprend où tu en es. Pas le temps, pas la forme ? « On ajuste » raccourcit la séance au lieu de la sauter. Et un jour off, coche Repos : ça compte aussi.",
+  // une action par puce (v20.5)
+  jour: ["Choisis ta séance dans le carrousel, puis touche un exercice : consigne, démo et charges sont dedans.", "Valide chaque exercice avec ta photo — c'est la preuve.", "Dis en un tap si c'était facile, juste ou trop dur : l'app apprend où tu en es.", "Pas le temps, pas la forme ? « On ajuste ». Jour off ? Coche Repos, ça compte aussi."],
   hab: "Tes petites habitudes du quotidien, prouvées en photo : 5 XP chacune. Une seule cochée suffit à couvrir ta journée, donc pas de malus ce soir-là. Pas besoin de tout faire, juste de ne pas disparaître — même fatigué·e.",
   prog: "Tout ce que tu construis, séance après séance : ton niveau, tes badges, et la courbe de charge de chaque exercice, comme sur une balance connectée. Elle monte quand tu progresses et marque les jours trop durs, pour que tu voies d'où tu viens.",
   rec: ({ solo }) => solo ? "Ta motivation, en vrai : les récompenses que tu t'offres se débloquent à chaque niveau, et les mini-kifs sont là pour les petites victoires. Tu les choisis, tu les changes, c'est ton coin à toi." : "Ta motivation, en vrai : les récompenses de ton coach se débloquent à chaque niveau, tu négocies celles que tu veux (un aller-retour, pas plus), tu paries sur toi, et la cagnotte grossit avec tes oublis. C'est ton coin à toi, et tu y es attendu·e.",
   rec_coach: "Tes outils de coach, tout simplement : réponds aux négos avec une seule contre-offre, accepte ou refuse les paris, et garde un œil sur la cagnotte, qui grossit à chaque oubli. Ton rôle, c'est de tenir la barre — pas de tout contrôler.",
   suivi: "Son aventure en direct : XP, séances de la semaine, jokers utilisés, et ses photos de preuve (touche pour agrandir). Un petit mot au bon moment vaut plus qu'un long discours."
 };
-const bulleTexte = (cle, st, solo) => { const v = BULLES[cle]; return v ? accorde(typeof v === "function" ? v({ solo }) : v, st && st.adresse) : ""; };
+const bulleTexte = (cle, st, solo) => { const v = BULLES[cle]; if (!v) return ""; const t = typeof v === "function" ? v({ solo }) : v; return Array.isArray(t) ? t.map(x => accorde(x, st && st.adresse)) : accorde(t, st && st.adresse); };
+// une bulle en liste = des puces numérotées, une action par puce
+const rendreBulle = v => Array.isArray(v) ? h("ol", { className: "bulle-puces", style: { margin: 0, paddingLeft: 22, display: "grid", gap: 8 } }, v.map((t, i) => h("li", { key: i }, t))) : v;
 
 /* ============================ VISITE GUIDÉE ============================ */
 function Tour({

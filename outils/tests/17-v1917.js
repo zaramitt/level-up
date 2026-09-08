@@ -52,7 +52,7 @@ const init = () => {
   await p.waitForTimeout(600);
 
   console.log('=== A1 — chrono sur horodatage (arrière-plan simulé) ===');
-  await p.locator('button', { hasText: 'Fin de série — repos' }).first().tap();
+  await p.locator('button', { hasText: 'Fin de série' }).first().tap();
   await p.waitForTimeout(600);
   let o = await overlay();
   console.log('  repos lancé, affiche', o && o.txt, '(attendu 2:00 ou 1:59)');

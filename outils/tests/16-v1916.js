@@ -86,7 +86,7 @@ const init = ([role, vus]) => {
     await p.waitForTimeout(600);
     const t = await texte(p);
     console.log('  contenu déployé — charge par série:', t.includes('CHARGE PAR SÉRIE'), '| démo:', t.includes('Voir la démo'),
-                '| repos:', t.includes('Fin de série — repos'), '| valider:', t.includes('Valider avec une photo'));
+                '| repos:', t.includes('Fin de série'), '| valider:', t.includes('Valider avec une photo'));
     console.log('  compact garde dose + repos + dernier:', t.includes('3 × 10') && t.includes('dernier'));
     await ctx.close();
   }
