@@ -796,7 +796,7 @@
         id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
         pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
         series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
-        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
+        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null, difficulte: x.difficulte
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
         id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
@@ -872,7 +872,7 @@
     return {
       id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel), pdc: pdcPossible(cand),
       series: x.series, reps, duree: x.duree_s, unilateral: x.unilateral, consigne: cand.consigne || "", erreur: cand.erreur || "",
-      compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id
+      compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id, difficulte: cand.difficulte
     };
   };
   // les 2 à 3 candidats proposés à l'écran : le phare en premier, chacun avec son muscle et son matériel.
@@ -922,7 +922,7 @@
       const ctx = { niveau, niv, materiel, difficulteMax: Math.min(niv.difficulteMax, obj.difficulteMax || 3), obj, prioritaires: [], favoris: new Set(), phares: new Set(), distancePhare: () => 0,
         unilateral: false, dejaSemaine: new Set(), compteSemaine: {}, musclesSemaine: new Set(), dejaSeance: new Set(s.exercices.map(x => x.id)), musclesSeance: new Set(s.exercices.filter(x => x.compartiment === "isolation").map(x => x.muscle)) };
       const versApp = x => ({ id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, materiel), pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
-        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement" });
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement", difficulte: x.difficulte });
       const ajouter = (e, pourquoi, dureeCardio) => {
         if (!e || ajouts.length >= 3) return false;
         const x = exerciceProgramme(e, doser(e, { ...ctx, dureeCardio }), "complement");
@@ -2002,6 +2002,12 @@ const XP = {
   defi: 60,
   pari: 100
 };
+// v20.8 : barème selon la difficulté de l'exercice (banque : 1 / 2 / 3) — 10 / 15 / 20 XP ; un exercice
+// sans difficulté connue (anciens programmes) vaut 15. Sans photo : 5 XP de moins (jamais sous 5).
+const xpExo = ex => ex && ex.difficulte === 1 ? 10 : ex && ex.difficulte === 3 ? 20 : XP.exo;
+const xpExoSansPhoto = ex => Math.max(5, xpExo(ex) - 5);
+const xpSeance = S => S.focus === "recup" ? S.exos.length * XP.recupItem + XP.bonusRecup : S.exos.reduce((a, e) => a + xpExo(e), 0) + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0);
+const fourchetteXP = S => { const l = S.exos.map(xpExo); const mn = Math.min(...l), mx = Math.max(...l); return l.length && mn !== mx ? `${mn} à ${mx} XP par exercice` : `${l.length ? mn : XP.exo} XP par exercice`; };
 const DECAY = 25; // XP perdus par jour sans aucun passage
 const MAX_NIVEAU = 12;
 // Paliers progressifs : passer du niveau n au n+1 coûte 150 + 1170×(n-1) XP.
@@ -3361,6 +3367,65 @@ function App() {
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
+  // v20.8 : le service worker reçoit le code duo (il va chercher le message du moment à chaque push)
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !code) return;
+    navigator.serviceWorker.ready.then(r => { if (r.active) r.active.postMessage({ type: "code", code }); }).catch(() => {});
+  }, [code]);
+  /* ---- notifications de séance (v20.8), seulement si les rappels sont activés ----
+     « repos » : à la fin du repos en cours ; « relance » : 15-20 min après le dernier exercice validé
+     tant que la séance n'est pas terminée. Le serveur pousse à la minute près (cron), donc l'app
+     annule dès que le repos se termine à l'écran ; en arrière-plan sur Android, elle notifie aussi
+     elle-même. Sur iPhone, seule la notification du serveur arrive (l'app est gelée). */
+  const planifier = (type, quand) => {
+    if (!rappelsVoulus || !code) return;
+    fetch(api(code, "/planifier"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type, quand }) }).catch(() => {});
+  };
+  const reposPlanifie = useRef(false);
+  const notifierLocal = (titre, corps, tag) => {
+    if (!rappelsVoulus || typeof Notification === "undefined" || Notification.permission !== "granted" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.ready.then(r => r.showNotification(titre, { body: corps, tag })).catch(() => {});
+  };
+  // relance « Tu as fini ? » 18 min après le dernier exercice validé ; annulée à la clôture
+  // fin d'un repos d'exercice : le serveur n'a plus rien à pousser ; en arrière-plan, on notifie soi-même
+  useEffect(() => {
+    if (timer && timer.mode === "repos" && timer.exId) return;
+    if (reposPlanifie.current) { reposPlanifie.current = false; planifier("repos", null); }
+    if (timer && timer.mode === "depasse" && timer.exId && document.visibilityState === "hidden") notifierLocal("Repos terminé ⏱️", "À toi — série suivante.", "repos-lvlup");
+  }, [timer && timer.mode, timer && timer.exId]);
+  // (ces effets vivent avant les retours anticipés de App : ils lisent l'état du jour dans st, pas dans J)
+  const jourN = st && st.jour ? st.jour[auj()] : null;
+  const nbFaits = jourN ? (jourN.faits || []).length : 0, valideN = !!(jourN && jourN.valide), seanceN = jourN ? jourN.seance : null;
+  useEffect(() => {
+    if (!estSeance(seanceN) || role === "coach") return;
+    if (valideN) { if (nbFaits > 0) planifier("relance", null); return; }
+    if (nbFaits > 0) planifier("relance", Date.now() + 18 * 60000);
+  }, [nbFaits, valideN, seanceN]);
+  // clôture automatique après 3 h sans activité (règle « venir compte ») : la séance est enregistrée
+  // comme partielle, au chargement, au retour au premier plan ou à la minute
+  useEffect(() => {
+    if (role === "coach") return;
+    const verifier = () => {
+      const jourKey = auj();
+      const cour = stRef.current || st; // au premier passage, stRef n'est pas encore rempli (effet déclaré plus bas)
+      const j = cour && cour.jour && cour.jour[jourKey];
+      if (!j || !estSeance(j.seance) || j.valide || !(j.faits || []).length || !j.activite) return;
+      if (Date.now() - j.activite < 3 * 3600000) return;
+      maj(s => {
+        s.jour[jourKey] = { ...s.jour[jourKey], valide: true, partiel: true, autoInactivite: true };
+        s.activeDays[jourKey] = true;
+        if (!(s.histo || []).some(h => h.date === jourKey && h.type === j.seance)) s.histo.unshift({ date: jourKey, type: j.seance, xp: 0, partiel: true, auto: true, ...(j.adaptee ? { adaptee: true } : {}) });
+        s.histo = s.histo.slice(0, 30);
+        return s;
+      });
+      toast("Séance enregistrée comme partielle : 3 h sans activité — venir compte.");
+    };
+    verifier();
+    const iv = setInterval(verifier, 60000);
+    const vis = () => document.visibilityState === "visible" && verifier();
+    document.addEventListener("visibilitychange", vis);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", vis); };
+  }, [!!st, auj()]);
   // enregistrement du code côté serveur, une fois par profil (v20.4) — les routes IA le demandent
   const profilEnregistre = !!(st && st.profilEnregistre);
   useEffect(() => {
@@ -3751,6 +3816,8 @@ function App() {
     return Object.keys(rempl).length ? { ...S, exos: S.exos.map(e => rempl[e.id] || e) } : S;
   })();
   const recupJ = !!(SJ && SJ.focus === "recup");
+  // l'exercice tel qu'il se joue aujourd'hui (remplacé, adapté), pour son barème d'XP (v20.8)
+  const exoDuJour = id => (SJ && SJ.exos.find(e => e.id === id)) || null;
   // barre « Terminer la séance » fixe au-dessus de la barre d'onglets, tant qu'une
   // séance est en cours avec au moins un exercice validé (le chrono se pose
   // au-dessus d'elle)
@@ -3823,7 +3890,7 @@ function App() {
   // récap des XP de la séance du jour, pour la popup de célébration
   const recapSeance = partiel => {
     const exos = (J.faits || []).length;
-    const xpExos = exos * (recupJ ? XP.recupItem : XP.exo);
+    const xpExos = recupJ ? exos * XP.recupItem : (J.faits || []).reduce((a, id) => a + ((J.xpExos || {})[id] || xpExo(exoDuJour(id))), 0);
     const bonus = partiel ? 0 : recupJ ? XP.bonusRecup : XP.bonusSeance;
     const gain = (J.gainage || []).length * XP.gainageItem + (J.gainValide ? XP.bonusGainage : 0);
     return {
@@ -3901,17 +3968,20 @@ function App() {
         }].slice(-200);
         return s;
       });
+      const ptsPhoto = xpExo(exoDuJour(p.exId));
       setJour(j => ({
         ...j,
         faits: [...j.faits, p.exId],
         photos: {
           ...j.photos,
           [p.exId]: photoId
-        }
+        },
+        xpExos: { ...(j.xpExos || {}), [p.exId]: ptsPhoto },
+        activite: Date.now()
       }));
       setBurst(p.exId);
       setTimeout(() => setBurst(null), 1900);
-      gagne(XP.exo, "· preuve validée 📷");
+      gagne(ptsPhoto, "· preuve validée 📷");
     }
     if (p.type === "cardio") {
       maj(s => {
@@ -3978,6 +4048,7 @@ function App() {
         ...(j.gainTours || {})
       };
       j.gainTours[g.id] = (j.gainTours[g.id] || 0) + 1;
+      j.activite = Date.now();
       if (j.gainTours[g.id] >= 3 && !j.gainage.includes(g.id)) {
         j.gainage = [...j.gainage, g.id];
       }
@@ -4054,14 +4125,18 @@ function App() {
     // temps réellement écoulé (le chrono suit l'horloge, pas l'app)
     if (timer && timer.mode === "repos" && timer.exId === ex.id && timer.reste > 0) return;
     apresRepos.current = null;
+    const fin = Date.now() + ex.repos * 1000;
     setTimer({
       mode: "repos",
       exId: ex.id,
       reste: ex.repos,
       total: ex.repos,
-      fin: Date.now() + ex.repos * 1000,
+      fin,
       label: `Repos — ${ex.nom}`
     });
+    setJour(j => ({ ...j, activite: Date.now() }));
+    planifier("repos", fin);
+    reposPlanifie.current = true;
   };
   const validerSeance = () => {
     if (J.valide || !J.seance) return;
@@ -4141,6 +4216,7 @@ function App() {
       if (type) e.type = type;else delete e.type;
       e.series[idx] = v;
       s.charges[exId] = l.slice(-30);
+      if (s.jour[jourKey]) s.jour[jourKey].activite = Date.now();
       return s;
     });
   };
@@ -4301,7 +4377,7 @@ function App() {
       s.photosMeta = (s.photosMeta || []).filter(m => !(m.exId === exId && m.date === jourKey));
       return s;
     });
-    perdre(XP.exo, "· exercice annulé");
+    perdre((J.xpExos || {})[exId] || XP.exo, "· exercice annulé");
   };
   const annulerGain = g => {
     if (J.gainValide) return;
@@ -5236,7 +5312,7 @@ function App() {
     }
   }, "Qu'est-ce qu'on fait aujourd'hui ?"), /*#__PURE__*/React.createElement(Carrousel, null, Object.keys(SEANCES).map(t => {
     const S = SEANCES[t];
-    const estXP = S.focus === "recup" ? S.exos.length * XP.recupItem + XP.bonusRecup : S.exos.length * XP.exo + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0);
+    const estXP = xpSeance(S);
     return /*#__PURE__*/React.createElement("button", {
       key: t,
       onClick: () => choisir(t),
@@ -5455,11 +5531,14 @@ function App() {
     onAnnulerExo: annulerExo,
     onAnnulerGain: annulerGain,
     validerSansPhoto: exId => {
+      const pts = xpExoSansPhoto(exoDuJour(exId));
       setJour(j => ({
         ...j,
-        faits: [...j.faits, exId]
+        faits: [...j.faits, exId],
+        xpExos: { ...(j.xpExos || {}), [exId]: pts },
+        activite: Date.now()
       }));
-      gagne(10, "· sans photo");
+      gagne(pts, "· sans photo");
     },
     onPartiel: finirPartiel,
     timer: timer,
@@ -6104,11 +6183,11 @@ function App() {
       color: SUB,
       margin: "8px 0 16px"
     }
-  }, /*#__PURE__*/React.createElement("div", null, celebration.exos, " exercice", celebration.exos > 1 ? "s" : "", " × ", XP.exo, " XP = ", /*#__PURE__*/React.createElement("b", {
+  }, /*#__PURE__*/React.createElement("div", null, celebration.exos, " exercice", celebration.exos > 1 ? "s" : "", " validé", celebration.exos > 1 ? "s" : "", " = ", /*#__PURE__*/React.createElement("b", {
     style: {
       color: INK
     }
-  }, celebration.xpExos)), celebration.bonus > 0 && /*#__PURE__*/React.createElement("div", null, "Bonus séance complète : ", /*#__PURE__*/React.createElement("b", {
+  }, celebration.xpExos, " XP"), " (10 à 20 XP selon la difficulté)"), celebration.bonus > 0 && /*#__PURE__*/React.createElement("div", null, "Bonus séance complète : ", /*#__PURE__*/React.createElement("b", {
     style: {
       color: INK
     }
@@ -6506,9 +6585,15 @@ function SeanceView({
       color: "#fff",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between"
+      justifyContent: "space-between",
+      gap: 10
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
       fontSize: 16
@@ -6519,7 +6604,7 @@ function SeanceView({
       opacity: .9,
       fontWeight: 500
     }
-  }, S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", XP.exo, " XP/exercice · +", XP.bonusSeance, " si complète"), S.sport && /*#__PURE__*/React.createElement("div", {
+  }, S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", fourchetteXP(S), " · +", XP.bonusSeance, " si complète"), S.sport && /*#__PURE__*/React.createElement("div", {
     className: "note-sport",
     style: {
       fontSize: 11,
@@ -6530,7 +6615,8 @@ function SeanceView({
   }, S.sport)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
-      fontSize: 15
+      fontSize: 15,
+      flexShrink: 0
     }
   }, J.faits.length, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -6685,7 +6771,7 @@ function SeanceView({
         color: S.couleur,
         flexShrink: 0
       }
-    }, "+", XP.exo, " XP")), !J.valide && /*#__PURE__*/React.createElement(Ressenti, {
+    }, "+", (J.xpExos || {})[ex.id] || xpExo(ex), " XP")), !J.valide && /*#__PURE__*/React.createElement(Ressenti, {
       valeur: (J.ressentis || {})[ex.id],
       couleur: S.couleur,
       onChoisir: r => onRessenti(ex, r)
@@ -6777,7 +6863,7 @@ function SeanceView({
         borderRadius: 999,
         padding: "3px 8px"
       }
-    }, "+", XP.exo, " XP")), /*#__PURE__*/React.createElement("div", {
+    }, "+", xpExo(ex), " XP")), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 12,
         color: SUB,
@@ -7041,7 +7127,7 @@ function SeanceView({
         fontWeight: 700,
         color: S.couleur
       }
-    }, "Validé · +", XP.exo, " XP"), !J.valide && /*#__PURE__*/React.createElement("button", {
+    }, "Validé · +", (J.xpExos || {})[ex.id] || xpExo(ex), " XP"), !J.valide && /*#__PURE__*/React.createElement("button", {
       onClick: () => onAnnulerExo(ex.id),
       title: "Annuler",
       style: {
@@ -7790,7 +7876,7 @@ function BoutonMaintenir({
 const xpParSeanceMoyenne = () => {
   const l = Object.values(SEANCES || {});
   if (!l.length) return 150;
-  const tot = l.reduce((a, S) => a + S.exos.length * XP.exo + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0), 0);
+  const tot = l.reduce((a, S) => a + xpSeance(S), 0);
   return Math.max(1, Math.round(tot / l.length));
 };
 const seancesRestantes = (niveauCible, xp) => {
@@ -7966,7 +8052,10 @@ function Recompenses({
         color: ok && !r.pris ? "#fff" : INK,
         textDecoration: r.pris ? "line-through" : "none"
       }
-    }, r.label), /*#__PURE__*/React.createElement("div", {
+    }, r.label), r.concret && /*#__PURE__*/React.createElement("div", {
+      className: "recompense-concret",
+      style: { fontSize: 10.5, lineHeight: 1.4, marginTop: 4, color: ok && !r.pris ? "rgba(255,255,255,.8)" : SUB }
+    }, "Concrètement : ", r.concret), /*#__PURE__*/React.createElement("div", {
       style: {
         marginTop: "auto",
         display: "flex",
@@ -8033,7 +8122,9 @@ function Recompenses({
         margin: "10px 0 14px",
         textDecoration: r.pris ? "line-through" : "none"
       }
-    }, r.label), r.pris ? /*#__PURE__*/React.createElement("div", {
+    }, r.label), r.concret && /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 13, color: SUB, lineHeight: 1.5, margin: "-6px 0 14px" }
+    }, "Concrètement : ", r.concret), r.pris ? /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 13,
         color: SUB
@@ -8184,6 +8275,7 @@ function Recompenses({
       s.recompenses.push({
         niveau: it.niveau,
         label: it.label,
+        ...(it.concret ? { concret: it.concret } : {}),
         pris: false
       });
       s.recompenses.sort((a, b) => a.niveau - b.niveau);
@@ -8706,7 +8798,7 @@ function Negos({
       fontSize: 12,
       lineHeight: 1.7
     }
-  }, "Exercice validé photo : ", /*#__PURE__*/React.createElement("b", null, XP.exo, " XP"), " · Bonus séance complète : ", /*#__PURE__*/React.createElement("b", null, "+", XP.bonusSeance), /*#__PURE__*/React.createElement("br", null), "Une séance complète ≈ ", /*#__PURE__*/React.createElement("b", null, "100-130 XP"), " selon le programme", /*#__PURE__*/React.createElement("br", null), "Gainage complet : ", /*#__PURE__*/React.createElement("b", null, "35"), " · Cardio 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.cardio), " · Habitude 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.habitude), " · Défi hebdo : ", /*#__PURE__*/React.createElement("b", null, XP.defi), /*#__PURE__*/React.createElement("br", null), "Jour sans passage : ", /*#__PURE__*/React.createElement("b", {
+  }, "Exercice validé photo : ", /*#__PURE__*/React.createElement("b", null, "10, 15 ou 20 XP"), " selon sa difficulté (sans photo : 5 de moins) · Bonus séance complète : ", /*#__PURE__*/React.createElement("b", null, "+", XP.bonusSeance), /*#__PURE__*/React.createElement("br", null), "Une séance complète ≈ ", /*#__PURE__*/React.createElement("b", null, "100-130 XP"), " selon le programme", /*#__PURE__*/React.createElement("br", null), "Gainage complet : ", /*#__PURE__*/React.createElement("b", null, "35"), " · Cardio 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.cardio), " · Habitude 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.habitude), " · Défi hebdo : ", /*#__PURE__*/React.createElement("b", null, XP.defi), /*#__PURE__*/React.createElement("br", null), "Jour sans passage : ", /*#__PURE__*/React.createElement("b", {
     style: {
       color: COL.A
     }
@@ -10519,7 +10611,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.7"));
+  }, "v20.8"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -12920,6 +13012,7 @@ function Idees({
     }
   }, liste.map((it, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
+    className: "idee",
     onClick: () => {
       onAjout(it);
       toast("Ajoutée au niveau " + it.niveau + " 🎁");
@@ -12927,17 +13020,21 @@ function Idees({
     style: {
       background: GLASSBG,
       border: `1px solid ${LINE}`,
-      borderRadius: 999,
-      padding: "7px 11px",
-      fontSize: 11,
+      borderRadius: 14,
+      padding: "8px 12px",
+      fontSize: 11.5,
       fontWeight: 600,
-      textAlign: "left"
+      textAlign: "left",
+      width: "100%"
     }
-  }, "＋ ", it.label, " ", /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("div", null, "＋ ", it.label, " ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: SUB
     }
-  }, "· N", it.niveau)))));
+  }, "· N", it.niveau)), it.concret && /*#__PURE__*/React.createElement("div", {
+    className: "idee-concret",
+    style: { fontSize: 10.5, color: SUB, fontWeight: 500, marginTop: 3, lineHeight: 1.4 }
+  }, "Concrètement : ", it.concret)))));
 }
 
 /* ============================ BULLES CONTEXTUELLES ============================ */
@@ -13191,7 +13288,7 @@ function ReglesJeu({
     }
   }, "Les règles du jeu"), /*#__PURE__*/React.createElement(B, {
     t: "Gagner des XP",
-    x: `Exercice validé photo : ${XP.exo} (✓ sans photo : 10) · bonus séance complète : +${XP.bonusSeance} · gainage bouclé : ${XP.gainageItem}/exo +${XP.bonusGainage} · cardio : ${XP.cardio} · habitude : ${XP.habitude} · défi hebdo : ${XP.defi} · pari gagné : ${XP.pari}.`
+    x: `Exercice validé photo : 10, 15 ou 20 XP selon sa difficulté (✓ sans photo : 5 de moins) · bonus séance complète : +${XP.bonusSeance} · gainage bouclé : ${XP.gainageItem}/exo +${XP.bonusGainage} · cardio : ${XP.cardio} · habitude : ${XP.habitude} · défi hebdo : ${XP.defi} · pari gagné : ${XP.pari}.`
   }), /*#__PURE__*/React.createElement(B, {
     t: "Perdre des XP",
     x: `Jour sans aucun passage : −${DECAY} XP. Cocher Repos ou une seule habitude suffit à couvrir la journée.`

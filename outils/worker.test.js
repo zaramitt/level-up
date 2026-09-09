@@ -95,11 +95,56 @@ const deB64u = s => Buffer.from(s, "base64url");
       await W.scheduled({ cron: "0 18 * * *" }, envSans, { waitUntil: p => attentes3.push(p) });
       await Promise.all(attentes3);
       check("cron sans secret : aucun appel sortant", envois.length === 0);
+      // v20.8 : notifications de séance — planifier, cron chaque minute, message servi au service worker
+      envois.length = 0;
+      const t0 = Date.now();
+      const rp = await post(env, "/api/duo-testabcd/planifier", { type: "repos", quand: t0 - 5000 });
+      check("/planifier (repos, échéance passée) → 200, planification rangée dans planif:index", rp.status === 200 && JSON.parse(await env.NEGOS.get("planif:index"))["duo-testabcd"].repos === t0 - 5000);
+      check("/planifier refuse un type inconnu ou une échéance absurde (400)", (await post(env, "/api/duo-testabcd/planifier", { type: "x", quand: t0 })).status === 400 && (await post(env, "/api/duo-testabcd/planifier", { type: "relance", quand: t0 + 2 * 86400000 })).status === 400);
+      const at4 = [];
+      await W.scheduled({ cron: "* * * * *" }, env, { waitUntil: p => at4.push(p) });
+      await Promise.all(at4);
+      const notif = JSON.parse(await env.NEGOS.get("duo-testabcd:notif"));
+      check("cron minute : l'échéance passée est poussée (un appel push), le message « Repos terminé » attend le service worker sous <code>:notif", envois.length === 1 && notif && /Repos terminé/.test(notif.titre) && notif.tag === "repos-lvlup", JSON.stringify(notif));
+      check("… et la planification est consommée (index vidé)", !JSON.parse(await env.NEGOS.get("planif:index"))["duo-testabcd"]);
+      const rn = await appel(env, "/api/duo-testabcd/notif");
+      check("GET /notif rend ce message (no-store) ; 404 quand il n'y a rien", rn.status === 200 && (await rn.json()).tag === "repos-lvlup" && rn.headers.get("cache-control") === "no-store" && (await appel(env, "/api/duo-autreabcd/notif")).status === 404);
+      envois.length = 0;
+      await post(env, "/api/duo-testabcd/planifier", { type: "relance", quand: t0 + 18 * 60000 });
+      const at5 = [];
+      await W.scheduled({ cron: "* * * * *" }, env, { waitUntil: p => at5.push(p) });
+      await Promise.all(at5);
+      check("une relance dans 18 min n'est pas poussée maintenant", envois.length === 0 && JSON.parse(await env.NEGOS.get("planif:index"))["duo-testabcd"].relance === t0 + 18 * 60000);
+      await post(env, "/api/duo-testabcd/planifier", { type: "relance", quand: null });
+      check("planifier avec quand:null annule (index vidé)", !JSON.parse(await env.NEGOS.get("planif:index"))["duo-testabcd"]);
+      await post(env, "/api/duo-testabcd/planifier", { type: "relance", quand: t0 - 40 * 60000 });
+      const at6 = [];
+      await W.scheduled({ cron: "* * * * *" }, env, { waitUntil: p => at6.push(p) });
+      await Promise.all(at6);
+      check("une échéance en retard de plus de 15 min est abandonnée sans push (l'app a bougé)", envois.length === 0 && !JSON.parse(await env.NEGOS.get("planif:index"))["duo-testabcd"]);
+      check("wrangler.jsonc déclare le cron chaque minute", /"\* \* \* \* \*"/.test(fs.readFileSync(path.join(__dirname, "..", "wrangler.jsonc"), "utf8")));
+      // le service worker : il mémorise le code (message), va chercher le message du moment à chaque push
+      { const swSrc = await (await appel(env, "/sw.js")).text();
+        const handlers = {}, caches = new Map(), shown = [];
+        const self = { addEventListener: (t, f) => { handlers[t] = f; }, skipWaiting: () => {}, registration: { showNotification: async (titre, opts) => { shown.push({ titre, ...opts }); } } };
+        const fauxCaches = { open: async () => ({ put: async (k, r) => { caches.set(k, await r.text()); }, match: async k => caches.has(k) ? new Response(caches.get(k)) : undefined }) };
+        const fetchSW = async (u) => u === "/api/duo-testabcd/notif" ? new Response(JSON.stringify({ titre: "Tu as fini ? 🏁", corps: "Termine ta séance pour la compter.", tag: "relance-lvlup" }), { status: 200 }) : new Response("", { status: 404 });
+        new Function("self", "caches", "fetch", "clients", swSrc)(self, fauxCaches, fetchSW, { claim: () => {}, matchAll: async () => [] });
+        const attendre = async (ev, data) => { const p = []; await handlers[ev]({ data, waitUntil: x => p.push(x), notification: { close() {} } }); await Promise.all(p); };
+        await attendre("message", { type: "code", code: "duo-testabcd" });
+        check("service worker : le message {type:\"code\"} range le code duo dans le cache", caches.get("/__code") === "duo-testabcd");
+        await attendre("message", { type: "code", code: "PAS UN CODE!" });
+        check("… un code invalide est ignoré", caches.get("/__code") === "duo-testabcd");
+        await attendre("push", null);
+        check("push : le service worker demande /api/<code>/notif et affiche ce message (titre, corps, tag)", shown.length === 1 && /Tu as fini/.test(shown[0].titre) && shown[0].tag === "relance-lvlup", JSON.stringify(shown[0]));
+        caches.clear(); shown.length = 0;
+        await attendre("push", null);
+        check("sans code ou sans message : repli sur le rappel du soir ou du matin (tag rappel-lvlup)", shown.length === 1 && shown[0].tag === "rappel-lvlup" && /Level Up/.test(shown[0].titre)); }
     } finally { globalThis.fetch = vraiFetch; } }
 
   console.log("\n=== Routes IA : clé, code connu, taille bornée, quota par code, budget global, contexte hors du prompt système ===");
   const aujourdhui = new Date().toISOString().slice(0, 10);
-  const idees8 = { idees: [2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: "Idée " + (i + 1) })) };
+  const idees8 = { idees: [2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: "Soirée crêpes numéro " + (i + 1), concret: "Je fais la pâte, tu choisis les garnitures, on mange devant ton film préféré." })) };
   const fauxAnthropic = (reponse) => { const appels = []; globalThis.fetch = async (url, init) => { appels.push({ url: String(url), corps: JSON.parse(init.body) }); return new Response(JSON.stringify({ content: [{ type: "text", text: JSON.stringify(reponse) }] }), { status: 200, headers: { "content-type": "application/json" } }); }; return appels; };
   const vraiFetch2 = globalThis.fetch;
   try {
@@ -164,6 +209,38 @@ const deB64u = s => Buffer.from(s, "base64url");
       globalThis.fetch = async () => new Response(JSON.stringify({ content: [{ type: "text", text: "pas du json" }] }), { status: 200, headers: { "content-type": "application/json" } });
       const r3 = await post(env, "/api/duo-repliabcd/idees", { styles: ["soins"] }, ipRepli);
       check("réponse illisible → 502 statut \"format\"", r3.status === 502 && (await r3.json()).statut === "format"); }
+    { // v20.8 : Sonnet, prompt avec trois bonnes et trois mauvaises idées, ligne « concret », vérification minimale
+      await env.NEGOS.put("quota:idees:" + aujourdhui, "0");
+      const ipV = { "cf-connecting-ip": "203.0.113.88" };
+      await post(env, "/api/duo-verifabcd/profil", {}, ipV);
+      const appelsV = fauxAnthropic(idees8);
+      const r = await post(env, "/api/duo-verifabcd/idees", { styles: ["cool"] }, ipV);
+      const d = await r.json();
+      const req = appelsV[appelsV.length - 1].corps;
+      check("/idees tourne sur claude-sonnet-5, en sortie structurée avec « concret » obligatoire", req.model === "claude-sonnet-5" && req.output_config.format.schema.properties.idees.items.required.includes("concret"), req.model);
+      check("le prompt exige concret + expliqué, français irréprochable, ton humain, avec 3 bonnes et 3 mauvaises idées", /CONCRÈTE et EXPLIQUÉE/.test(req.system) && /Français irréprochable/.test(req.system) && /Ton humain/.test(req.system) && /Soirée crêpes maison/.test(req.system) && /Défi farfelu avec gage hilarant/.test(req.system) && /blagues marantesse/.test(req.system));
+      check("chaque idée renvoyée porte niveau, label et concret", r.status === 200 && d.length === 8 && d.every(x => x.niveau >= 2 && x.niveau <= 5 && x.label && x.concret), JSON.stringify(d[0]));
+      // idées suspectes (mot inventé, lettres triplées, sans voyelle, trop court) → une seule nouvelle génération, puis filtrage
+      const douteuses = { idees: [
+        { niveau: 2, label: "Des blagues marantesse", concret: "On rigolle ensemble avec des blaguesss trop marrrantes." },
+        { niveau: 3, label: "Défi xkrpt", concret: "Un défi farfelu avec gage hilarant." },
+        { niveau: 4, label: "Un dimanche sans réveil", concret: "Tu dors tant que tu veux, je m'occupe du petit-déjeuner et du reste de la maison jusqu'à midi." },
+        { niveau: 5, label: "Place de concert", concret: "Je réserve une place pour un concert de ton choix dans les trois mois, je t'accompagne." } ] };
+      let n = 0; const corpsV = [];
+      globalThis.fetch = async (url, init) => { const c = JSON.parse(init.body); corpsV.push(c); n++; return new Response(JSON.stringify({ content: [{ type: "text", text: JSON.stringify(n === 1 ? douteuses : idees8) }] }), { status: 200, headers: { "content-type": "application/json" } }); };
+      const r2 = await post(env, "/api/duo-verifabcd/idees", { styles: ["cool"] }, ipV);
+      const d2 = await r2.json();
+      check("plus d'un tiers d'idées suspectes → une seconde génération avec consigne de relecture, et ce sont ses idées qui reviennent", r2.status === 200 && n === 2 && /Relis chaque libellé/.test(corpsV[1].system) && d2.length === 8 && d2.every(x => /Soirée crêpes/.test(x.label)), n + " appels, " + d2.length + " idées");
+      n = 0;
+      globalThis.fetch = async (url, init) => { n++; return new Response(JSON.stringify({ content: [{ type: "text", text: JSON.stringify(douteuses) }] }), { status: 200, headers: { "content-type": "application/json" } }); };
+      const r3 = await post(env, "/api/duo-verifabcd/idees", { styles: ["cool"] }, ipV);
+      const d3 = await r3.json();
+      check("toujours suspectes après relecture → les douteuses sont écartées, les propres passent (2 sur 4), pas de troisième appel", r3.status === 200 && n === 2 && d3.length === 2 && d3.every(x => /dimanche|concert/.test(x.label)), JSON.stringify(d3));
+      n = 0;
+      globalThis.fetch = async () => { n++; return new Response(JSON.stringify({ content: [{ type: "text", text: JSON.stringify({ idees: [{ niveau: 3, label: "Xxx", concret: "court" }] }) }] }), { status: 200, headers: { "content-type": "application/json" } }); };
+      const r4 = await post(env, "/api/duo-verifabcd/idees", { styles: ["cool"] }, ipV);
+      check("rien de propre après deux essais → 502 statut \"vide\", jamais une idée suspecte à l'écran", r4.status === 502 && (await r4.json()).statut === "vide" && n === 2);
+      check("compteur : une seule unité par demande, même avec deux appels à l'API", (await env.NEGOS.get("duo-verifabcd:idees:" + aujourdhui)) === "3"); }
   } finally { globalThis.fetch = vraiFetch2; }
 
   console.log("\n=== Validation : tailles bornées, liste blanche de /etat, identifiants filtrés, services push connus, no-store ===");

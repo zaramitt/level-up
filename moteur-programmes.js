@@ -713,7 +713,7 @@
         id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
         pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
         series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
-        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
+        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null, difficulte: x.difficulte
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
         id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
@@ -789,7 +789,7 @@
     return {
       id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel), pdc: pdcPossible(cand),
       series: x.series, reps, duree: x.duree_s, unilateral: x.unilateral, consigne: cand.consigne || "", erreur: cand.erreur || "",
-      compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id
+      compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id, difficulte: cand.difficulte
     };
   };
   // les 2 à 3 candidats proposés à l'écran : le phare en premier, chacun avec son muscle et son matériel.
@@ -839,7 +839,7 @@
       const ctx = { niveau, niv, materiel, difficulteMax: Math.min(niv.difficulteMax, obj.difficulteMax || 3), obj, prioritaires: [], favoris: new Set(), phares: new Set(), distancePhare: () => 0,
         unilateral: false, dejaSemaine: new Set(), compteSemaine: {}, musclesSemaine: new Set(), dejaSeance: new Set(s.exercices.map(x => x.id)), musclesSeance: new Set(s.exercices.filter(x => x.compartiment === "isolation").map(x => x.muscle)) };
       const versApp = x => ({ id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, materiel), pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
-        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement" });
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement", difficulte: x.difficulte });
       const ajouter = (e, pourquoi, dureeCardio) => {
         if (!e || ajouts.length >= 3) return false;
         const x = exerciceProgramme(e, doser(e, { ...ctx, dureeCardio }), "complement");

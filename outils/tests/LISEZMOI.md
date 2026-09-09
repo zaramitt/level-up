@@ -32,6 +32,10 @@ node outils/sync.test.js             # les copies embarquées sont-elles à jour
   « dernier » seulement avec une valeur, phare du jour push, cagnotte et paris
   toujours présents en duo (coach pas relié, serveur en erreur), session audio
   « ambient », Progrès dès la première charge, « Terminer la séance ».
+- `09b-v2008-xp-idees-notifs.js` — v20.8 : barème d'XP selon la difficulté
+  (cartes, pastilles, validation, récap), idées de récompenses avec leur ligne
+  « Concrètement », notifications de séance planifiées et annulées (mock
+  `/planifier`, `/__planifs`), clôture automatique après 3 h sans activité.
 - `10` à `21` — non-régressions v19.10 → v19.21, portées sur les nouvelles
   questions d'onboarding quand elles passaient par les anciennes.
 
