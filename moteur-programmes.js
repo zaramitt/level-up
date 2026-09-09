@@ -763,9 +763,16 @@
   const suggererCharge = (x, histo, materiel) => {
     if (!x || !(x.charge || x.pdc) || !x.reps || !histo || !histo.length) return null;
     const der = histo[histo.length - 1];
-    if (!der || !der.hautFourchette) return null;
+    if (!der) return null;
+    // v20.9 : les reps réelles par série font foi (toutes au haut de la fourchette) ; une entrée d'avant,
+    // sans reps, garde la case « tenu »
+    const tenu = Array.isArray(der.reps) && der.reps.length ? der.reps.every(r => Number(r) >= x.reps[1]) : !!der.hautFourchette;
+    if (!tenu) return null;
     if (der.ressenti === "dur" || der.ressenti == null) return null;
-    const base = chargeDeSerie(der);
+    let base = chargeDeSerie(der);
+    // v20.9 : reps tenues mais charge pas notée ce jour-là (elle est facultative) → la dernière charge
+    // connue du même type sert de base
+    if (!base) { const src = [...histo].reverse().find(e => (e.type || null) === (der.type || null) && chargeDeSerie(e)); if (!src) return null; base = chargeDeSerie(src); }
     const plus = incrementDe(x, materiel);
     if (der.type === "assiste" && base < 0) return { kg: Math.min(0, base + plus), plus, base, reps: x.reps[1], type: "assiste", raison: `−${String(plus).replace(".", ",")} kg d'assistance, tu as tenu ${x.reps[1]} reps partout` };
     if (!(base > 0)) return null;
@@ -810,6 +817,43 @@
       approximatif: r.approximatif,
       candidats: cands.slice(0, 3).map(c => ({ exo: remplacantPourApp(exoApp, c, materiel), muscle: c.muscle, materiel: c.materiel.join(" ou "), phare: c.echelle === "phare", difficulte: c.difficulte }))
     };
+  };
+  /* ------------------------------------------------------------------ */
+  /* Étape 4 (v20.9) : la séance libre                                  */
+  /* ------------------------------------------------------------------ */
+  // un exercice de la banque ajouté à la main : doses par défaut de la banque (3 séries, fourchette et
+  // repos de la banque ; cardio et mobilité : leur durée), modifiables ensuite dans l'app
+  const exerciceLibrePourApp = (banque, id, opts = {}) => {
+    const e = banque.exercices.find(x => x.id === id);
+    if (!e) return null;
+    const materiel = opts.materiel || "salle";
+    const cardio = e.compartiment === "cardio_mobilite", gain = e.compartiment === "gainage";
+    const x = { compartiment: e.compartiment, series: cardio ? 1 : 3, reps: e.reps || null, duree_s: e.reps ? null : e.duree_s || null, unilateral: !!e.unilateral };
+    if (!x.reps && !x.duree_s) x.reps = [8, 12];
+    const repos = cardio ? 0 : gain ? 45 : e.repos_s || (x.reps ? reposDe(x.reps, e.compartiment === "isolation") : 60);
+    return {
+      id: e.id, nom: e.nom, dose: doseDe(x), repos, charge: !cardio && chargeDe(e, materiel), pdc: !cardio && pdcPossible(e),
+      series: x.series, reps: x.reps, duree: x.duree_s, unilateral: x.unilateral, consigne: e.consigne || "", erreur: e.erreur || "",
+      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true
+    };
+  };
+  // le catalogue du panneau « Ajouter / Remplacer » : les similaires (muscle principal dans le focus de la
+  // séance, règle 1), triés par compartiment, phare en premier, faisables avec le matériel d'abord ; toute
+  // la banque ; cardio et mobilité. Jamais un exercice déjà dans la séance.
+  const catalogue = (banque, opts = {}) => {
+    const materiel = opts.materiel || "salle";
+    const exclure = new Set(opts.exclure || []);
+    const resume = e => ({
+      id: e.id, nom: e.nom, compartiment: e.compartiment, muscle: e.muscle, materiel: e.materiel.join(" ou "),
+      tags: [...new Set(e.materiel.flatMap(tagsDe))], difficulte: e.difficulte, phare: e.echelle === "phare", faisable: faisable(e, materiel), type: e.type || null,
+      dose: doseDe({ compartiment: e.compartiment, series: e.compartiment === "cardio_mobilite" ? 1 : 3, reps: e.reps || (e.duree_s ? null : [8, 12]), duree_s: e.reps ? null : e.duree_s || null, unilateral: !!e.unilateral })
+    });
+    const tri = (a, b) => (b.faisable - a.faisable) || (ORDRE_COMP[a.compartiment] - ORDRE_COMP[b.compartiment]) || (b.phare - a.phare) || (a.difficulte - b.difficulte) || a.nom.localeCompare(b.nom);
+    const tous = banque.exercices.filter(e => !exclure.has(e.id));
+    const cardio = tous.filter(e => e.compartiment === "cardio_mobilite").map(resume).sort((a, b) => (b.faisable - a.faisable) || (a.type || "").localeCompare(b.type || "") || a.nom.localeCompare(b.nom));
+    const force = tous.filter(e => e.compartiment !== "cardio_mobilite");
+    const similaires = (opts.focus && FOCUS[opts.focus] ? force.filter(e => appartientAuFocus(e, opts.focus)) : []).map(resume).sort(tri);
+    return { similaires, tous: force.map(resume).sort(tri), cardio };
   };
   // « Adapter ma séance » : moins de temps ou d'énergie → la séance existe au lieu d'être sautée.
   // Ordre de DECISIONS.md : isolations, séries, repos jusqu'aux planchers, jamais les polyarticulaires.
@@ -976,5 +1020,5 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
 });

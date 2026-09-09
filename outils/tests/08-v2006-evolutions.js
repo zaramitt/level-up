@@ -71,7 +71,7 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     await p.locator('button[aria-expanded]', { hasText: exo.nom }).first().tap(); await p.waitForTimeout(500);
     const focus = p.locator('.focus-exercice');
     check('le sélecteur poids du corps / lesté / assisté est là, « Poids du corps » par défaut', (await focus.locator('.type-charge button').count()) === 3 && await focus.locator('.type-charge button[aria-pressed="true"]').innerText() === 'Poids du corps');
-    check('au poids du corps : pas de saisie de kg, la case « J\'ai tenu N reps » et le conseil', (await focus.locator('.charge-pdc').count()) === 1 && /passe en lesté/.test(await focus.innerText()) && (await focus.locator('.haut-fourchette').count()) === 1);
+    check('au poids du corps : pas de saisie de kg, les reps par série (v20.9) et le conseil', (await focus.locator('.charge-pdc').count()) === 1 && /passe en lesté/.test(await focus.innerText()) && (await focus.locator('.reps-pdc .reps-serie').count()) >= 3);
     await focus.locator('.type-charge button', { hasText: 'Assisté' }).tap(); await p.waitForTimeout(400);
     check('assisté : saisie d\'assistance, « moins, c\'est mieux »', /ASSISTANCE PAR SÉRIE \(KG\) · moins, c'est mieux/.test(await focus.innerText()));
     // saisie au clavier : un tap sur la valeur ouvre le champ

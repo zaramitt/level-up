@@ -128,7 +128,7 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     st = await etat(p);
     check('« − » : retour à 0, la charge enregistrée devient 0 (plus 2,5)', st.charges[exId][0].series[0] === 0, JSON.stringify(st.charges[exId]));
     check('le champ de charge est dit facultatif', /CHARGE PAR SÉRIE \(KG\) · facultatif/i.test(await ouvert.innerText()));
-    check('sous la case « J\'ai tenu N reps » : le signal pour monter la charge', /Tout tenu \? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures\./.test(await ouvert.innerText()));
+    check('sous les reps par série (pré-remplies au haut de la fourchette) : le signal pour monter la charge', /Tout tenu \? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures\./.test(await ouvert.innerText()));
     // le bouton de repos ressemble à un bouton : bordure et texte de la couleur de la séance, libellé d'action
     const rb = ouvert.locator('.bouton-repos');
     check('« Fin de série → lancer le repos » : un vrai bouton (bordure colorée, libellé d\'action)', (await rb.count()) === 1 && /Fin de série → lancer le repos/.test(await rb.innerText()) && await rb.evaluate(el => getComputedStyle(el).borderColor !== 'rgba(255, 255, 255, 0.12)'));

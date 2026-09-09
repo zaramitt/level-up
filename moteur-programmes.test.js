@@ -612,6 +612,49 @@ test("v20.7 — banque : « Dips à la machine assise », variante machine des d
   }
 });
 
+test("v20.9 — règle 8 sur les reps réelles : toutes les séries au haut de la fourchette → proposition ; une série en dessous → rien ; l'ancienne case reste lue", () => {
+  const dc = { id: "developpe_couche", charge: true, reps: [5, 8], compartiment: "poussee_h" };
+  const ok = M.suggererCharge(dc, [{ date: "2026-09-01", series: [40, 40, 40], reps: [8, 8, 8], ressenti: "juste" }], "salle");
+  assert.ok(ok && ok.kg === 42.5, JSON.stringify(ok));
+  assert.strictEqual(M.suggererCharge(dc, [{ date: "2026-09-01", series: [40, 40, 40], reps: [8, 8, 6], ressenti: "juste" }], "salle"), null, "une série sous le haut de fourchette : pas de proposition");
+  assert.strictEqual(M.suggererCharge(dc, [{ date: "2026-09-01", series: [40, 40, 40], reps: [8, 8, 8], ressenti: "dur" }], "salle"), null, "trop dur : rien");
+  const sansCharge = M.suggererCharge(dc, [{ date: "2026-08-30", series: [40, 40, 40], reps: [5, 5, 5], ressenti: "juste" }, { date: "2026-09-01", series: [], reps: [8, 8, 8], ressenti: "facile" }], "salle");
+  assert.ok(sansCharge && sansCharge.kg === 42.5, "reps tenues sans charge notée : la dernière charge connue sert de base — " + JSON.stringify(sansCharge));
+  assert.strictEqual(M.suggererCharge(dc, [{ date: "2026-09-01", series: [], reps: [8, 8, 8], ressenti: "facile" }], "salle"), null, "aucune charge connue : rien à proposer");
+  const ancien = M.suggererCharge(dc, [{ date: "2026-09-01", series: [40, 40, 40], hautFourchette: true, ressenti: "facile" }], "salle");
+  assert.ok(ancien && ancien.kg === 42.5, "entrée d'avant la v20.9 : la case « tenu » fait foi");
+  assert.strictEqual(M.suggererCharge(dc, [{ date: "2026-09-01", series: [40, 40, 40], reps: [8, 8, 8], hautFourchette: false, ressenti: "facile" }], "salle") && true, true, "les reps l'emportent sur la case");
+});
+test("v20.9 — exercice libre pour l'app : doses par défaut de la banque, XP par difficulté, cardio à sa durée", () => {
+  const d = M.exerciceLibrePourApp(banque, "dips_machine", { materiel: "salle" });
+  assert.ok(d && d.ajoute && d.series === 3 && d.dose === "3 × 8-12" && d.repos === 120 && d.charge && !d.pdc && d.difficulte === 2 && d.role === "ajout", JSON.stringify(d));
+  const r = M.exerciceLibrePourApp(banque, "rameur", {});
+  assert.ok(r && r.dose === "15 min" && r.repos === 0 && !r.charge && !r.pdc && r.compartiment === "cardio_mobilite", JSON.stringify(r));
+  const pl = M.exerciceLibrePourApp(banque, "planche", {});
+  assert.ok(pl && pl.dose === "3 × 40 s" && pl.repos === 45 && pl.pdc, JSON.stringify(pl));
+  const pompes = M.exerciceLibrePourApp(banque, "pompes", { materiel: "rien" });
+  assert.ok(pompes && pompes.pdc && !pompes.charge && pompes.reps && pompes.reps[1] === 12, JSON.stringify(pompes));
+  assert.strictEqual(M.exerciceLibrePourApp(banque, "inconnu", {}), null);
+});
+test("v20.9 — catalogue du panneau : similaires du focus (phare en premier par compartiment, faisables d'abord), toute la banque, cardio et mobilité, jamais un exercice déjà dans la séance", () => {
+  const ppl = M.programmePourApp({ frequence: 6, objectif: "muscler", muscu: "an", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  const A = ppl.seances.A;
+  const c = M.catalogue(banque, { focus: A.focus, materiel: "salle", exclure: A.exos.map(e => e.id) });
+  assert.ok(c.similaires.length >= 8 && c.similaires.every(x => M.appartientAuFocus(byId[x.id], "push")), "similaires du push : " + c.similaires.map(x => x.id).join(", "));
+  assert.ok(!c.similaires.some(x => A.exos.some(e => e.id === x.id)) && !c.tous.some(x => A.exos.some(e => e.id === x.id)), "les exercices de la séance sont exclus");
+  const comps = c.similaires.map(x => x.compartiment);
+  assert.deepStrictEqual(comps, [...comps].sort((a, b) => M.ORDRE_COMP ? 0 : 0), "tri stable par compartiment");
+  const premierPousseeH = c.similaires.find(x => x.compartiment === "poussee_h");
+  assert.ok(premierPousseeH && (premierPousseeH.phare || byId.developpe_couche && A.exos.some(e => e.id === "developpe_couche")), "le phare en premier dans son compartiment (ou déjà dans la séance)");
+  assert.ok(c.cardio.length >= 10 && c.cardio.every(x => x.compartiment === "cardio_mobilite") && !c.tous.some(x => x.compartiment === "cardio_mobilite"), "cardio et mobilité à part");
+  const h = M.catalogue(banque, { focus: "push", materiel: "halteres" });
+  const idx = h.similaires.findIndex(x => !x.faisable);
+  assert.ok(idx > 0 && h.similaires.slice(0, idx).every(x => x.faisable) && h.similaires.slice(idx).every(x => !x.faisable), "faisables d'abord, puis le reste (haltères et banc)");
+  assert.ok(h.similaires.some(x => x.id === "dc_halteres" && x.faisable) && h.similaires.some(x => x.id === "chest_press" && !x.faisable), "chest press infaisable avec des haltères");
+  assert.deepStrictEqual(M.catalogue(banque, { focus: "libre" }).similaires, [], "séance libre : pas de similaires");
+  assert.ok(c.tous.every(x => typeof x.dose === "string" && x.dose.length && Array.isArray(x.tags)), "chaque entrée porte sa dose et ses tags de matériel");
+});
+
 console.log("\n=== cas demandés ===");
 test("débutant à 6× : PPL, difficulté 1 seulement, 4-5 exercices par séance", () => {
   const p = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau: 1 }, banque);

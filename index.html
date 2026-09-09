@@ -41,7 +41,7 @@
   .carrousel { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
     padding:10px 2px 12px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
   .carrousel::-webkit-scrollbar { display:none; }
-  .carte-seance { scroll-snap-align:center; flex:0 0 76%;
+  .carte-seance, .carte-libre { scroll-snap-align:center; flex:0 0 76%;
     transition: transform .18s ease-out, opacity .18s ease-out; will-change: transform; }
   .carte-mode { min-height:112px; }
   .orbe { animation: orbespin 2.6s linear infinite; }
@@ -846,9 +846,16 @@
   const suggererCharge = (x, histo, materiel) => {
     if (!x || !(x.charge || x.pdc) || !x.reps || !histo || !histo.length) return null;
     const der = histo[histo.length - 1];
-    if (!der || !der.hautFourchette) return null;
+    if (!der) return null;
+    // v20.9 : les reps réelles par série font foi (toutes au haut de la fourchette) ; une entrée d'avant,
+    // sans reps, garde la case « tenu »
+    const tenu = Array.isArray(der.reps) && der.reps.length ? der.reps.every(r => Number(r) >= x.reps[1]) : !!der.hautFourchette;
+    if (!tenu) return null;
     if (der.ressenti === "dur" || der.ressenti == null) return null;
-    const base = chargeDeSerie(der);
+    let base = chargeDeSerie(der);
+    // v20.9 : reps tenues mais charge pas notée ce jour-là (elle est facultative) → la dernière charge
+    // connue du même type sert de base
+    if (!base) { const src = [...histo].reverse().find(e => (e.type || null) === (der.type || null) && chargeDeSerie(e)); if (!src) return null; base = chargeDeSerie(src); }
     const plus = incrementDe(x, materiel);
     if (der.type === "assiste" && base < 0) return { kg: Math.min(0, base + plus), plus, base, reps: x.reps[1], type: "assiste", raison: `−${String(plus).replace(".", ",")} kg d'assistance, tu as tenu ${x.reps[1]} reps partout` };
     if (!(base > 0)) return null;
@@ -893,6 +900,43 @@
       approximatif: r.approximatif,
       candidats: cands.slice(0, 3).map(c => ({ exo: remplacantPourApp(exoApp, c, materiel), muscle: c.muscle, materiel: c.materiel.join(" ou "), phare: c.echelle === "phare", difficulte: c.difficulte }))
     };
+  };
+  /* ------------------------------------------------------------------ */
+  /* Étape 4 (v20.9) : la séance libre                                  */
+  /* ------------------------------------------------------------------ */
+  // un exercice de la banque ajouté à la main : doses par défaut de la banque (3 séries, fourchette et
+  // repos de la banque ; cardio et mobilité : leur durée), modifiables ensuite dans l'app
+  const exerciceLibrePourApp = (banque, id, opts = {}) => {
+    const e = banque.exercices.find(x => x.id === id);
+    if (!e) return null;
+    const materiel = opts.materiel || "salle";
+    const cardio = e.compartiment === "cardio_mobilite", gain = e.compartiment === "gainage";
+    const x = { compartiment: e.compartiment, series: cardio ? 1 : 3, reps: e.reps || null, duree_s: e.reps ? null : e.duree_s || null, unilateral: !!e.unilateral };
+    if (!x.reps && !x.duree_s) x.reps = [8, 12];
+    const repos = cardio ? 0 : gain ? 45 : e.repos_s || (x.reps ? reposDe(x.reps, e.compartiment === "isolation") : 60);
+    return {
+      id: e.id, nom: e.nom, dose: doseDe(x), repos, charge: !cardio && chargeDe(e, materiel), pdc: !cardio && pdcPossible(e),
+      series: x.series, reps: x.reps, duree: x.duree_s, unilateral: x.unilateral, consigne: e.consigne || "", erreur: e.erreur || "",
+      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true
+    };
+  };
+  // le catalogue du panneau « Ajouter / Remplacer » : les similaires (muscle principal dans le focus de la
+  // séance, règle 1), triés par compartiment, phare en premier, faisables avec le matériel d'abord ; toute
+  // la banque ; cardio et mobilité. Jamais un exercice déjà dans la séance.
+  const catalogue = (banque, opts = {}) => {
+    const materiel = opts.materiel || "salle";
+    const exclure = new Set(opts.exclure || []);
+    const resume = e => ({
+      id: e.id, nom: e.nom, compartiment: e.compartiment, muscle: e.muscle, materiel: e.materiel.join(" ou "),
+      tags: [...new Set(e.materiel.flatMap(tagsDe))], difficulte: e.difficulte, phare: e.echelle === "phare", faisable: faisable(e, materiel), type: e.type || null,
+      dose: doseDe({ compartiment: e.compartiment, series: e.compartiment === "cardio_mobilite" ? 1 : 3, reps: e.reps || (e.duree_s ? null : [8, 12]), duree_s: e.reps ? null : e.duree_s || null, unilateral: !!e.unilateral })
+    });
+    const tri = (a, b) => (b.faisable - a.faisable) || (ORDRE_COMP[a.compartiment] - ORDRE_COMP[b.compartiment]) || (b.phare - a.phare) || (a.difficulte - b.difficulte) || a.nom.localeCompare(b.nom);
+    const tous = banque.exercices.filter(e => !exclure.has(e.id));
+    const cardio = tous.filter(e => e.compartiment === "cardio_mobilite").map(resume).sort((a, b) => (b.faisable - a.faisable) || (a.type || "").localeCompare(b.type || "") || a.nom.localeCompare(b.nom));
+    const force = tous.filter(e => e.compartiment !== "cardio_mobilite");
+    const similaires = (opts.focus && FOCUS[opts.focus] ? force.filter(e => appartientAuFocus(e, opts.focus)) : []).map(resume).sort(tri);
+    return { similaires, tous: force.map(resume).sort(tri), cardio };
   };
   // « Adapter ma séance » : moins de temps ou d'énergie → la séance existe au lieu d'être sautée.
   // Ordre de DECISIONS.md : isolations, séries, repos jusqu'aux planchers, jamais les polyarticulaires.
@@ -1059,7 +1103,7 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
 });
 </script>
 <script id="banque-exercices">
@@ -1070,7 +1114,8 @@ window.BANQUE = {"version":1,"genere":"programmes étape 1 (marqueurs étape 2 :
 const {
   useState,
   useEffect,
-  useRef
+  useRef,
+  useMemo
 } = React;
 
 /* ============================ DESIGN ============================ */
@@ -1879,6 +1924,49 @@ const GAINAGE = [{
 // gainage d'une séance : liste propre (programmes du moteur, v20.0) ou la liste globale (anciens programmes)
 const gainageDe = S => Array.isArray(S.gainage) ? S.gainage : S.gainage ? GAINAGE : [];
 const nbSeries = ex => parseInt(ex.dose) || 3;
+// v20.9 (étape 4) : la séance libre — vide au départ, on ajoute ce qu'on fait ; ses XP viennent des exercices
+const SEANCE_LIBRE = { nom: "Séance libre", geste: null, couleur: COL.B, focus: "libre", exos: [], gainage: [], dureeMin: null, libre: true };
+// la séance du jour telle qu'elle se joue : programme (ou séance libre), adaptée (temps / énergie),
+// exercices remplacés du jour, retirés, ajoutés (après un exercice ou en fin), et l'ordre du jour.
+// Le programme, lui, ne bouge pas : tout ça vit dans st.jour[date].
+const seanceDuJour = (j, seances) => {
+  if (!j || !j.seance) return null;
+  const libre = j.seance === "L";
+  const base = libre ? SEANCE_LIBRE : seances[j.seance];
+  if (!base) return null;
+  const S = j.adaptee && j.adaptee.seance ? j.adaptee.seance : base;
+  const rempl = j.remplacements || {};
+  const retires = new Set(j.retires || []);
+  const retiresExos = S.exos.map(e => rempl[e.id] || e).filter(e => retires.has(e.id)).map(e => ({ id: e.id, nom: e.nom }));
+  let exos = S.exos.map(e => rempl[e.id] || e).filter(e => !retires.has(e.id));
+  for (const a of j.ajouts || []) {
+    if (exos.some(e => e.id === a.id)) continue;
+    const k = a.apres ? exos.findIndex(e => e.id === a.apres) : -1;
+    if (k >= 0) exos.splice(k + 1, 0, a); else exos.push(a);
+  }
+  if (Array.isArray(j.ordre) && j.ordre.length) {
+    const pos = new Map(j.ordre.map((id, i) => [id, i]));
+    exos = exos.map((e, i) => [e, pos.has(e.id) ? pos.get(e.id) : 1000 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+  }
+  return { ...S, exos, libre, retiresExos };
+};
+// le journal d'une séance (v20.9) : ce qui a été FAIT — prévus validés, ajoutés, retirés, remplacés, séries,
+// reps réelles, charges, type de charge, ressenti. Progrès et « dernier » lisent les charges, pas le programme.
+const journalDe = (j, S, charges, jourK) => {
+  const exos = (S ? S.exos : []).map(e => {
+    const l = (charges || {})[e.id] || [];
+    const c = l.length && l[l.length - 1].date === jourK ? l[l.length - 1] : null;
+    return {
+      id: e.id, nom: e.nom, fait: (j.faits || []).includes(e.id), xp: (j.xpExos || {})[e.id] || 0,
+      ...(e.ajoute ? { ajoute: true } : {}), ...(e.remplace ? { remplace: e.remplace } : {}),
+      series: c ? (c.series || []).slice() : [], reps: c && c.reps ? c.reps.slice() : [], type: c && c.type || null,
+      ressenti: (j.ressentis || {})[e.id] || null
+    };
+  });
+  // retirés : id + nom (le programme peut changer, le journal reste lisible)
+  const retires = (j.retires || []).map(id => (S && S.retiresExos || []).find(r => r.id === id) || { id, nom: id });
+  return { exos, retires, ...(j.seance === "L" ? { libre: true } : {}) };
+};
 // v20.6 : une entrée de charge porte un type — rien (charge classique), « leste » (+kg au poids du
 // corps), « assiste » (kg d'assistance, stockés en négatif : moins d'assistance = mieux), « pdc »
 const valeursCharge = e => e == null ? [] : e.kg != null ? [Number(e.kg)] : (e.series || []).filter(v => v != null && v !== "").map(Number).filter(v => !isNaN(v));
@@ -3359,6 +3447,9 @@ function App() {
   const [chargeur, setChargeur] = useState(false);
   const [regen, setRegen] = useState(null); // flux de régénération ouvert : { mode, question }
   const [remplacer, setRemplacer] = useState(null); // exercice en cours de remplacement (v20.1)
+  const [ajouter, setAjouter] = useState(null); // panneau « Ajouter un exercice » (v20.9) : null fermé, "fin" ou l'id de l'exercice après lequel ajouter
+  const [retrait, setRetrait] = useState(null); // confirmation légère « Retirer de la séance » (v20.9)
+  const repsRef = useRef({}); // reps par série affichées pour chaque exercice ouvert (v20.9)
   const [adapter, setAdapter] = useState(false); // panneau « Adapter ma séance » (v20.1)
   const [pushRenouveler, setPushRenouveler] = useState(false); // abonnement push signé avec une ancienne clé (v20.4)
   const [explicCoach, setExplicCoach] = useState(false); // « Ton coach t'attend » déplié : ce que ça implique (v20.6)
@@ -3414,8 +3505,9 @@ function App() {
       maj(s => {
         s.jour[jourKey] = { ...s.jour[jourKey], valide: true, partiel: true, autoInactivite: true };
         s.activeDays[jourKey] = true;
-        if (!(s.histo || []).some(h => h.date === jourKey && h.type === j.seance)) s.histo.unshift({ date: jourKey, type: j.seance, xp: 0, partiel: true, auto: true, ...(j.adaptee ? { adaptee: true } : {}) });
+        if (!(s.histo || []).some(h => h.date === jourKey && h.type === j.seance)) s.histo.unshift({ date: jourKey, type: j.seance, xp: 0, partiel: true, auto: true, ...(j.adaptee ? { adaptee: true } : {}), ...journalDe(j, seanceDuJour(j, SEANCES), s.charges, jourKey) });
         s.histo = s.histo.slice(0, 30);
+        compterRetraits(s, j);
         return s;
       });
       toast("Séance enregistrée comme partielle : 3 h sans activité — venir compte.");
@@ -3544,8 +3636,10 @@ function App() {
           type: j.seance,
           xp: 0,
           partiel: true,
-          auto: true
+          auto: true,
+          ...journalDe(j, seanceDuJour(j, SEANCES), s.charges, d)
         });
+        compterRetraits(s, j);
       });
       // l'historique reste trié du plus récent au plus ancien : la suggestion
       // de prochaine séance lit la première entrée
@@ -3808,13 +3902,7 @@ function App() {
   const habJ = st.habitudes[jourKey] || [];
   // la séance du jour telle qu'elle se joue : adaptée (temps / énergie) et avec les
   // exercices remplacés d'aujourd'hui (v20.1) — la lettre reste celle du programme
-  const SJ = (() => {
-    const base = J.seance && SEANCES[J.seance];
-    if (!base) return null;
-    const S = J.adaptee && J.adaptee.seance ? J.adaptee.seance : base;
-    const rempl = J.remplacements || {};
-    return Object.keys(rempl).length ? { ...S, exos: S.exos.map(e => rempl[e.id] || e) } : S;
-  })();
+  const SJ = seanceDuJour(J, SEANCES);
   const recupJ = !!(SJ && SJ.focus === "recup");
   // l'exercice tel qu'il se joue aujourd'hui (remplacé, adapté), pour son barème d'XP (v20.8)
   const exoDuJour = id => (SJ && SJ.exos.find(e => e.id === id)) || null;
@@ -3822,7 +3910,8 @@ function App() {
   // séance est en cours avec au moins un exercice validé (le chrono se pose
   // au-dessus d'elle)
   const barreFin = !!(role !== "coach" && tab === "jour" && estSeance(J.seance) && !recupJ && !J.valide && (J.faits || []).length > 0 && !reglagesOuvert);
-  const tousFaitsJ = !!(SJ && (J.faits || []).length >= SJ.exos.length);
+  // une séance libre n'a pas de bonus « complète » : ses XP viennent des exercices faits
+  const tousFaitsJ = !!(SJ && !SJ.libre && SJ.exos.length > 0 && (J.faits || []).length >= SJ.exos.length);
   const niveau = niveauDe(st.xp);
   const basNiveau = SEUILS[niveau - 1],
     hautNiveau = SEUILS[Math.min(niveau, MAX_NIVEAU - 1)];
@@ -3871,11 +3960,14 @@ function App() {
       s.histo.unshift({
         date: jourKey,
         type: J.seance,
+        nomS: SJ ? SJ.nom : undefined,
         xp: 0,
         partiel: true,
-        ...(J.adaptee ? { adaptee: true } : {})
+        ...(J.adaptee ? { adaptee: true } : {}),
+        ...journalDe(J, SJ, s.charges, jourKey)
       });
       s.histo = s.histo.slice(0, 30);
+      compterRetraits(s, J);
       return s;
     });
     setJour(j => ({
@@ -3889,12 +3981,14 @@ function App() {
   };
   // récap des XP de la séance du jour, pour la popup de célébration
   const recapSeance = partiel => {
+    const libre = !!(SJ && SJ.libre);
     const exos = (J.faits || []).length;
     const xpExos = recupJ ? exos * XP.recupItem : (J.faits || []).reduce((a, id) => a + ((J.xpExos || {})[id] || xpExo(exoDuJour(id))), 0);
     const bonus = partiel ? 0 : recupJ ? XP.bonusRecup : XP.bonusSeance;
     const gain = (J.gainage || []).length * XP.gainageItem + (J.gainValide ? XP.bonusGainage : 0);
     return {
       partiel,
+      libre,
       exos,
       total: (SJ ? SJ.exos.length : exos),
       xpExos,
@@ -3911,8 +4005,12 @@ function App() {
       gainage: [],
       valide: false,
       gainValide: false,
-      photos: {}
+      photos: {},
+      ajouts: [],
+      retires: [],
+      ordre: null
     }));
+    if (type === "L") toast("Séance libre : ajoute ce que tu fais avec « + »");
     if (type === "R") {
       maj(s => {
         s.activeDays[auj()] = true;
@@ -3969,6 +4067,7 @@ function App() {
         return s;
       });
       const ptsPhoto = xpExo(exoDuJour(p.exId));
+      figerReps(p.exId);
       setJour(j => ({
         ...j,
         faits: [...j.faits, p.exId],
@@ -4148,11 +4247,13 @@ function App() {
       s.histo.unshift({
         date: jourKey,
         type: J.seance,
-        nomS: SEANCES[J.seance]?.nom,
+        nomS: SJ ? SJ.nom : undefined,
         photos: Object.values(J.photos || {}),
         ...(J.adaptee ? { adaptee: true } : {}),
-        ...(recupJ ? { recup: true } : {})
+        ...(recupJ ? { recup: true } : {}),
+        ...journalDe(J, SJ, s.charges, jourKey)
       });
+      compterRetraits(s, J);
       return s;
     });
     gagne(recupJ ? XP.bonusRecup : XP.bonusSeance, recupJ ? "· récupération bouclée" : "· séance complète 🎉");
@@ -4276,6 +4377,83 @@ function App() {
     });
   };
   // remplacement (règle 12) : pour aujourd'hui, et pour de bon si demandé
+  // ---- étape 4 (v20.9) : ajouter, retirer, déplacer — pour aujourd'hui, le programme ne bouge pas ----
+  const materielSt = st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle";
+  const ajouterExo = (id, apres) => {
+    const ex = window.Moteur.exerciceLibrePourApp(window.BANQUE, id, { materiel: materielSt });
+    if (!ex) return;
+    setJour(j => ({
+      ...j,
+      ajouts: [...(j.ajouts || []).filter(a => a.id !== id), { ...ex, ...(apres && apres !== "fin" ? { apres } : {}) }],
+      retires: (j.retires || []).filter(x => x !== id),
+      activite: Date.now()
+    }));
+    setAjouter(null);
+    toast(`${ex.nom} ajouté à la séance`);
+  };
+  const retirerExo = id => {
+    setJour(j => ({
+      ...j,
+      ajouts: (j.ajouts || []).filter(a => a.id !== id),
+      retires: (j.ajouts || []).some(a => a.id === id) ? (j.retires || []) : [...new Set([...(j.retires || []), id])],
+      faits: (j.faits || []).filter(x => x !== id),
+      ordre: Array.isArray(j.ordre) ? j.ordre.filter(x => x !== id) : j.ordre
+    }));
+    setRetrait(null);
+    toast("Retiré. Ça ne change rien à tes XP.");
+  };
+  const deplacerExo = (id, sens) => {
+    if (!SJ) return;
+    const ids = SJ.exos.map(e => e.id);
+    const i = ids.indexOf(id), k = i + sens;
+    if (i < 0 || k < 0 || k >= ids.length) return;
+    [ids[i], ids[k]] = [ids[k], ids[i]];
+    setJour(j => ({ ...j, ordre: ids }));
+  };
+  // reps réelles par série (v20.9) : l'app garde ce qui est affiché ; une modification explicite ou la
+  // validation de l'exercice l'écrit dans l'entrée du jour (une série non modifiée = valeur pré-remplie)
+  const persisterReps = (exId, arr) => {
+    const ex = exoDuJour(exId);
+    maj(s => {
+      const l = s.charges[exId] || [];
+      let e = l[l.length - 1];
+      if (!e || e.date !== jourKey) { e = { date: jourKey, series: [] }; l.push(e); }
+      e.reps = arr.map(Number);
+      if (ex && ex.reps) e.hautFourchette = e.reps.length > 0 && e.reps.every(r => r >= ex.reps[1]);
+      s.charges[exId] = l.slice(-30);
+      if (s.jour[jourKey]) s.jour[jourKey].activite = Date.now();
+      return s;
+    });
+  };
+  const noterReps = (exId, arr, explicite) => { repsRef.current[exId] = arr; if (explicite) persisterReps(exId, arr); };
+  const figerReps = exId => { const arr = repsRef.current[exId]; const ex = exoDuJour(exId); if (arr && arr.length && ex && ex.reps) persisterReps(exId, arr); };
+  // retraits et remplacements d'affilée (v20.9) : après trois séances de suite, l'app propose de l'enlever du programme
+  const compterRetraits = (s, j) => {
+    const base = j.seance && j.seance !== "L" && SEANCES[j.seance];
+    if (!base || s.programme !== "perso") return;
+    s.retraits = { ...(s.retraits || {}) };
+    for (const e of base.exos) {
+      if ((j.retires || []).includes(e.id) || (j.remplacements || {})[e.id]) s.retraits[e.id] = (s.retraits[e.id] || 0) + 1;
+      else if ((j.faits || []).includes(e.id)) s.retraits[e.id] = 0;
+    }
+  };
+  const propositionRetrait = (() => {
+    const r = st.retraits || {};
+    const id = Object.keys(r).find(x => r[x] >= 3 && Object.values(SEANCES).some(S => S.exos.some(e => e.id === x)));
+    return id ? { id, nom: nomDe(id), n: r[id] } : null;
+  })();
+  const enleverDuProgramme = id => {
+    maj(s => {
+      if (s.programme === "perso" && s.programmePerso) for (const L of Object.keys(s.programmePerso.seances)) {
+        const sc = s.programmePerso.seances[L];
+        sc.exos = sc.exos.filter(e => e.id !== id);
+      }
+      s.retraits = { ...(s.retraits || {}), [id]: 0 };
+      return s;
+    });
+    toast(`${nomDe(id)} retiré du programme`);
+  };
+  const garderDansProgramme = id => maj(s => { s.retraits = { ...(s.retraits || {}), [id]: 0 }; return s; });
   const remplacerExo = (exId, cand, tous) => {
     setJour(j => ({
       ...j,
@@ -4745,12 +4923,24 @@ function App() {
       fontSize: 12,
       textDecoration: "underline"
     }
-  }, "Fermer"))), remplacer && SJ && /*#__PURE__*/React.createElement(RemplacerPanneau, {
+  }, "Fermer"))), remplacer && SJ && /*#__PURE__*/React.createElement(PanneauExercices, {
+    mode: "remplacer",
     ex: remplacer,
     st: st,
     S: SJ,
-    onRemplacer: remplacerExo,
+    onChoisir: remplacerExo,
     onFermer: () => setRemplacer(null)
+  }), ajouter && SJ && /*#__PURE__*/React.createElement(PanneauExercices, {
+    mode: "ajouter",
+    apres: ajouter,
+    st: st,
+    S: SJ,
+    onChoisir: ajouterExo,
+    onFermer: () => setAjouter(null)
+  }), retrait && /*#__PURE__*/React.createElement(ConfirmRetrait, {
+    ex: retrait,
+    onOui: () => retirerExo(retrait.id),
+    onNon: () => setRetrait(null)
   }), adapter && SJ && /*#__PURE__*/React.createElement(AdapterPanneau, {
     S: SJ,
     defautMin: (st.derniereAdaptation || {}).tempsMin,
@@ -5194,7 +5384,14 @@ function App() {
       s.avertissementsFermes = signatureAvertissements(PROG);
       return s;
     })
-  }), propositionNiveau && !J.seance && /*#__PURE__*/React.createElement(CarteNiveau, {
+  }), propositionRetrait && !J.seance && /*#__PURE__*/React.createElement("div", {
+    className: "proposition-retrait",
+    style: { ...GLASS, borderRadius: 16, padding: "12px 14px", marginBottom: 12 }
+  }, /*#__PURE__*/React.createElement("div", { style: { fontWeight: 800, fontSize: 13.5 } }, "« ", propositionRetrait.nom, " » retiré ou remplacé ", propositionRetrait.n, " séances de suite"),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, color: SUB, margin: "4px 0 10px", lineHeight: 1.5 } }, "On l'enlève du programme ? Tes charges déjà notées restent."),
+    /*#__PURE__*/React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } },
+      /*#__PURE__*/React.createElement("button", { className: "enlever-programme", onClick: () => enleverDuProgramme(propositionRetrait.id), style: { background: "#F2F5F9", color: "#0B0E14", border: "none", borderRadius: 12, padding: "11px", fontWeight: 800, fontSize: 13, touchAction: "manipulation" } }, "Oui, on l'enlève"),
+      /*#__PURE__*/React.createElement("button", { className: "garder-programme", onClick: () => garderDansProgramme(propositionRetrait.id), style: { ...GLASS, color: INK, borderRadius: 12, padding: "11px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Non, je le garde"))), propositionNiveau && !J.seance && /*#__PURE__*/React.createElement(CarteNiveau, {
     proposition: propositionNiveau,
     onOui: () => accepterNiveau(propositionNiveau.sens),
     onNon: () => maj(s => {
@@ -5414,7 +5611,26 @@ function App() {
       s: 11,
       w: 2.4
     }), " LANCER"));
-  })), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("button", {
+    key: "L",
+    onClick: () => choisir("L"),
+    className: "carte-libre",
+    style: {
+      position: "relative",
+      border: `1.5px dashed ${COL.B}99`,
+      textAlign: "left",
+      borderRadius: 22,
+      padding: "18px 16px 46px",
+      minHeight: 150,
+      overflow: "hidden",
+      background: `linear-gradient(155deg, ${COL.B}55 0%, rgba(11,14,20,.6) 100%)`,
+      color: "#fff"
+    }
+  }, /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, letterSpacing: .8, opacity: .8 } }, "SÉANCE LIBRE"),
+    /*#__PURE__*/React.createElement("div", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 20, lineHeight: 1.1, marginTop: 4 } }, "Je fais ce que je veux"),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, opacity: .9, marginTop: 6, lineHeight: 1.4 } }, "Tu sais ce que tu veux faire, ou rien n'est libre ? Démarre vide, ajoute au fil de l'eau."),
+    /*#__PURE__*/React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, marginTop: 7 } }, /*#__PURE__*/React.createElement(Ic, { n: "zap", s: 10, w: 2.4 }), " XP selon ce que tu fais"),
+    /*#__PURE__*/React.createElement("div", { style: { position: "absolute", bottom: 14, left: 16, display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800 } }, "+ COMMENCER VIDE"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: "1fr 1fr",
@@ -5509,6 +5725,10 @@ function App() {
     onRessenti: noterRessenti,
     onHautFourchette: noterHautFourchette,
     onRemplacer: setRemplacer,
+    onAjouter: setAjouter,
+    onRetirer: setRetrait,
+    onDeplacer: deplacerExo,
+    onReps: noterReps,
     onAdapter: () => setAdapter(true),
     onAnnulerAdaptation: () => setJour(j => ({
       ...j,
@@ -5532,6 +5752,7 @@ function App() {
     onAnnulerGain: annulerGain,
     validerSansPhoto: exId => {
       const pts = xpExoSansPhoto(exoDuJour(exId));
+      figerReps(exId);
       setJour(j => ({
         ...j,
         faits: [...j.faits, exId],
@@ -6041,7 +6262,7 @@ function App() {
       borderRadius: 9,
       display: "grid",
       placeItems: "center",
-      background: h.type === "K" ? COL.K : SEANCES[h.type]?.couleur || "#5A6274",
+      background: h.type === "K" ? COL.K : h.type === "L" ? COL.B : SEANCES[h.type]?.couleur || "#5A6274",
       color: "#fff",
       fontFamily: DISPLAY,
       fontSize: 13
@@ -6057,7 +6278,7 @@ function App() {
       fontSize: 13,
       fontWeight: 600
     }
-  }, h.type === "K" ? h.quoi || "Cardio" : `Séance ${h.type} — ${h.nomS || SEANCES[h.type]?.nom || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, h.type === "K" ? h.quoi || "Cardio" : h.type === "L" ? `Séance libre${h.exos ? ` — ${h.exos.filter(e => e.fait).length} exercice${h.exos.filter(e => e.fait).length > 1 ? "s" : ""}` : ""}` : `Séance ${h.type} — ${h.nomS || SEANCES[h.type]?.nom || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11
     }
@@ -6129,7 +6350,7 @@ function App() {
       opacity: .85,
       marginTop: 1
     }
-  }, tousFaitsJ ? "tous les exercices sont faits — bonus de séance complète" : `${(J.faits || []).length}/${(SJ || {exos: []}).exos.length} exercices gardés · la séance compte, sans le bonus`))), celebration && /*#__PURE__*/React.createElement(Spotlight, {
+  }, tousFaitsJ ? "tous les exercices sont faits — bonus de séance complète" : SJ && SJ.libre ? `${(J.faits || []).length}/${SJ.exos.length} exercices faits — ça compte, avec les XP de chacun` : `${(J.faits || []).length}/${(SJ || {exos: []}).exos.length} exercices gardés · la séance compte, sans le bonus`))), celebration && /*#__PURE__*/React.createElement(Spotlight, {
     onFermer: () => setCelebration(null)
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6160,13 +6381,13 @@ function App() {
       fontSize: 21,
       lineHeight: 1.2
     }
-  }, celebration.partiel ? "Séance enregistrée" : "Séance validée !"), /*#__PURE__*/React.createElement("div", {
+  }, celebration.libre ? "Séance libre enregistrée" : celebration.partiel ? "Séance enregistrée" : "Séance validée !"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13.5,
       color: SUB,
       marginTop: 4
     }
-  }, celebration.partiel ? `${celebration.exos}/${celebration.total} exercices gardés — ça compte.` : accord(st.adresse, "Fière de toi.", "Fier de toi.", "Quelle fierté.")), /*#__PURE__*/React.createElement("div", {
+  }, celebration.libre ? `${celebration.exos} exercice${celebration.exos > 1 ? "s" : ""} — ça compte.` : celebration.partiel ? `${celebration.exos}/${celebration.total} exercices gardés — ça compte.` : accord(st.adresse, "Fière de toi.", "Fier de toi.", "Quelle fierté.")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
       fontWeight: 800,
@@ -6555,10 +6776,14 @@ function SeanceView({
   onAnnulerAdaptation,
   materiel,
   typesCharge,
-  onTypeCharge
+  onTypeCharge,
+  onAjouter,
+  onRetirer,
+  onDeplacer,
+  onReps
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
-  const tousFaits = J.faits.length >= S.exos.length;
+  const tousFaits = !S.libre && S.exos.length > 0 && J.faits.length >= S.exos.length;
   const gain = gainageDe(S);
   const gainFait = gain.length > 0 && J.gainage.length >= gain.length;
   // accordéon : un seul exercice déployé à la fois, les autres restent visibles
@@ -6598,13 +6823,13 @@ function SeanceView({
       fontFamily: DISPLAY,
       fontSize: 16
     }
-  }, "SÉANCE ", J.seance || Object.keys(SEANCES).find(k => SEANCES[k] === S)), /*#__PURE__*/React.createElement("div", {
+  }, S.libre ? "SÉANCE LIBRE" : ["SÉANCE ", J.seance || Object.keys(SEANCES).find(k => SEANCES[k] === S)]), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       opacity: .9,
       fontWeight: 500
     }
-  }, S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", fourchetteXP(S), " · +", XP.bonusSeance, " si complète"), S.sport && /*#__PURE__*/React.createElement("div", {
+  }, S.libre ? "Ce que tu fais aujourd'hui · les XP de chaque exercice fait" : [S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", fourchetteXP(S), " · +", XP.bonusSeance, " si complète"]), S.sport && /*#__PURE__*/React.createElement("div", {
     className: "note-sport",
     style: {
       fontSize: 11,
@@ -6648,7 +6873,7 @@ function SeanceView({
       textDecoration: "underline",
       touchAction: "manipulation"
     }
-  }, "Annuler")), !S.adaptee && !J.valide && (J.faits || []).length === 0 && S.exos.some(e => e.compartiment) && /*#__PURE__*/React.createElement("button", {
+  }, "Annuler")), !S.libre && !S.adaptee && !J.valide && (J.faits || []).length === 0 && S.exos.some(e => e.compartiment) && /*#__PURE__*/React.createElement("button", {
     onClick: onAdapter,
     className: "bouton-adapter",
     style: {
@@ -6819,6 +7044,7 @@ function SeanceView({
     /*#__PURE__*/React.createElement("button", {
       onClick: () => basculer(ex.id),
       "aria-expanded": ouvert,
+      "data-exo": ex.id,
       style: {
         display: "flex",
         alignItems: "center",
@@ -6908,6 +7134,7 @@ function SeanceView({
        compacte reste derrière. Les charges sont enregistrées à chaque saisie, donc rien ne se
        perd à la fermeture. ---- */
     ouvert && /*#__PURE__*/React.createElement(FocusExercice, {
+      reserve: timer ? (!J.valide && (J.faits || []).length > 0 ? 190 : 122) : 0,
       titre: i + 1 + ". " + ex.nom,
       sous: ex.dose + " · repos " + fmtSec(ex.repos) + (derAffiche ? " · dernier : " + fmtCharge(derAffiche) : ""),
       couleur: S.couleur,
@@ -6930,7 +7157,8 @@ function SeanceView({
       style: {
         display: "flex",
         alignItems: "center",
-        gap: 10,
+        flexWrap: "wrap",
+        gap: 8,
         marginBottom: 14
       }
     }, /*#__PURE__*/React.createElement("a", {
@@ -6973,7 +7201,24 @@ function SeanceView({
       n: "shuffle",
       s: 11,
       w: 2.4
-    }), "Remplacer"), photoSrc && /*#__PURE__*/React.createElement("img", {
+    }), "Remplacer"), !fait && /*#__PURE__*/React.createElement("button", {
+      className: "retirer-exercice",
+      onClick: () => onRetirer(ex),
+      style: { display: "inline-flex", alignItems: "center", gap: 6, color: INK, background: "rgba(255,255,255,.08)", border: `1px solid ${LINE}`, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, fontWeight: 700, touchAction: "manipulation" }
+    }, "Retirer"), !fait && /*#__PURE__*/React.createElement("button", {
+      className: "ajouter-apres",
+      onClick: () => onAjouter(ex.id),
+      style: { display: "inline-flex", alignItems: "center", gap: 6, color: INK, background: "rgba(255,255,255,.08)", border: `1px solid ${LINE}`, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, fontWeight: 700, touchAction: "manipulation" }
+    }, "+ Ajouter après"), !fait && S.exos.length > 1 && /*#__PURE__*/React.createElement("span", {
+      className: "deplacer-exercice",
+      style: { display: "inline-flex", gap: 4 }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "monter", "aria-label": "Monter", disabled: i === 0, onClick: () => onDeplacer(ex.id, -1),
+      style: { width: 34, height: 30, borderRadius: 999, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === 0 ? "#5A6274" : INK, fontSize: 12, padding: 0, touchAction: "manipulation" }
+    }, "▲"), /*#__PURE__*/React.createElement("button", {
+      className: "descendre", "aria-label": "Descendre", disabled: i === S.exos.length - 1, onClick: () => onDeplacer(ex.id, 1),
+      style: { width: 34, height: 30, borderRadius: 999, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === S.exos.length - 1 ? "#5A6274" : INK, fontSize: 12, padding: 0, touchAction: "manipulation" }
+    }, "▼")), photoSrc && /*#__PURE__*/React.createElement("img", {
       src: photoSrc,
       onClick: () => onZoom({
         src: photoSrc,
@@ -7002,7 +7247,7 @@ function SeanceView({
       key: ex.id + ":" + facteur + ":" + (sugg ? sugg.kg : "") + ":" + (typeCharge || "") + ":" + (S.adaptee && S.adaptee.intensifie ? "fond" : ""),
       nb: nbSeries(ex),
       exId: ex.id,
-      dernier: der,
+      dernier: hist ? [...hist].reverse().find(e => e.date !== auj() && valeursCharge(e).length) || (der && der.date !== auj() ? der : null) : null,
       couleur: S.couleur,
       onSave: onCharge,
       suggestion: sugg,
@@ -7012,7 +7257,10 @@ function SeanceView({
       intensifie: !!(S.adaptee && S.adaptee.intensifie),
       increment: increment,
       hautFourchette: der && der.date === auj() ? !!der.hautFourchette : false,
-      onHautFourchette: v => onHautFourchette(ex.id, v)
+      onHautFourchette: v => onHautFourchette(ex.id, v),
+      // v20.9 : l'entrée du jour (reps corrigées, charges déjà tapées) survit au remontage
+      duJour: der && der.date === auj() ? der : null,
+      onReps: onReps
     })), !fait && ex.repos > 0 && (() => {
       // repos en cours pour CET exercice : le bouton devient le chrono lui-même
       // (bleu, décompte en gros) — un re-tap ne remet jamais à zéro (garde dans
@@ -7144,7 +7392,12 @@ function SeanceView({
         padding: 0
       }
     }, "↩")))));
-  }), !J.valide ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+  }), S.libre && S.exos.length === 0 && /*#__PURE__*/React.createElement("div", { className: "libre-vide", style: { fontSize: 12.5, color: SUB, lineHeight: 1.5, padding: "14px 4px 2px" } }, "Séance vide pour l'instant : ajoute ce que tu fais, dans l'ordre où tu le fais. Chaque exercice validé rapporte ses XP."),
+  !J.valide && /*#__PURE__*/React.createElement("button", {
+    className: "ajouter-exercice",
+    onClick: () => onAjouter("fin"),
+    style: { width: "100%", marginTop: 10, background: "rgba(255,255,255,.04)", border: `1.5px dashed ${S.couleur}99`, borderRadius: 14, color: INK, fontSize: 13, fontWeight: 800, padding: "12px", touchAction: "manipulation" }
+  }, "+ Ajouter un exercice"), !J.valide ? (S.libre ? null : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
     onClick: onValider,
     disabled: !tousFaits,
     style: {
@@ -7159,7 +7412,7 @@ function SeanceView({
       fontSize: 15,
       transition: "all .2s"
     }
-  }, tousFaits ? `Valider ma séance · +${XP.bonusSeance} XP 🎉` : `Encore ${S.exos.length - J.faits.length} exercice(s)…`)) : /*#__PURE__*/React.createElement("div", {
+  }, tousFaits ? `Valider ma séance · +${XP.bonusSeance} XP 🎉` : `Encore ${S.exos.length - J.faits.length} exercice(s)…`))) : /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 12
     }
@@ -7463,12 +7716,36 @@ function SerieInputs({
   onHautFourchette,
   type,
   intensifie,
-  increment
+  increment,
+  duJour,
+  onReps
 }) {
   // nbLoc : séries affichées — nb au départ, + une à chaque « + une série »
-  const [nbLoc, setNbLoc] = useState(nb);
-  const [vals, setVals] = useState(Array(nb).fill(""));
-  const [saved, setSaved] = useState(Array(nb).fill(false));
+  // v20.9 : le composant est remonté quand la suggestion change (une correction de reps, par exemple) :
+  // les charges déjà tapées aujourd'hui (duJour.series) et les reps corrigées repartent de l'entrée du jour
+  const tapees = duJour && Array.isArray(duJour.series) ? duJour.series : [];
+  const [nbLoc, setNbLoc] = useState(Math.max(nb, tapees.length));
+  const [vals, setVals] = useState(() => Array.from({ length: Math.max(nb, tapees.length) }, (_, i) => tapees[i] != null && tapees[i] !== "" ? Math.abs(Number(tapees[i])) : ""));
+  const [saved, setSaved] = useState(() => Array.from({ length: Math.max(nb, tapees.length) }, (_, i) => tapees[i] != null && tapees[i] !== ""));
+  // v20.9 : reps réelles par série, pré-remplies au haut de la fourchette, modifiables au tap (clavier) et par −/+ ;
+  // une série non modifiée garde la valeur pré-remplie. L'app reçoit ce qui est affiché (onReps) et l'écrit
+  // dans l'entrée du jour à la validation, ou tout de suite sur une modification explicite.
+  const repsMax = reps ? reps[1] : null;
+  // remonté (clé) quand la suggestion change : on repart de l'entrée du jour si elle porte déjà des reps
+  const [repsVals, setRepsVals] = useState(() => duJour && Array.isArray(duJour.reps) && duJour.reps.length >= nb ? duJour.reps.slice(0, Math.max(nb, tapees.length)).map(r => r != null ? r : repsMax != null ? repsMax : "") : Array(Math.max(nb, tapees.length)).fill(repsMax != null ? repsMax : ""));
+  useEffect(() => { if (onReps && repsMax != null) onReps(exId, repsVals, false); }, []);
+  const fixerReps = (i, v) => {
+    const n = Math.round(Number(v));
+    if (isNaN(n) || n < 0 || n > 60) return;
+    const a = [...repsVals];
+    a[i] = n;
+    setRepsVals(a);
+    if (onReps) onReps(exId, a, true);
+  };
+  const tousTenus = repsMax != null && repsVals.length > 0 && repsVals.every(r => Number(r) >= repsMax);
+  const repsStepper = i => repsMax != null && /*#__PURE__*/React.createElement("div", { className: "reps-serie", style: { flex: "0 0 104px", minWidth: 0 } }, /*#__PURE__*/React.createElement(Stepper, { compact: true, unite: "reps", pas: 1, min: 0, max: 60, accent: couleur, valeur: repsVals[i] != null && repsVals[i] !== "" ? repsVals[i] : repsMax, onChange: v => fixerReps(i, v) }));
+  const aideTenu = /*#__PURE__*/React.createElement("div", { className: "haut-fourchette-aide", style: { fontSize: 11, color: SUB, lineHeight: 1.45, marginTop: 6 } }, "Tout tenu ? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures.");
+  const aideReps = /*#__PURE__*/React.createElement("div", { className: "reps-aide", style: { fontSize: 10.5, color: "#5A6274", marginTop: 6 } }, "Reps pré-remplies au haut de la fourchette (", repsMax, ") : corrige celles que tu n'as pas tenues.");
   // pré-remplissage : la suggestion d'incrément si elle existe, sinon la dernière fois
   // (× 0,9 arrondi à 2,5 kg en petite forme ; +un cran « à fond ») — jamais d'un autre type de charge
   const f = facteur && facteur < 1 ? facteur : 1;
@@ -7495,43 +7772,12 @@ function SerieInputs({
       color: SUB,
       lineHeight: 1.45
     }
-  }, "Au poids du corps : vise le haut de la fourchette, puis passe en lesté quand tout est tenu."), reps && /*#__PURE__*/React.createElement("button", {
-    onClick: () => onHautFourchette && onHautFourchette(!hautFourchette),
-    "aria-pressed": !!hautFourchette,
-    className: "haut-fourchette",
-    style: {
-      marginTop: 8,
-      width: "100%",
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      background: hautFourchette ? tintCss(couleur) : "rgba(255,255,255,.04)",
-      border: `1px solid ${hautFourchette ? couleur : LINE}`,
-      borderRadius: 10,
-      padding: "8px 11px",
-      color: hautFourchette ? couleur : SUB,
-      fontSize: 11.5,
-      fontWeight: 700,
-      textAlign: "left",
-      touchAction: "manipulation"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 16,
-      height: 16,
-      borderRadius: 5,
-      border: `2px solid ${hautFourchette ? couleur : "rgba(255,255,255,.3)"}`,
-      background: hautFourchette ? couleur : "transparent",
-      display: "grid",
-      placeItems: "center",
-      flexShrink: 0
-    }
-  }, hautFourchette && /*#__PURE__*/React.createElement(Ic, {
-    n: "check",
-    s: 10,
-    c: "#fff",
-    w: 3
-  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"));
+  }, "Au poids du corps : vise le haut de la fourchette, puis passe en lesté quand tout est tenu."), repsMax != null && /*#__PURE__*/React.createElement("div", { className: "reps-pdc", style: { marginTop: 8 } },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, color: SUB, fontWeight: 600, marginBottom: 4 } }, "REPS PAR SÉRIE · pré-remplies au haut de la fourchette"),
+    /*#__PURE__*/React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 } }, Array.from({ length: nbLoc }).map((_, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 6 } },
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, fontWeight: 800, color: "#5A6274", width: 18 } }, "S", i + 1), /*#__PURE__*/React.createElement("div", { style: { flex: 1 } }, repsStepper(i))))),
+    nbLoc < 8 && /*#__PURE__*/React.createElement("button", { onClick: () => { setNbLoc(n => n + 1); setRepsVals(r => [...r, repsMax]); }, style: { marginTop: 8, background: "rgba(255,255,255,.04)", border: `1px dashed ${LINE}`, borderRadius: 10, color: INK, fontSize: 11.5, fontWeight: 700, padding: "8px 12px", width: "100%" } }, "+ une série"),
+    tousTenus ? aideTenu : aideReps));
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10.5,
@@ -7542,7 +7788,7 @@ function SerieInputs({
   }, assiste ? "ASSISTANCE PAR SÉRIE (KG) · moins, c'est mieux" : type === "leste" ? "LEST PAR SÉRIE (KG) · facultatif" : "CHARGE PAR SÉRIE (KG) · facultatif"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: nbLoc > 2 ? "1fr 1fr" : `repeat(${nbLoc},1fr)`,
+      gridTemplateColumns: "1fr",
       gap: 6
     }
   }, Array.from({
@@ -7569,7 +7815,8 @@ function SerieInputs({
       style: {
         position: "relative",
         display: "flex",
-        gap: 4
+        gap: 4,
+        minWidth: 0
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -7617,12 +7864,13 @@ function SerieInputs({
       accent: couleur,
       valeur: eff(i),
       onChange: fixer
-    })));
+    })), repsStepper(i));
   })), nbLoc < 8 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setNbLoc(n => n + 1);
       setVals(v => [...v, ""]);
       setSaved(sv => [...sv, false]);
+      setRepsVals(r => [...r, repsMax != null ? repsMax : ""]);
     },
     style: {
       marginTop: 8,
@@ -7641,7 +7889,7 @@ function SerieInputs({
       color: "#5A6274",
       marginTop: 6
     }
-  }, "« idem » reprend la charge de la série d'avant · touche la valeur pour la taper au clavier"), suggestion && /*#__PURE__*/React.createElement("div", {
+  }, "« idem » reprend la charge de la série d'avant · touche une valeur pour la taper au clavier", repsMax != null ? " · à droite, tes reps réelles" : ""), suggestion && /*#__PURE__*/React.createElement("div", {
     className: "suggestion-charge",
     style: {
       marginTop: 8,
@@ -7666,51 +7914,7 @@ function SerieInputs({
       fontSize: 11.5,
       color: SUB
     }
-  }, "Petite forme : charges pré-remplies à −10 % de la dernière fois."), reps && /*#__PURE__*/React.createElement("button", {
-    onClick: () => onHautFourchette && onHautFourchette(!hautFourchette),
-    "aria-pressed": !!hautFourchette,
-    className: "haut-fourchette",
-    style: {
-      marginTop: 8,
-      width: "100%",
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      background: hautFourchette ? tintCss(couleur) : "rgba(255,255,255,.04)",
-      border: `1px solid ${hautFourchette ? couleur : LINE}`,
-      borderRadius: 10,
-      padding: "8px 11px",
-      color: hautFourchette ? couleur : SUB,
-      fontSize: 11.5,
-      fontWeight: 700,
-      textAlign: "left",
-      touchAction: "manipulation"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 16,
-      height: 16,
-      borderRadius: 5,
-      border: `2px solid ${hautFourchette ? couleur : "rgba(255,255,255,.3)"}`,
-      background: hautFourchette ? couleur : "transparent",
-      display: "grid",
-      placeItems: "center",
-      flexShrink: 0
-    }
-  }, hautFourchette && /*#__PURE__*/React.createElement(Ic, {
-    n: "check",
-    s: 10,
-    c: "#fff",
-    w: 3
-  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"), reps && /*#__PURE__*/React.createElement("div", {
-    className: "haut-fourchette-aide",
-    style: {
-      fontSize: 11,
-      color: SUB,
-      lineHeight: 1.45,
-      marginTop: 6
-    }
-  }, "Tout tenu ? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures."));
+  }, "Petite forme : charges pré-remplies à −10 % de la dernière fois."), repsMax != null && (tousTenus ? aideTenu : aideReps));
 }
 /* ---------- mise en avant (spotlight) : carte agrandie centrée, fond flouté ---------- */
 function Spotlight({
@@ -9690,7 +9894,7 @@ function SuiviCoach({
       borderRadius: 9,
       display: "grid",
       placeItems: "center",
-      background: h.type === "K" ? COL.K : SEANCES[h.type]?.couleur || "#5A6274",
+      background: h.type === "K" ? COL.K : h.type === "L" ? COL.B : SEANCES[h.type]?.couleur || "#5A6274",
       color: "#fff",
       fontFamily: DISPLAY,
       fontSize: 13
@@ -9706,7 +9910,7 @@ function SuiviCoach({
       fontSize: 13,
       fontWeight: 600
     }
-  }, h.type === "K" ? h.quoi || "Cardio" : `Séance ${h.type} — ${h.nomS || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, h.type === "K" ? h.quoi || "Cardio" : h.type === "L" ? "Séance libre" : `Séance ${h.type} — ${h.nomS || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11
     }
@@ -10160,32 +10364,78 @@ function Ressenti({ valeur, couleur, onChoisir }) {
 }
 
 /* « Remplacer » (règle 12) : deux motifs, 2 à 3 candidats, le phare en premier, aujourd'hui ou pour de bon */
-function RemplacerPanneau({ ex, st, S, onRemplacer, onFermer }) {
-  const [motif, setMotif] = useState(null);
+/* Étape 4 (v20.9) : un seul panneau pour « Ajouter un exercice » et « Remplacer ». Trois onglets — les
+   similaires (muscle principal dans le focus de la séance, phare en premier ; en remplacement, les
+   remplaçants directs de la règle 12 d'abord), toute la banque (recherche + filtres muscle / compartiment /
+   matériel), cardio et mobilité. Tout est local : la banque et le moteur sont embarqués. */
+function PanneauExercices({ mode, ex, apres, st, S, onChoisir, onFermer }) {
+  const remplacer = mode === "remplacer";
   const [tous, setTous] = useState(false);
+  const [recherche, setRecherche] = useState("");
+  const [fMuscle, setFMuscle] = useState("");
+  const [fComp, setFComp] = useState("");
+  const [fMat, setFMat] = useState("");
   const materiel = st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle";
   const niveau = st.programmePerso && st.programmePerso.moteur ? st.programmePerso.moteur.entrees.niveau : 2;
-  const r = motif ? window.Moteur.remplacantsPour(window.BANQUE, ex, { materiel, niveau, motif, exclure: S.exos.map(e => e.id) }) : null;
   const moteur = !!(st.programmePerso && st.programmePerso.moteur && st.programme === "perso");
-  return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
-    h("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", maxHeight: "86vh", overflowY: "auto", fontFamily: FONT, color: INK } },
-      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "Remplacer « ", ex.nom, " »"),
-      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 12px" } }, "Même geste, même muscle d'abord. Tes charges déjà notées restent sous l'ancien exercice."),
-      h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 } },
-        [["materiel", "Matériel indisponible"], ["prefere", "Je préfère autre chose"]].map(([m, l]) => h("button", { key: m, onClick: () => setMotif(m), style: { ...GLASS, border: `1.5px solid ${motif === m ? COL.G : LINE}`, background: motif === m ? tintCss(COL.G) : GLASSBG, color: motif === m ? COL.G : INK, borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 12.5, touchAction: "manipulation" } }, l))),
-      r && r.inconnu && h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.5 } }, "Cet exercice vient d'un ancien programme : le remplacement arrive avec le nouveau moteur (carte « Nouveau moteur de programmes » dans l'onglet Séance)."),
-      r && !r.inconnu && !r.candidats.length && h("div", { style: { fontSize: 12.5, color: SUB } }, "Rien de comparable avec ton matériel. Passe-le pour aujourd'hui, ou coche du matériel en plus dans les réglages."),
-      r && r.candidats.map((c, k) => h("button", { key: c.exo.id, onClick: () => onRemplacer(ex.id, c, tous), style: { display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", ...GLASS, border: `1px solid ${c.phare ? COL.G + "88" : LINE}`, borderRadius: 14, padding: "11px 13px", marginBottom: 7, color: INK, touchAction: "manipulation" } },
-        h("span", { style: { flex: 1, minWidth: 0 } },
-          h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, c.exo.nom, c.phare && h("span", { style: { marginLeft: 7, fontSize: 9, fontWeight: 800, letterSpacing: .6, color: COL.G, background: tintCss(COL.G), borderRadius: 999, padding: "2px 7px", verticalAlign: "middle" } }, "PHARE")),
-          h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, c.muscle, " · ", c.materiel, " · ", c.exo.dose)),
-        h(Ic, { n: "chevron", s: 14, w: 2.4, c: SUB, style: { transform: "rotate(180deg)" } }))),
-      r && r.approximatif && h("div", { style: { fontSize: 11, color: COL.D, marginTop: 4 } }, "Même muscle, geste différent : rien d'identique dans ce compartiment."),
-      r && r.candidats.length > 0 && moteur && h("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, marginTop: 10, color: INK } },
+  const exclure = S.exos.map(e => e.id).filter(id => !remplacer || id !== ex.id);
+  const cat = useMemo(() => window.Moteur.catalogue(window.BANQUE, { focus: S.focus, materiel, exclure }), [S.focus, materiel, exclure.join(",")]);
+  const directs = useMemo(() => remplacer ? window.Moteur.remplacantsPour(window.BANQUE, ex, { materiel, niveau, exclure }) : null, [remplacer, ex && ex.id, materiel, niveau, exclure.join(",")]);
+  const idsDirects = new Set(directs ? directs.candidats.map(c => c.exo.id) : []);
+  const [onglet, setOnglet] = useState(cat.similaires.length || (directs && directs.candidats.length) ? "similaires" : "banque");
+  const norm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const q = norm(recherche.trim());
+  const listeBanque = cat.tous.filter(x => (!q || norm(x.nom).includes(q) || norm(x.muscle).includes(q)) && (!fMuscle || x.muscle === fMuscle) && (!fComp || x.compartiment === fComp) && (!fMat || x.tags.includes(fMat)));
+  const muscles = [...new Set(cat.tous.map(x => x.muscle))].sort((a, b) => a.localeCompare(b));
+  const comps = [...new Set(cat.tous.map(x => x.compartiment))];
+  const mats = [...new Set(cat.tous.flatMap(x => x.tags))].sort((a, b) => a.localeCompare(b));
+  const NOM_COMP = { squat: "Squat", hinge: "Charnière (hinge)", poussee_h: "Poussée horizontale", poussee_v: "Poussée verticale", tirage_h: "Tirage horizontal", tirage_v: "Tirage vertical", unilateral: "Unilatéral jambes", gainage: "Gainage", isolation: "Isolation" };
+  const choisir = x => {
+    if (remplacer) {
+      const direct = directs && directs.candidats.find(c => c.exo.id === x.id);
+      const exo = direct ? direct.exo : { ...window.Moteur.exerciceLibrePourApp(window.BANQUE, x.id, { materiel }), ajoute: false, role: ex.role || null, remplace: ex.remplace || ex.id };
+      onChoisir(ex.id, { exo }, tous);
+    } else onChoisir(x.id, apres);
+  };
+  const ligne = (x, k, tag) => h("button", { key: x.id, className: "exo-candidat", "data-id": x.id, onClick: () => choisir(x), style: { display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", ...GLASS, border: `1px solid ${tag ? COL.G + "88" : LINE}`, borderRadius: 14, padding: "10px 13px", marginBottom: 6, color: INK, opacity: x.faisable === false ? .55 : 1, touchAction: "manipulation" } },
+    h("span", { style: { flex: 1, minWidth: 0 } },
+      h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, x.nom, tag && h("span", { style: { marginLeft: 7, fontSize: 9, fontWeight: 800, letterSpacing: .6, color: COL.G, background: tintCss(COL.G), borderRadius: 999, padding: "2px 7px", verticalAlign: "middle" } }, tag)),
+      h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, x.muscle, " · ", x.materiel, " · ", x.dose, x.faisable === false ? " · pas ton matériel" : "")),
+    h("span", { style: { fontSize: 18, color: SUB, flexShrink: 0 } }, "＋"));
+  const ongletBtn = (id, l, n) => h("button", { key: id, className: "onglet-panneau", "aria-pressed": onglet === id, onClick: () => setOnglet(id), style: { flex: 1, background: onglet === id ? tintCss(COL.G) : "rgba(255,255,255,.04)", border: `1.5px solid ${onglet === id ? COL.G : LINE}`, color: onglet === id ? COL.G : SUB, borderRadius: 999, padding: "8px 6px", fontSize: 11.5, fontWeight: 800, touchAction: "manipulation" } }, l, n != null ? ` (${n})` : "");
+  const select = (val, set, opts, lib, nom) => h("select", { value: val, onChange: e => set(e.target.value), "aria-label": lib, style: { flex: 1, minWidth: 0, background: FIELD, color: val ? INK : SUB, border: `1px solid ${LINE}`, borderRadius: 10, padding: "8px 6px", fontSize: 12, fontFamily: FONT } },
+    h("option", { value: "" }, lib), opts.map(o => h("option", { key: o, value: o }, nom ? nom(o) : o)));
+  return h("div", { className: "panneau-exercices-fond", style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
+    h("div", { className: "panneau-exercices", onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", height: "88vh", display: "flex", flexDirection: "column", fontFamily: FONT, color: INK } },
+      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, remplacer ? `Remplacer « ${ex.nom} »` : "Ajouter un exercice"),
+      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 10px" } }, remplacer ? "Même geste, même muscle d'abord. Tes charges déjà notées restent sous l'ancien exercice." : apres && apres !== "fin" ? "Il se place juste après l'exercice ouvert. Doses de la banque, tu les changes si tu veux." : "Il se place en fin de séance. Doses de la banque, tu les changes si tu veux."),
+      h("div", { style: { display: "flex", gap: 6, marginBottom: 10 } }, ongletBtn("similaires", "Similaires", cat.similaires.length + (directs ? directs.candidats.filter(c => !cat.similaires.some(x => x.id === c.exo.id)).length : 0)), ongletBtn("banque", "Toute la banque"), ongletBtn("cardio", "Cardio & mobilité")),
+      onglet === "banque" && h("div", { style: { marginBottom: 8 } },
+        h("input", { className: "recherche-exo", value: recherche, onChange: e => setRecherche(e.target.value), placeholder: "Rechercher par nom…", inputMode: "search", style: { width: "100%", boxSizing: "border-box", background: FIELD, color: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "10px 12px", fontSize: 14, fontFamily: FONT, marginBottom: 6 } }),
+        h("div", { style: { display: "flex", gap: 6 } }, select(fMuscle, setFMuscle, muscles, "Muscle"), select(fComp, setFComp, comps, "Compartiment", c => NOM_COMP[c] || c), select(fMat, setFMat, mats, "Matériel"))),
+      h("div", { className: "liste-exos", style: { flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8 } },
+        onglet === "similaires" && [
+          directs && directs.inconnu && h("div", { key: "inc", style: { fontSize: 12.5, color: SUB, lineHeight: 1.5, marginBottom: 8 } }, "Cet exercice vient d'un ancien programme : le remplacement arrive avec le nouveau moteur (carte « Nouveau moteur de programmes » dans l'onglet Séance)."),
+          directs && directs.candidats.map(c => ligne({ id: c.exo.id, nom: c.exo.nom, muscle: c.muscle, materiel: c.materiel, dose: c.exo.dose, faisable: true }, c.exo.id, c.phare ? "PHARE" : "même geste")),
+          directs && directs.approximatif && h("div", { key: "apx", style: { fontSize: 11, color: COL.D, margin: "-2px 0 8px" } }, "Même muscle, geste différent : rien d'identique dans ce compartiment."),
+          cat.similaires.filter(x => !idsDirects.has(x.id)).map(x => ligne(x, x.id, x.phare ? "PHARE" : null)),
+          !cat.similaires.length && !(directs && directs.candidats.length) && h("div", { key: "vide", style: { fontSize: 12.5, color: SUB, padding: "8px 2px" } }, S.libre ? "Séance libre : pas de focus, donc pas de « similaires ». Cherche dans toute la banque, ou en cardio et mobilité." : "Rien de plus dans ce focus. Cherche dans toute la banque.")],
+        onglet === "banque" && (listeBanque.length ? listeBanque.map(x => ligne(x, x.id, null)) : h("div", { style: { fontSize: 12.5, color: SUB, padding: "8px 2px" } }, "Aucun exercice ne correspond.")),
+        onglet === "cardio" && cat.cardio.map(x => ligne({ ...x, muscle: x.type === "mobilite" ? "mobilité" : "cardio" }, x.id, null))),
+      remplacer && moteur && h("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, marginTop: 8, color: INK } },
         h("input", { type: "checkbox", checked: tous, onChange: e => setTous(e.target.checked), style: { accentColor: COL.G, width: 17, height: 17, margin: 0 } }), "Pour toutes les prochaines séances aussi"),
-      h("button", { onClick: onFermer, style: { width: "100%", marginTop: 14, ...GLASS, color: INK, borderRadius: 12, padding: "12px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Annuler")));
+      h("button", { onClick: onFermer, style: { width: "100%", marginTop: 10, ...GLASS, color: INK, borderRadius: 12, padding: "12px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Fermer")));
 }
-
+/* confirmation légère du retrait (v20.9) : sans culpabilité */
+function ConfirmRetrait({ ex, onOui, onNon }) {
+  return h("div", { className: "confirm-retrait-fond", style: { position: "fixed", inset: 0, zIndex: 96, background: "rgba(0,0,0,.6)", display: "grid", placeItems: "center", padding: 20 }, onClick: onNon },
+    h("div", { className: "confirm-retrait", onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 360, background: "#10141D", borderRadius: 20, padding: "18px 18px 16px", fontFamily: FONT, color: INK, boxShadow: "0 24px 60px rgba(0,0,0,.5)" } },
+      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "Retirer « ", ex.nom, " » ?"),
+      h("div", { style: { fontSize: 12.5, color: SUB, margin: "6px 0 14px", lineHeight: 1.5 } }, "Pour aujourd'hui seulement. Ça ne change rien à tes XP, ni au programme."),
+      h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } },
+        h("button", { onClick: onNon, style: { ...GLASS, color: INK, borderRadius: 12, padding: "12px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Garder"),
+        h("button", { className: "confirmer-retrait", onClick: onOui, style: { background: "#F2F5F9", color: "#0B0E14", border: "none", borderRadius: 12, padding: "12px", fontWeight: 800, fontSize: 13, touchAction: "manipulation" } }, "Retirer"))));
+}
 /* « Adapter ma séance » : temps (saisie exacte) et énergie, avant de commencer */
 function AdapterPanneau({ S, defautMin, entrees, onAdapter, onFermer }) {
   const [temps, setTemps] = useState(defautMin || S.dureeMin || 45);
@@ -10275,16 +10525,18 @@ function Confidentialite({ onFermer }) {
    24 px : en dessous, le doigt est « attiré » vers la carte par le navigateur (ajustement
    tactile) et le tap à l'extérieur ne ferme jamais. Alternative (b) de la v19.16,
    choisie après test terrain : remplace l'accordéon. */
-function FocusExercice({ titre, sous, couleur, onFermer, children }) {
+// reserve (v20.9) : place laissée en bas quand le bandeau de repos est affiché (il passe au-dessus du
+// focus, décision v20.6) — la carte s'arrête au-dessus, la validation n'est jamais recouverte
+function FocusExercice({ titre, sous, couleur, onFermer, reserve = 0, children }) {
   useEffect(() => { const avant = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = avant; }; }, []);
-  return h("div", { className: "focus-exercice-fond", onClick: onFermer, style: { position: "fixed", inset: 0, zIndex: 86, background: "rgba(4,6,10,.55)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", display: "flex", padding: "max(24px, env(safe-area-inset-top)) 10px max(24px, env(safe-area-inset-bottom))", touchAction: "manipulation" } },
-    h("div", { className: "focus-exercice", onClick: e => e.stopPropagation(), style: { flex: 1, minHeight: 0, background: "#10141D", border: `1.5px solid ${couleur}`, borderRadius: 20, display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,.5)", animation: "pop .22s" } },
+  return h("div", { className: "focus-exercice-fond", onClick: onFermer, style: { position: "fixed", inset: 0, zIndex: 86, background: "rgba(4,6,10,.55)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", display: "flex", padding: `max(24px, env(safe-area-inset-top)) 10px calc(max(24px, env(safe-area-inset-bottom)) + ${reserve}px)`, touchAction: "manipulation" } },
+    h("div", { className: "focus-exercice", onClick: e => e.stopPropagation(), style: { flex: 1, minHeight: 0, minWidth: 0, maxWidth: "100%", overflow: "hidden", background: "#10141D", border: `1.5px solid ${couleur}`, borderRadius: 20, display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,.5)", animation: "pop .22s" } },
       h("div", { style: { display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 10px", borderBottom: `1px solid ${LINE}` } },
         h("div", { style: { flex: 1, minWidth: 0 } },
           h("div", { style: { fontWeight: 800, fontSize: 16, lineHeight: 1.25 } }, titre),
           sous && h("div", { style: { fontSize: 12, color: SUB, marginTop: 2 } }, sous)),
         h("button", { onClick: onFermer, "aria-label": "Fermer", className: "fermer-focus", style: { width: 34, height: 34, borderRadius: 999, border: `1px solid ${LINE}`, background: GLASSBG, color: INK, fontSize: 18, lineHeight: 1, display: "grid", placeItems: "center", padding: 0, flexShrink: 0, touchAction: "manipulation" } }, "✕")),
-      h("div", { style: { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "12px 16px 20px" } }, children)));
+      h("div", { style: { flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "12px 16px 24px" } }, children)));
 }
 /* Type de charge d'un exercice faisable au poids du corps (v20.6) : poids du corps, lesté, assisté */
 function TypeCharge({ valeur, couleur, onChoisir }) {
@@ -10611,7 +10863,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.8"));
+  }, "v20.9"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -13450,7 +13702,7 @@ function MoisGrille({
         color: INK,
         flex: 1
       }
-    }, jokersJ.includes(sel) ? "Joker utilisé — journée couverte" : j && j.seance === "R" ? "Repos coché" : j && j.seance === "K" ? "Cardio" : j && j.seance && SEANCES[j.seance] ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+    }, jokersJ.includes(sel) ? "Joker utilisé — journée couverte" : j && j.seance === "R" ? "Repos coché" : j && j.seance === "K" ? "Cardio" : j && j.seance === "L" ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", { style: { color: COL.B } }, "Séance libre"), " · ", (j.faits || []).length, " exos", j.valide ? " · enregistrée" : "") : j && j.seance && SEANCES[j.seance] ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
       style: {
         color: SEANCES[j.seance].couleur
       }

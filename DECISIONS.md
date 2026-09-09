@@ -7,6 +7,10 @@ Objectif : ne pas se refaire proposer six mois plus tard un truc déjà écarté
 
 ## Chantier Programmes — septembre 2026
 
+> **Principe fondateur (étape 4, v20.9) : le programme est une proposition. La
+> séance est ce que tu as fait. Tout ce qu'on fait en salle doit pouvoir se
+> noter, sans culpabilité et sans quitter la séance.**
+
 > Cette section **remplace** la décision de fréquence de la v19.8 (2 à 5 +
 > option 6 « habitués », pas de 7) et tranche la question ouverte « templates
 > du moteur hybride : combien, lesquels ».
@@ -90,6 +94,50 @@ extension lombaire rangés en hinge (charnière sans charge) ; burpees et
 montées de genoux en cardio ; « Développé haltères » des templates gardé en
 poussée verticale assis — à corriger en une ligne si un programme prouve le
 contraire.
+
+### Étape 4 — la séance libre (v20.9)
+
+- **Ajouter, retirer, réordonner, remplacer pour un jour ne touche jamais le
+  programme.** Tout vit dans `st.jour[date]` (ajouts, retirés, ordre,
+  remplacements) ; seules les actions dites « pour toutes les prochaines
+  séances » réécrivent le programme. → Un programme qui bouge à chaque geste
+  devient illisible, et le coaché doit pouvoir improviser sans « casser » ce
+  qu'on lui a proposé.
+- **Un exercice retiré ne compte ni en positif ni en négatif** : pas d'XP, pas
+  de malus, il sort simplement de la séance du jour (journalisé à part).
+  → Sans culpabilité : la machine est prise, l'épaule tire, le temps manque —
+  aucune de ces raisons ne mérite une pénalité.
+- **Ajout libre, sans limite**, depuis un panneau à trois onglets — Similaires
+  (même focus, phare en premier), Toute la banque (recherche + filtres),
+  Cardio & mobilité — avec les doses par défaut de la banque et les XP selon
+  la difficulté (barème v20.8). Le même panneau sert à « Remplacer », les
+  remplaçants directs (règle 12) en tête. → Un seul outil à apprendre.
+- **Reps réelles par série** à la place de la case « j'ai tenu N reps » :
+  pré-remplies au haut de la fourchette, corrigées au tap ou −/+, une série
+  non modifiée vaut la valeur pré-remplie. La règle 8 lit ces reps ; les
+  entrées d'avant gardent leur case « tenu ». → Le geste le plus fréquent
+  (tout tenu) reste à zéro tap ; la précision arrive sans friction. Sans
+  charge notée ce jour-là, la dernière charge connue sert de base à
+  l'incrément (la charge reste facultative).
+- **Séance libre** : carte permanente du carrousel, démarre vide, compte comme
+  une séance (venir compte), XP des exercices faits, pas de bonus « complète »
+  (rien à compléter). → Un jour sans programme reste un jour d'entraînement.
+- **Le journal enregistre ce qui a été FAIT** (prévus validés, ajoutés,
+  retirés, remplacés, séries, reps, charges, type de charge, ressenti) dans
+  chaque entrée d'historique ; Progrès et « dernier » lisent les charges, pas
+  le programme. → Un exercice ajouté une fois existe dans Progrès comme les
+  autres.
+- **Retiré ou remplacé 3 séances de suite → « on l'enlève du programme ? »**,
+  jamais automatique ; « Non, je le garde » remet le compteur à zéro. → L'app
+  observe et propose, elle n'impose pas (même logique que le niveau observé).
+- Écarté : **limiter le nombre d'ajouts** ou les cantonner au focus de la
+  séance (« pas de hip thrust un jour pecs »). → Le programme est une
+  proposition ; en salle, on fait ce qu'on peut avec ce qui est libre.
+- Écarté : un **onglet « Séance libre » séparé** de l'onglet Séance. → Une
+  carte de plus dans le carrousel suffit et garde un seul écran de séance.
+- Mise en page : le bandeau de repos passe **sous** la carte focus (dedans,
+  le bouton de repos est déjà le chrono) — avec les reps par série, la carte
+  s'allonge et le bandeau recouvrait la validation.
 
 ### Moteur de génération — arbitrages de relecture (étape 2)
 
@@ -209,6 +257,17 @@ réduites : la séance existe au lieu d'être sautée.
 Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
+
+## v20.9 — septembre 2026
+
+Chantier Programmes, étape 4 : **la séance libre**. Décisions détaillées dans
+« Chantier Programmes — Étape 4 » ci-dessus (principe fondateur en tête de la
+section). En bref : ajouter / retirer / réordonner un exercice pour le jour
+sans toucher au programme, panneau unique à trois onglets partagé avec
+« Remplacer », reps réelles par série (règle 8 sur les reps), séance libre
+permanente dans le carrousel, journal de ce qui a été fait, proposition après
+trois retraits de suite. Backlog : « Répétitions par série » et « ÉTAPE 4 »
+traités.
 
 ## v20.8 — septembre 2026
 
