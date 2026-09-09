@@ -485,10 +485,75 @@ test("« Adapter ma séance » — recompression dans l'ordre (isolations, séri
   for (const e of petite.exos) { const o = S.exos.find(x => x.id === e.id); assert.strictEqual(e.series, Math.max(2, o.series - 1), e.id); assert.strictEqual(e.repos, o.repos, e.id + " repos préservé"); }
   assert.strictEqual(petite.adaptee.chargeFacteur, 0.9);
   assert.ok(petite.gainage.length === S.gainage.length, "le gainage reste à énergie basse si le temps le permet");
-  const fond = M.adapterSeance(S, { tempsMin: 200, energie: "fond" });
-  assert.deepStrictEqual(fond.exos.map(e => [e.id, e.series, e.repos]), S.exos.map(e => [e.id, e.series, e.repos]), "à fond et sans contrainte de temps : rien ne bouge");
+  const fond = M.adapterSeance(S, { tempsMin: 200, energie: "fond", complements: false });
+  assert.ok(fond.adaptee.intensifie && fond.exos.filter(e => e.compartiment !== "isolation").every(e => { const o = S.exos.find(x => x.id === e.id); return e.series === Math.min(5, o.series + 1) && e.repos === o.repos; }), "à fond (v20.6) : une série de plus sur les gros exercices, repos gardés");
+  assert.ok(fond.exos.filter(e => e.compartiment === "isolation").every(e => e.series === S.exos.find(x => x.id === e.id).series), "à fond : les isolations ne bougent pas");
   const vieux = M.adapterSeance({ nom: "Bas", couleur: "#fff", exos: [{ id: "goblet", nom: "Goblet squat", dose: "3 × 10", repos: 120, charge: true }], gainage: true }, { tempsMin: 20 });
   assert.ok(vieux.exos.length === 1 && vieux.exos[0].dose, "un ancien programme (sans compartiment) ne casse pas");
+});
+
+test("v20.6 — temps en plus : des compléments (gainage manquant, isolation du focus, finisher) jusqu'à remplir le temps, jamais au-delà", () => {
+  const S = progApp.seances.A, entrees = progApp.moteur.entrees;
+  const plus = M.adapterSeance(S, { tempsMin: 120, energie: "normal", banque, entrees });
+  const aj = plus.adaptee.ajouts;
+  assert.ok(aj.length >= 1 && aj.length <= 3, `ajouts : ${aj.length}`);
+  assert.ok(plus.dureeMin <= 120 && plus.dureeMin > S.dureeMin, `${S.dureeMin} → ${plus.dureeMin} min`);
+  assert.ok(plus.exos.length + plus.gainage.length === S.exos.length + S.gainage.length + aj.length, "chaque ajout est dans la séance");
+  for (const a of aj) { const x = [...plus.exos, ...plus.gainage].find(e => e.id === a.id); assert.ok(x && x.role === "complement" && x.dose && x.nom === a.nom, a.id); }
+  assert.ok(!aj.some(a => S.exos.some(e => e.id === a.id)), "jamais un exercice déjà présent");
+  const sans = M.adapterSeance(S, { tempsMin: 120, energie: "normal", banque, entrees, complements: false });
+  assert.deepStrictEqual(sans.adaptee.ajouts, [], "compléments refusés : rien d'ajouté");
+  assert.deepStrictEqual(sans.exos.map(e => e.id), S.exos.map(e => e.id));
+  const juste = M.adapterSeance(S, { tempsMin: S.dureeMin + 3, energie: "normal", banque, entrees });
+  assert.deepStrictEqual(juste.adaptee.ajouts, [], "moins de 8 min en plus : rien à ajouter");
+  const douce = M.programmePourApp({ frequence: 3, objectif: "douce", muscu: "jamais", technique: "pas_sur", materiel: "salle", tempsMin: 40 }, banque);
+  const d = M.adapterSeance(douce.seances.A, { tempsMin: 120, energie: "normal", banque, entrees: douce.moteur.entrees });
+  assert.ok(!d.adaptee.ajouts.some(a => a.pourquoi === "finisher cardio"), "en reprise douce, le finisher est de la mobilité, pas du cardio");
+});
+test("v20.6 — jours de sport jamais bloquants : 6 séances et 3 jours de foot, on s'entraîne aussi les jours de foot, jamais de grosse séance jambes la veille ni le jour même", () => {
+  const p = genererProgramme({ frequence: 6, objectif: "mieux", sport: "football", intention: "sport", materiel: "salle", niveau: 2, joursSport: [2, 5] }, banque);
+  assert.strictEqual(seances(p).length, 6, "les six séances sont placées");
+  assert.ok(p.placementSouple, "placement souple");
+  assert.ok(p.semaine.some(j => j.sport && j.seance), "au moins une séance un jour de foot");
+  for (const j of p.semaine) if (j.seance && M.FOCUS[j.seance.focus].bas) { const lendemain = p.semaine.find(x => x.jour === (j.jour === 7 ? 1 : j.jour + 1)); assert.ok(!j.sport && !lendemain.sport, `jambes (${j.seance.lettre}) le jour ${j.jour} : jour ou veille de foot`); }
+  assert.ok(p.avertissements.some(a => /tu t'entraînes aussi certains jours de sport/.test(a) && /jamais de grosse séance jambes/.test(a)), p.avertissements.join(" | "));
+  assert.ok(!p.avertissements.some(a => /ignorés pour le placement/.test(a)), "plus jamais « jours de sport ignorés »");
+  assert.deepStrictEqual(verifierRegles(p, banque), []);
+  // trois jours de foot (mardi, jeudi, dimanche) : un seul jour possible pour des jambes → dernier recours, dit clairement
+  const p3 = genererProgramme({ frequence: 6, objectif: "mieux", sport: "football", intention: "sport", materiel: "salle", niveau: 2, joursSport: [2, 4, 7] }, banque);
+  assert.strictEqual(seances(p3).length, 6, "les six séances sont placées quand même");
+  assert.ok(p3.avertissements.some(a => /impossible d'éviter une grosse séance jambes/.test(a) && /à toi d'ajuster/.test(a)), p3.avertissements.join(" | "));
+  assert.deepStrictEqual(verifierRegles(p3, banque), []);
+  // quand ça tient sans toucher aux jours de sport, rien ne change
+  const p2 = genererProgramme({ frequence: 3, objectif: "tonifier", sport: "football", intention: "sport", materiel: "salle", niveau: 2, joursSport: [3, 7] }, banque);
+  assert.ok(!p2.placementSouple && p2.semaine.every(j => !(j.sport && j.seance)));
+});
+test("v20.6 — sport + progresser : l'effet est visible, une phrase par séance, et le modificateur pèse vraiment", () => {
+  const foot = M.programmePourApp({ frequence: 4, objectif: "mieux", muscu: "mois", technique: "oui", sport: "football", intention: "sport", materiel: "salle", tempsMin: 60 }, banque);
+  const soi = M.programmePourApp({ frequence: 4, objectif: "mieux", muscu: "mois", technique: "oui", sport: "football", intention: "soi", materiel: "salle", tempsMin: 60 }, banque);
+  const notes = Object.values(foot.seances).map(s => s.sport).filter(Boolean);
+  assert.ok(notes.length >= 2, "au moins deux séances portent une note sport : " + JSON.stringify(Object.values(foot.seances).map(s => s.sport)));
+  assert.ok(notes.every(n => /^Adapté au foot : /.test(n)), notes.join(" | "));
+  assert.ok(notes.some(n => /unilatéral \(/.test(n)) && notes.some(n => /gainage anti-rotation \(/.test(n)), "unilatéral et anti-rotation nommés");
+  assert.ok(Object.values(soi.seances).every(s => !s.sport), "sans intention de progresser : pas de note");
+  const idsFoot = Object.values(foot.seances).flatMap(s => s.exos.map(e => e.id)), idsSoi = Object.values(soi.seances).flatMap(s => s.exos.map(e => e.id));
+  assert.notDeepStrictEqual(idsFoot, idsSoi, "le modificateur change les exercices");
+  const fav = M.SPORTS.football.favoris;
+  assert.ok(idsFoot.filter(id => fav.includes(id)).length > idsSoi.filter(id => fav.includes(id)).length, "plus de favoris du foot (nordic, bulgares, fente latérale…) avec l'intention de progresser");
+});
+test("v20.6 — noms de séances : les muscles en grand, le geste en petit ; poids du corps signalé", () => {
+  const ppl = M.programmePourApp({ frequence: 6, objectif: "muscler", muscu: "an", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  const S = Object.values(ppl.seances);
+  assert.deepStrictEqual(S.map(s => s.nom), ["Pecs · épaules · triceps", "Dos · biceps", "Jambes · fessiers", "Pecs · épaules · triceps", "Dos · biceps", "Jambes · fessiers"]);
+  assert.deepStrictEqual(S.map(s => s.geste), ["Push (poussée)", "Pull (tirage)", "Legs (jambes)", "Push (poussée)", "Pull (tirage)", "Legs (jambes)"]);
+  const hb = M.programmePourApp({ frequence: 4, objectif: "mieux", muscu: "mois", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  assert.deepStrictEqual(Object.values(hb.seances).map(s => s.nom).slice(0, 2), ["Pecs · dos · épaules · bras", "Jambes · fessiers"]);
+  const maison = M.programmePourApp({ frequence: 3, objectif: "mieux", muscu: "mois", technique: "oui", materiel: "pdc", tempsMin: 60 }, banque);
+  const exos = Object.values(maison.seances).flatMap(s => s.exos);
+  assert.ok(exos.some(e => e.pdc), "des exercices au poids du corps signalés");
+  assert.ok(M.pdcPossible(byId.dips_banc) && M.pdcPossible(byId.pompes) && !M.pdcPossible(byId.developpe_couche), "dips et pompes oui, développé couché non");
+  const sugg = M.suggererCharge({ id: "traction_assistee", charge: false, pdc: true, reps: [5, 8], compartiment: "tirage_v" }, [{ date: "2026-09-01", series: [-20, -20, -20], type: "assiste", hautFourchette: true, ressenti: "juste" }], "salle");
+  assert.ok(sugg && sugg.kg === -17.5 && sugg.plus === 2.5 && sugg.type === "assiste" && /−2,5 kg d'assistance/.test(sugg.raison), JSON.stringify(sugg));
 });
 
 console.log("\n=== cas demandés ===");

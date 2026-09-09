@@ -19,9 +19,37 @@ node outils/sync.test.js             # les copies embarquées sont-elles à jour
   ne change de programme sans action explicite (option (b), v20.0).
 - `02-v2000-onboarding-moteur-migration.js` — onboarding solo, duo et coach,
   moteur branché, lecture IA et repli, réglages, 7 séances, sans matériel.
+- `07-v2005-terrain.js` — retours terrain v20.5 : chaque écran d'onboarding
+  tient sans défiler et remplit ≥ 85 % sur 390×664 (Safari avec ses barres)
+  et 390×844, toasts (4 s, tap, erreurs persistantes), « dernier » à 0,
+  cagnotte sur les jours prévus, « À savoir » fermable, bulle en puces,
+  chrono et bouton de repos, charges facultatives.
+- `08-v2006-evolutions.js` — v20.6 : noms de séances par muscles, mode
+  focus, séance choisie en avant, types de charge, ajustement dans les deux
+  sens, jours de sport et note sport, proposition sans coach → inviter,
+  parcours coach par lien, « Ton coach t'attend », Progrès vide.
 - `10` à `21` — non-régressions v19.10 → v19.21, portées sur les nouvelles
   questions d'onboarding quand elles passaient par les anciennes.
 
 Prérequis : Playwright et Chromium (`NODE_PATH=/opt/node22/lib/node_modules`,
 exécutable `/opt/pw-browsers/chromium` dans les suites). `app.html`, les
 captures `.png` et les journaux ne sont pas versionnés.
+
+## Sécurité (v20.4)
+
+- `06-securite-front.js` — clé push injectée par le serveur, carte de
+  réactivation des rappels après changement de clé, rappels indisponibles
+  sans clé (mock 8324, `MOCK_VAPID=off`), service push refusé, enregistrement
+  du code (`/profil`) et messages de quota, CSP réelle rejouée sur un
+  parcours (aucune violation, aucune requête vers un tiers, police chargée),
+  page Confidentialité, phrase d'onboarding.
+- `node outils/worker.test.js` — le worker importé dans Node avec un faux KV
+  et un faux `fetch` : aucun secret dans le code, jeton VAPID vérifiable,
+  routes 503 sans secret, quotas et budget IA, validation, photos, en-têtes,
+  limitation de débit. À lancer avec le harnais.
+- Le mock sert la page à travers `preparerPage` (exportée par `worker.js`) :
+  mêmes en-têtes et même CSP à nonce que le vrai worker ; il injecte une clé
+  publique factice (`meta vapid-pub`) et un contact ; `MOCK_VAPID=off` sert
+  la page sans clé ; les routes IA refusent un code jamais enregistré, un
+  code contenant `budget` ou `quota` provoque le refus correspondant ; la
+  police est servie depuis `outils/polices`.

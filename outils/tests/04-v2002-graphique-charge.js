@@ -52,7 +52,8 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     check('l\'ancien carnet n\'est plus dupliqué en dessous', !/dernières charges notées/.test(t));
     await ctx.close(); }
   { const { ctx, p } = await ouvrir({});
-    check('sans charge notée : message d\'invitation, pas de graphique', (await p.locator('.graphe-charge').count()) === 0 && /Rien encore/.test(await texte(p)));
+    // v20.6 : sans historique, un graphique exemple grisé et la promesse « dès ta deuxième séance » (plus de « Rien encore »)
+    check('sans charge notée : graphique exemple grisé, pas de vraie courbe', (await p.locator('.graphe-exemple .graphe-charge').count()) === 1 && (await p.locator('.graphe-charge').count()) === 1 && /Ta courbe apparaîtra ici dès ta deuxième séance/.test(await texte(p)) && !/Rien encore/.test(await texte(p)));
     await ctx.close(); }
 
   await b.close();

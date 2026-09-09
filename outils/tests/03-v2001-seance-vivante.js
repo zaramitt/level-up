@@ -30,7 +30,9 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
   const etat = p => p.evaluate(() => JSON.parse(localStorage.getItem('lvlup-s:x3')));
   const tap = async (p, t, n = 0) => { await p.locator('button', { hasText: t }).nth(n).tap(); await p.waitForTimeout(450); };
   const ouvrirSeance = async (p, prog, lettre) => { await p.locator('.carte-seance').nth(Object.keys(prog.seances).indexOf(lettre)).tap(); await p.waitForTimeout(900); };
-  const deplier = async (p, nom) => { await p.locator('button[aria-expanded]', { hasText: nom }).first().tap(); await p.waitForTimeout(600); };
+  // v20.6 : la carte s'ouvre en mode focus (popup) ; on referme la popup en cours avant d'en ouvrir une autre
+  const fermerFocus = async p => { if (await p.locator('.fermer-focus').count()) { await p.locator('.fermer-focus').tap(); await p.waitForTimeout(400); } };
+  const deplier = async (p, nom) => { await fermerFocus(p); await p.locator('button[aria-expanded]', { hasText: nom }).first().tap(); await p.waitForTimeout(600); };
   const carte = (p, nom) => p.evaluate(n => { const b = [...document.querySelectorAll('button[aria-expanded]')].find(x => x.textContent.includes(n)); return b ? b.parentElement.innerText : ''; }, nom);
   const validerSansPhoto = async (p, nom) => { await p.evaluate(n => { const b = [...document.querySelectorAll('button[aria-expanded]')].find(x => x.textContent.includes(n)); const v = [...b.parentElement.querySelectorAll('button')].find(x => x.textContent.trim() === '✓'); v.click(); }, nom); await p.waitForTimeout(700); };
   // un bouton du corps de l'exercice déployé (les corps repliés restent montés, invisibles)
@@ -118,7 +120,7 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
     const L = lettreDe(prog, 'developpe_couche');
     await ouvrirSeance(p, prog, L);
     let t = await texte(p);
-    check('sous la carte : « Pas assez de temps ou d\'énergie aujourd\'hui ? On ajuste. »', /Pas assez de temps ou d'énergie aujourd'hui \? On ajuste\./.test(t));
+    check('sous la carte : « Ajuster ma séance du jour — temps, énergie »', /Ajuster ma séance du jour — temps, énergie/.test(t));
     await p.locator('.bouton-adapter').tap(); await p.waitForTimeout(600);
     t = await texte(p);
     check('panneau : temps (saisie exacte) et énergie, résultat annoncé', /TEMPS DISPONIBLE/.test(t) && /ÉNERGIE/.test(t) && /Petite forme/.test(t) && /Résultat :/.test(t) && await p.evaluate(() => !!document.querySelector('input[type=number]')));
@@ -132,7 +134,7 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
     const orig = prog.seances[L];
     check('les polyarticulaires restent, séries −1, repos préservés', orig.exos.filter(e => e.compartiment !== 'isolation').every(o => A.seance.exos.some(e => e.id === o.id)) && A.seance.exos.every(e => { const o = orig.exos.find(x => x.id === e.id); return e.series === Math.max(2, o.series - 1) && e.repos <= o.repos; }));
     t = await texte(p);
-    check('en-tête : « Séance ajustée · N min · petite forme », et le bouton d\'ajustement a disparu', /Séance ajustée · \d+ min · petite forme/.test(t) && !/On ajuste\./.test(t));
+    check('en-tête : « Séance ajustée · N min · petite forme », et le bouton d\'ajustement a disparu', /Séance ajustée · \d+ min · petite forme/.test(t) && !/Ajuster ma séance du jour/.test(t));
     check('l\'en-tête garde la lettre de la séance (« SÉANCE ' + L + ' ») même ajustée', new RegExp('SÉANCE ' + L + '\\b').test(t), t.match(/SÉANCE[^\n]*/) && t.match(/SÉANCE[^\n]*/)[0]);
     await deplier(p, 'Développé couché');
     const c = await carte(p, 'Développé couché');

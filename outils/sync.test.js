@@ -34,5 +34,11 @@ test("worker.js embarque la copie exacte de index.html (ligne 5)", () => {
   assert.strictEqual(JSON.parse(m[1]), html, "worker.js n'embarque pas l'index.html courant — lance node outils/sync.js");
   assert.strictEqual(worker, c.worker, "worker.js n'est pas synchronisé — lance node outils/sync.js");
 });
+test("worker.js embarque la police Space Grotesk (ligne 6, base64 de outils/polices/space-grotesk-latin.woff2)", () => {
+  const m = worker.split("\n")[5].match(/^const POLICE_WOFF2 = "([A-Za-z0-9+/=]*)";$/);
+  assert.ok(m, "la ligne 6 de worker.js n'est pas la constante POLICE_WOFF2");
+  assert.strictEqual(m[1], c.police, "la police embarquée diffère du fichier — lance node outils/sync.js");
+  assert.strictEqual(Buffer.from(m[1], "base64").toString("latin1").slice(0, 4), "wOF2", "la police embarquée n'est pas un WOFF2");
+});
 console.log(ko ? `\n${ko} copie(s) désynchronisée(s) — lance node outils/sync.js` : "\ncopies embarquées synchronisées");
 process.exit(ko ? 1 : 0);

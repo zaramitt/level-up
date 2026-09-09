@@ -210,6 +210,159 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.6 — septembre 2026
+
+Retour terrain complet de Léo, second commit : les évolutions.
+
+- **Écran Séance : mode focus, l'accordéon est abandonné.** Alternative (b)
+  de la v19.16, choisie après test terrain : au tap, la carte s'ouvre en popup
+  quasi plein écran, fond flouté comme le spotlight des récompenses, fermeture
+  par la croix ou un tap à l'extérieur ; la liste compacte reste derrière.
+  Le corps n'est plus monté en permanence (v19.16, « corps monté en
+  permanence ») : chaque saisie de charge est enregistrée au fil de l'eau,
+  rien ne se perd à la fermeture. Le chrono de repos passe au-dessus du focus.
+- **Noms de séances : les muscles en grand, le geste en petit.** « Push » ne
+  parle qu'à qui connaît déjà ; « Pecs · épaules · triceps » parle à tout le
+  monde. Le geste reste (« Push (poussée) ») pour qui l'a appris.
+- **La séance choisie passe au-dessus de la grille du mois**, du défi et du
+  joker : c'est elle qu'on vient faire.
+- **Types de charge au poids du corps** : poids du corps / lesté (+kg) /
+  assisté (−kg, machine ou élastique), pour tout exercice de la banque
+  faisable au poids du corps (dips, tractions, pompes, fentes…). L'assistance
+  est stockée en négatif : la meilleure série est la moins assistée, le
+  graphique et « dernier » suivent, l'incrément proposé fait baisser
+  l'assistance. Au poids du corps, la progression se dit en reps puis en
+  passant au lesté.
+- **« Ajuster ma séance du jour — temps, énergie », dans les deux sens.**
+  Temps en plus → le moteur propose des compléments (le gainage s'il manque,
+  une isolation d'un muscle du focus pas encore travaillé, un finisher cardio,
+  ou mobilité en reprise douce), trois au plus, jamais au-delà du temps,
+  refusables d'un tap. « À fond » → une série de plus sur les gros exercices
+  (cinq au plus) et un cran de charge suggéré et pré-rempli. 120 min ne donne
+  plus une séance de 54.
+- **Les jours de sport ne rendent jamais un programme impossible.** Règle 4,
+  mode souple : quand les jours de sport ne laissent pas la place, on
+  s'entraîne aussi ces jours-là, et la règle dure devient « pas de grosse
+  séance jambes la veille ni le jour d'un match ». En tout dernier recours
+  (six séances et trois jours de foot : un seul jour possible pour des
+  jambes), le moteur place sans en tenir compte et le dit.
+- **Sport + « progresser » : l'effet est visible**, une phrase par séance
+  (« Adapté au foot : ischios (Nordic curl), unilatéral (Fentes bulgares),
+  gainage anti-rotation (Pallof press) »), dans l'aperçu et dans l'en-tête de
+  la séance. Vérifié par un test : avec l'intention de progresser, plus de
+  favoris du sport, une case unilatérale en plus, un gainage anti-rotation.
+- **Proposer une récompense sans coach** : la proposition part dans la
+  table, elle attend ; une carte le dit, et juste après la proposition l'app
+  propose d'inviter le coach maintenant (« Plus tard » reste possible).
+- **Parcours coach par lien : pas d'onboarding complet.** Le lien porte le
+  code et le prénom (`&de=`) ; le coach donne son prénom, puis « Tu veux
+  aussi t'entraîner ? » — non → Suivi ; oui, en duo avec la personne ou avec
+  quelqu'un d'autre → son profil coach est créé sans recharger et
+  l'onboarding coaché enchaîne, avec un nouveau code duo (un code = une
+  personne coachée). Les deux profils cohabitent sur le téléphone.
+- **« Ton coach t'attend »** : un tap explique ce que ça implique pour lui
+  (voir tes séances et tes photos, valider, offrir — et que ça ne lui coûte
+  rien s'il ne veut pas offrir).
+- **Progrès sans historique : un graphique exemple grisé**, pour voir ce qui
+  attend, plutôt qu'un « Rien encore ».
+
+## v20.5 — septembre 2026
+
+Retour terrain complet de Léo, premier commit : les corrections.
+
+- **Onboarding : chaque écran remplit le viewport réel et tient sans
+  défiler.** `100dvh` (pas `100vh` : sur iPhone, les barres de Safari mangent
+  le bas), zones sûres, un pied de page par écran, la promesse répartie sur
+  la hauteur, les trois cartes de mode denses au lieu d'étirées. Règle de
+  `CLAUDE.md` désormais **vérifiée par le harnais** (suite 07) sur 390×664 et
+  390×844 : tient sans scroll ET remplit ≥ 85 % — pour chaque écran.
+- **Toasts** : 4 s minimum, fermeture au tap, les erreurs restent jusqu'au
+  tap, au-dessus de tout (le panneau Réglages compris), sur plusieurs lignes.
+  Plus aucune troncature à 80 caractères. Les erreurs des rappels disent le
+  cas (permission refusée, indisponible côté serveur, service non accepté).
+- **« Générer des idées » : la vraie cause** était le schéma de sortie
+  structurée (`minimum`/`maximum`, `maxLength`, `minItems`/`maxItems`), hors
+  du sous-ensemble supporté par l'API → 400 → 502 → « Oups ». Schémas réduits
+  au sous-ensemble (types, `enum`, `required`, `additionalProperties:false`),
+  bornes en code, repli en texte si l'API refuse encore, et l'app dit la
+  raison réelle (statut de l'IA, quota, budget, code inconnu, trop vite).
+- **Cagnotte : seuls les jours de séance prévus manqués comptent** (la
+  semaine du moteur fait foi ; un programme sans semaine compte tous les
+  jours, comme avant). La décroissance d'XP, elle, reste par jour sans
+  passage : c'est la règle du jeu affichée.
+- **« Fin de série → lancer le repos »** : un vrai bouton (couleur de la
+  séance) ; le chrono ne saute plus à droite (la translation de centrage
+  entrait en conflit avec l'animation).
+- **« À savoir sur ce programme »** se ferme pour de bon (« Compris »,
+  signature des avertissements mémorisée) et reste dans Réglages → Mon
+  programme.
+- **Bulle « Ta base » en quatre puces numérotées**, une action par puce.
+- **Sons du gainage** : plus doux (amplitude 0,5), un « go » discret à la fin
+  de la mise en place, un tic à chacune des trois dernières secondes, trois
+  notes montantes à la fin du travail.
+- **Photo de preuve et charges** : aucun blocage n'existait dans le code ; la
+  mise en page laissait croire le contraire. Le champ est dit « facultatif »,
+  et le mode focus (v20.6) réordonne.
+- **« dernier » à 0** : 0 est une valeur, revenir à 0 avec les boutons efface
+  bien la charge de la série.
+
+## v20.4 — septembre 2026
+
+Chantier sécurité, temps 2 (l'audit est dans `SECURITE.md`). Ce qui a été
+décidé, et pourquoi :
+
+- **Aucun secret dans le code, jamais.** La clé privée VAPID était en clair
+  dans `worker.js` depuis le premier commit, dépôt public : régénérée, elle vit
+  dans le dashboard (`VAPID_PRIV`), la clé publique aussi (`VAPID_PUB`,
+  injectée dans la page). Purger l'historique git aurait été inutile : la clé
+  était déjà copiée partout. Révoquer suffit.
+- **Réactivation des rappels : une carte, un tap, sans jargon.** Un
+  abonnement pris avec l'ancienne clé ne vaut plus rien ; l'app le détecte
+  (clé de l'abonnement ≠ clé courante) et propose « On a renforcé la sécurité
+  de l'app. Réactive tes rappels en un tap ». Pas de message technique.
+- **Un code inconnu = zéro appel IA.** Le quota par code ne bornait rien
+  puisque tout code de 8 à 30 caractères était accepté. Désormais l'app
+  enregistre son code (`/profil`) et l'IA refuse les autres ; un budget
+  journalier pour toute l'app (150 idées, 100 lectures) plafonne la facture
+  quoi qu'il arrive. Le message dit quel quota est atteint (le sien, ou celui
+  de l'app pour la journée).
+- **Ce que la personne tape ne va jamais dans le prompt système.** Le
+  contexte des idées passe dans le message utilisateur, présenté comme une
+  indication de goût.
+- **Le worker n'appelle jamais une URL arbitraire.** `/abonner` n'accepte que
+  les services push d'Apple, de Google (FCM) et de Mozilla. Edge sur Windows
+  (WNS) est donc refusé, l'app le dit : à élargir si une utilisatrice le
+  demande.
+- **Le serveur ne garde que ce que l'écran Suivi lit.** Liste blanche des
+  champs de `/etat`, tailles bornées par route. Les XP restent calculés par le
+  client : un client modifié peut se mentir, la photo reste la preuve, le
+  serveur n'a pas les règles pour recalculer et ne les aura pas.
+- **Pas de séparation des rôles côté serveur pour l'instant.** La coachée
+  peut forger une action coach et inversement ; c'est une limite de
+  l'architecture « un code = une capacité », acceptée pour un duo de confiance
+  sans argent réel. Le schéma « un secret par rôle » est au backlog, priorité
+  haute, prérequis avant ouverture hors du cercle proche.
+- **Limitation de débit dans le worker, pas dans le WAF.** Sur `workers.dev`
+  il n'y a pas de zone, donc pas de règle WAF ni de limitation de débit
+  dashboard : un compteur par IP en mémoire (par isolat) freine les boucles ;
+  le budget journalier reste le vrai plafond. À revoir le jour d'un domaine
+  à soi.
+- **Space Grotesk auto-hébergée.** Google Fonts recevait l'adresse IP de
+  chaque utilisatrice à chaque ouverture (le cas jugé à Munich en 2022) ; la
+  police (OFL) est servie par le worker, embarquée par `outils/sync.js`.
+- **CSP à nonce plutôt qu'à empreintes.** Les scripts en ligne changent à
+  chaque livraison ; le nonce est posé à la volée par le worker et rejoué par
+  le mock du harnais, ce qui teste la CSP réelle sur un parcours.
+- **Page « Confidentialité et mentions légales » en langage clair**, depuis
+  les Réglages, même texte dans `CONFIDENTIALITE.md` ; ni « KV », ni « API »,
+  ni « RGPD » dans le texte. L'éditeur est désigné par l'adresse de contact
+  (variable `CONTACT`), pas par un nom en dur dans un dépôt public.
+- **Le code duo reste dans l'URL.** Passage en en-tête évalué : gain marginal
+  (seuls les journaux Cloudflare optionnels le voient), ~25 points d'appel.
+  Pas fait.
+- **Photos : pas de chiffrement côté client pour l'instant.** Ça protégerait
+  contre une fuite KV, pas contre qui a le code ; au backlog.
+
 ## v20.3 — septembre 2026
 
 Chantier Programmes, étape 3 passe 2, commit 3 : **les textes des bulles
@@ -450,9 +603,9 @@ Chantier Programmes, étape 3, passe 1 : **le moteur est branché**. Première
   autres restant visibles en compact, ordre d'affichage jamais modifié.
   → Voir ce qui reste à faire est motivant, et l'ordre d'exécution de la séance
   porte une logique (échauffement, gros exercices, finition) qu'un
-  réordonnancement brouillerait. **Statut : à confirmer après test terrain** —
-  deux alternatives explorables si insatisfaisant : mode focus plein écran, ou
-  repli des autres exercices sous celui qui est ouvert.
+  réordonnancement brouillerait. **Statut : test terrain fait, l'alternative
+  (b) — mode focus plein écran — est retenue en v20.6** ; la liste compacte
+  et l'ordre restent, seul le corps change de forme.
 
 - **Bulles d'aide : popup au premier passage, puis rappelables par l'icône
   « ? » de l'en-tête** — au lieu d'un encart permanent en haut de chaque onglet.
@@ -463,6 +616,8 @@ Chantier Programmes, étape 3, passe 1 : **le moteur est branché**. Première
 - **Corps de l'accordéon monté en permanence, seule la hauteur est animée.**
   → Démonter le corps à la fermeture réinitialiserait les charges saisies par
   série. Coût nul : avant l'accordéon, tous les exercices étaient déjà montés.
+  *(Caduc en v20.6 : le corps s'ouvre en focus et n'est monté qu'ouvert ;
+  chaque saisie est enregistrée au fil de l'eau, rien ne se perd.)*
 
 ## v19.15 — août 2026
 

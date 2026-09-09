@@ -4,6 +4,8 @@
 // 1. moteur-programmes.js et banque-exercices.json → index.html (entre les balises
 //    <script id="moteur-programmes"> et <script id="banque-exercices">)
 // 2. index.html → worker.js (ligne 5, constante HTML)
+// 3. outils/polices/space-grotesk-latin.woff2 → worker.js (ligne 6, constante POLICE_WOFF2,
+//    en base64 : la police est servie par le worker, plus aucun appel à Google Fonts)
 // Les sources sont les fichiers à la racine ; les copies ne s'éditent jamais à la main.
 // `node outils/sync.test.js` échoue si une copie diffère de sa source.
 const fs = require("fs");
@@ -28,7 +30,10 @@ const calculer = () => {
   const w = lire("worker.js").split("\n");
   if (!w[4].startsWith("const HTML = \"")) throw new Error("worker.js : la ligne 5 n'est pas la constante HTML");
   w[4] = "const HTML = " + enc(html) + ";";
-  return { html, worker: w.join("\n"), moteur, banque };
+  const police = fs.readFileSync(path.join(racine, "outils", "polices", "space-grotesk-latin.woff2")).toString("base64");
+  if (!w[5].startsWith("const POLICE_WOFF2 = \"")) throw new Error("worker.js : la ligne 6 n'est pas la constante POLICE_WOFF2");
+  w[5] = "const POLICE_WOFF2 = \"" + police + "\";";
+  return { html, worker: w.join("\n"), moteur, banque, police };
 };
 
 if (require.main === module) {
@@ -36,7 +41,7 @@ if (require.main === module) {
   fs.writeFileSync(path.join(racine, "index.html"), c.html);
   fs.writeFileSync(path.join(racine, "worker.js"), c.worker);
   const verif = JSON.parse(lire("worker.js").split("\n")[4].match(/^const HTML = (".*");$/)[1]) === c.html;
-  console.log(`index.html : moteur (${c.moteur.length} car.) et banque (${c.banque.exercices.length} exercices) synchronisés ; worker.js : copie identique à index.html → ${verif}`);
+  console.log(`index.html : moteur (${c.moteur.length} car.) et banque (${c.banque.exercices.length} exercices) synchronisés ; worker.js : copie identique à index.html → ${verif}, police embarquée (${Math.round(c.police.length * 3 / 4 / 1024)} Ko)`);
   if (!verif) process.exit(1);
 }
 module.exports = { calculer };

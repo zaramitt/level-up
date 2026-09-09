@@ -52,7 +52,7 @@ const init = () => {
   await p.waitForTimeout(600);
 
   console.log('=== A1 — chrono sur horodatage (arrière-plan simulé) ===');
-  await p.locator('button', { hasText: 'Fin de série — repos' }).first().tap();
+  await p.locator('button', { hasText: 'Fin de série' }).first().tap();
   await p.waitForTimeout(600);
   let o = await overlay();
   console.log('  repos lancé, affiche', o && o.txt, '(attendu 2:00 ou 1:59)');
@@ -115,6 +115,7 @@ const init = () => {
   console.log('  div dédiée:', a4 && JSON.stringify(a4.texte), '| pleine largeur:', a4 && a4.pleineLargeur, '| sous la ligne méta:', a4 && a4.sousLaMeta);
 
   console.log('\n=== A2 — enchaînement du gainage ===');
+  if (await p.locator('.fermer-focus').count()) { await p.locator('.fermer-focus').tap(); await p.waitForTimeout(400); } // v20.6 : refermer la popup de l'exercice
   await p.locator('text=+ GAINAGE').scrollIntoViewIfNeeded();
   await p.waitForTimeout(400);
   await p.locator('div', { hasText: /^Planche$/ }).first().tap(); await p.waitForTimeout(500); // déplier (v19.21)

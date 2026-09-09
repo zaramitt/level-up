@@ -37,6 +37,8 @@ const init = ([role, vus]) => {
     await p.locator('.carte-seance').first().tap();
     await p.waitForTimeout(900);
   };
+  // v20.6 : la carte s'ouvre en mode focus (popup) ; on la referme avant de taper une autre ligne
+  const fermerFocus = async p => { if (await p.locator('.fermer-focus').count()) { await p.locator('.fermer-focus').tap(); await p.waitForTimeout(400); } };
   const etatExos = p => p.evaluate(() => [...document.querySelectorAll('button[aria-expanded]')].map(btn => {
     const carte = btn.parentElement;
     const corps = btn.nextElementSibling;
@@ -59,6 +61,7 @@ const init = ([role, vus]) => {
     await p.screenshot({ path: 'v1916-compact.png' });
 
     // ouvrir le 2e
+    await fermerFocus(p);
     await p.locator('button[aria-expanded]').nth(1).tap();
     await p.waitForTimeout(600);
     e = await etatExos(p);
@@ -69,6 +72,7 @@ const init = ([role, vus]) => {
     await p.screenshot({ path: 'v1916-deploye.png' });
 
     // ouvrir le 4e → le 2e doit se refermer, l'ordre ne bouge pas
+    await fermerFocus(p);
     await p.locator('button[aria-expanded]').nth(3).tap();
     await p.waitForTimeout(600);
     e = await etatExos(p);
@@ -76,17 +80,19 @@ const init = ([role, vus]) => {
     console.log('  ORDRE D\'AFFICHAGE INCHANGÉ:', JSON.stringify(e.map(x => x.titre)) === JSON.stringify(ordreInitial));
 
     // second tap → referme
+    await fermerFocus(p);
     await p.locator('button[aria-expanded]').nth(3).tap();
     await p.waitForTimeout(600);
     e = await etatExos(p);
     console.log('  second tap referme:', e.every(x => !x.ouvert && x.hauteurCorps === 0));
 
     // contenu du déployé : stepper, démo, repos, valider
+    await fermerFocus(p);
     await p.locator('button[aria-expanded]').first().tap();
     await p.waitForTimeout(600);
     const t = await texte(p);
     console.log('  contenu déployé — charge par série:', t.includes('CHARGE PAR SÉRIE'), '| démo:', t.includes('Voir la démo'),
-                '| repos:', t.includes('Fin de série — repos'), '| valider:', t.includes('Valider avec une photo'));
+                '| repos:', t.includes('Fin de série'), '| valider:', t.includes('Valider avec une photo'));
     console.log('  compact garde dose + repos + dernier:', t.includes('3 × 10') && t.includes('dernier'));
     await ctx.close();
   }
@@ -103,6 +109,7 @@ const init = ([role, vus]) => {
                page: Math.round(document.body.scrollHeight) };
     });
     const avant = mesureCompact.carte;
+    await fermerFocus(p);
     await p.locator('button[aria-expanded]').first().tap();
     await p.waitForTimeout(600);
     const apres = await p.evaluate(() => {

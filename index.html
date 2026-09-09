@@ -6,14 +6,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0B0E14">
+<meta name="vapid-pub" content="__VAPID_PUB__">
+<meta name="contact" content="__CONTACT__">
 <title>Level Up !</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
 <style>
+  /* Space Grotesk servie par le worker (licence OFL, fichier dans outils/polices) : plus aucun
+     appel à Google Fonts, donc plus d'adresse IP envoyée à un tiers à chaque ouverture */
+  @font-face {
+    font-family: 'Space Grotesk'; font-style: normal; font-weight: 300 700; font-display: swap;
+    src: url(/polices/space-grotesk.woff2) format('woff2-variations'), url(/polices/space-grotesk.woff2) format('woff2');
+  }
   html, body {
     margin:0; padding:0; background:#0B0E14; color:#F2F5F9;
     background-image:
@@ -27,6 +33,10 @@
   button { touch-action: manipulation; }
   input, button, textarea { font-family:inherit; }
   input, textarea { color:#F2F5F9 !important; font-size:16px !important; }
+  /* onboarding (v20.5) : chaque écran remplit le viewport RÉEL (dvh : barres Safari et
+     encoche comprises) et tient sans défiler — vérifié par le harnais sur 390×664 et 390×844 */
+  .cadre-onb { min-height:100vh; min-height:100dvh; padding-bottom:calc(24px + env(safe-area-inset-bottom)); padding-top:calc(18px + env(safe-area-inset-top)); }
+  @keyframes apparait { 0%{opacity:0;transform:translateY(-8px)} 100%{opacity:1;transform:none} }
   input::placeholder, textarea::placeholder { color:#5A6274; }
   .carrousel { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
     padding:10px 2px 12px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
@@ -170,27 +180,27 @@
   // repli : quand une case d'isolation n'a plus de muscle libre dans la séance (jamais deux
   // isolations du même muscle), elle devient un polyarticulaire du focus
   const FOCUS = {
-    fullA: { nom: "Full body A", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+    fullA: { muscles: "Tout le corps", nom: "Full body A", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
       cases: [{ c: "squat" }, { c: "poussee_h" }, { c: "tirage_h" }, { c: "hinge" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    fullB: { nom: "Full body B", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+    fullB: { muscles: "Tout le corps", nom: "Full body B", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
       cases: [{ c: "hinge" }, { c: "poussee_v" }, { c: "tirage_v" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    fullC: { nom: "Full body C", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+    fullC: { muscles: "Tout le corps", nom: "Full body C", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
       cases: [{ c: "unilateral" }, { c: "poussee_h" }, { c: "tirage_h" }, { c: "squat" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    haut: { nom: "Haut du corps", comp: ["poussee_h", "poussee_v", "tirage_h", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
+    haut: { muscles: "Pecs · dos · épaules · bras", nom: "Haut du corps", comp: ["poussee_h", "poussee_v", "tirage_h", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
       cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "poussee_v" }, { c: "tirage_v" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    bas: { nom: "Bas du corps", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+    bas: { muscles: "Jambes · fessiers", nom: "Bas du corps", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
       cases: [{ c: "squat" }, { c: "hinge" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    push: { nom: "Push (poussée)", comp: ["poussee_h", "poussee_v", "isolation", "gainage"], iso: ["triceps", "épaules latérales"], bas: false,
+    push: { muscles: "Pecs · épaules · triceps", nom: "Push (poussée)", comp: ["poussee_h", "poussee_v", "isolation", "gainage"], iso: ["triceps", "épaules latérales"], bas: false,
       cases: [{ c: "poussee_h" }, { c: "poussee_v" }, { c: "poussee_h" }, { c: "isolation", m: ["triceps"] }, { c: "isolation", m: ["épaules latérales"] }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
-    pull: { nom: "Pull (tirage)", comp: ["tirage_h", "tirage_v", "isolation", "gainage"], iso: ["biceps", "arrière d'épaule"], bas: false,
+    pull: { muscles: "Dos · biceps", nom: "Pull (tirage)", comp: ["tirage_h", "tirage_v", "isolation", "gainage"], iso: ["biceps", "arrière d'épaule"], bas: false,
       cases: [{ c: "tirage_v" }, { c: "tirage_h" }, { c: "tirage_h" }, { c: "isolation", m: ["arrière d'épaule"] }, { c: "isolation", m: ["biceps"] }, { c: "isolation", repli: "tirage_v" }, { c: "gainage" }] },
-    legs: { nom: "Legs (jambes)", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+    legs: { muscles: "Jambes · fessiers", nom: "Legs (jambes)", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
       cases: [{ c: "squat" }, { c: "hinge" }, { c: "unilateral" }, { c: "isolation", m: ["fessiers"] }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    focusBas: { nom: "Focus bas du corps", comp: ["hinge", "unilateral", "squat", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+    focusBas: { muscles: "Fessiers · ischios · jambes", nom: "Focus bas du corps", comp: ["hinge", "unilateral", "squat", "isolation", "gainage"], iso: ISO_BAS, bas: true,
       cases: [{ c: "hinge" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "squat" }, { c: "gainage" }] },
-    focusHaut: { nom: "Focus haut du corps", comp: ["poussee_h", "tirage_h", "poussee_v", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
+    focusHaut: { muscles: "Pecs · dos · épaules", nom: "Focus haut du corps", comp: ["poussee_h", "tirage_h", "poussee_v", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
       cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
-    recup: { nom: "Récupération active", comp: ["cardio_mobilite"], iso: [], bas: false,
+    recup: { muscles: "Récupération active", nom: "Récupération active", comp: ["cardio_mobilite"], iso: [], bas: false,
       cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1200 }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }] }
   };
   const appartientAuFocus = (e, focus) => {
@@ -246,20 +256,20 @@
   // d'isolation du bas devient une seconde case unilatérale ; gainage anti-rotation en plus
   const SPORTS = {
     // obligatoires : une entrée = un exercice ou une liste d'alternatives (le premier admissible est pris)
-    course: { nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    cyclisme: { nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
-    natation: { nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
-    football: { nom: "Football", prioritaires: ["ischio-jambiers", "fessiers", "adducteurs", "quadriceps"], favoris: ["nordic", "bulgare", "fente_laterale", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    tennis: { nom: "Tennis & padel", prioritaires: ["arrière d'épaule", "épaules", "fessiers", "obliques"], favoris: ["pallof", "planche_laterale", "fente_laterale", "tirage_ela"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
-    rugby: { nom: "Rugby", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "quadriceps", "pectoraux"], favoris: ["souleve_terre", "squat", "rowing_barre"], unilateral: false, brasMin: false, antiRotation: false, cote: null },
-    basket: { nom: "Basket & handball", prioritaires: ["quadriceps", "fessiers", "mollets", "épaules"], favoris: ["bulgare", "stepup", "mollets", "squat_saut"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
-    escalade: { nom: "Escalade", prioritaires: ["dos (grand dorsal)", "biceps", "arrière d'épaule", "avant-bras"], favoris: ["traction", "traction_lestee", "rowing_inverse", "hollow"], unilateral: false, brasMin: false, antiRotation: false, cote: "haut" },
-    frappe: { nom: "Sports de frappe", prioritaires: ["obliques", "épaules", "chaîne postérieure", "mollets"], favoris: ["pallof", "planche_laterale", "push_press", "swing"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
-    prehension: { nom: "Sports de préhension", prioritaires: ["dos (grand dorsal)", "chaîne postérieure", "biceps", "obliques"], favoris: ["traction", "rowing_barre", "souleve_terre", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: null },
-    mma: { nom: "MMA", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "obliques", "épaules"], favoris: ["traction", "souleve_terre", "pallof", "push_press"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
-    equitation: { nom: "Équitation", prioritaires: ["adducteurs", "fessiers", "abducteurs", "dos (grand dorsal)"], favoris: ["fente_laterale", "abduction", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    danse: { nom: "Danse", prioritaires: ["fessiers", "abducteurs", "mollets", "obliques"], favoris: ["bulgare", "mollets", "planche_laterale", "abduction"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    yoga: { nom: "Yoga & pilates", prioritaires: ["dos (grand dorsal)", "pectoraux", "fessiers", "épaules"], favoris: ["traction", "developpe_couche", "hipthrust"], unilateral: false, brasMin: false, antiRotation: false, cote: null }
+    course: { libelle: "à la course à pied", nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    cyclisme: { libelle: "au vélo", nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    natation: { libelle: "à la natation", nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
+    football: { libelle: "au foot", nom: "Football", prioritaires: ["ischio-jambiers", "fessiers", "adducteurs", "quadriceps"], favoris: ["nordic", "bulgare", "fente_laterale", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    tennis: { libelle: "au tennis et au padel", nom: "Tennis & padel", prioritaires: ["arrière d'épaule", "épaules", "fessiers", "obliques"], favoris: ["pallof", "planche_laterale", "fente_laterale", "tirage_ela"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    rugby: { libelle: "au rugby", nom: "Rugby", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "quadriceps", "pectoraux"], favoris: ["souleve_terre", "squat", "rowing_barre"], unilateral: false, brasMin: false, antiRotation: false, cote: null },
+    basket: { libelle: "au basket et au hand", nom: "Basket & handball", prioritaires: ["quadriceps", "fessiers", "mollets", "épaules"], favoris: ["bulgare", "stepup", "mollets", "squat_saut"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    escalade: { libelle: "à l'escalade", nom: "Escalade", prioritaires: ["dos (grand dorsal)", "biceps", "arrière d'épaule", "avant-bras"], favoris: ["traction", "traction_lestee", "rowing_inverse", "hollow"], unilateral: false, brasMin: false, antiRotation: false, cote: "haut" },
+    frappe: { libelle: "aux sports de frappe", nom: "Sports de frappe", prioritaires: ["obliques", "épaules", "chaîne postérieure", "mollets"], favoris: ["pallof", "planche_laterale", "push_press", "swing"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    prehension: { libelle: "aux sports de préhension", nom: "Sports de préhension", prioritaires: ["dos (grand dorsal)", "chaîne postérieure", "biceps", "obliques"], favoris: ["traction", "rowing_barre", "souleve_terre", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: null },
+    mma: { libelle: "au MMA", nom: "MMA", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "obliques", "épaules"], favoris: ["traction", "souleve_terre", "pallof", "push_press"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    equitation: { libelle: "à l'équitation", nom: "Équitation", prioritaires: ["adducteurs", "fessiers", "abducteurs", "dos (grand dorsal)"], favoris: ["fente_laterale", "abduction", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    danse: { libelle: "à la danse", nom: "Danse", prioritaires: ["fessiers", "abducteurs", "mollets", "obliques"], favoris: ["bulgare", "mollets", "planche_laterale", "abduction"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    yoga: { libelle: "au yoga et au pilates", nom: "Yoga & pilates", prioritaires: ["dos (grand dorsal)", "pectoraux", "fessiers", "épaules"], favoris: ["traction", "developpe_couche", "hipthrust"], unilateral: false, brasMin: false, antiRotation: false, cote: null }
   };
 
   /* ------------------------------------------------------------------ */
@@ -456,17 +466,21 @@
   /* ------------------------------------------------------------------ */
   const combinaisons = (n, k) => { const out = []; const rec = (d, acc) => { if (acc.length === k) { out.push(acc.slice()); return; } for (let i = d; i <= n; i++) { acc.push(i); rec(i + 1, acc); acc.pop(); } }; rec(1, []); return out; };
   const suivant = d => d === 7 ? 1 : d + 1, precedent = d => d === 1 ? 7 : d - 1;
-  // jamais le même gros groupe deux jours de suite (dur) ; jamais de séance un jour de sport (dur) ;
-  // ensuite : le moins de jours collés, le bloc le plus court, la semaine plutôt que le week-end,
-  // les séances jambes loin des jours de sport
-  const placer = (seances, joursSport) => {
+  const JOURS_NOM = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+  // jamais le même gros groupe deux jours de suite (dur) ; jamais de séance un jour de sport (dur,
+  // tant que c'est possible) ; ensuite : le moins de jours collés, le bloc le plus court, la
+  // semaine plutôt que le week-end, les séances jambes loin des jours de sport.
+  // Mode souple (v20.6) : quand les jours de sport ne laissent pas la place, on s'entraîne aussi
+  // ces jours-là — la règle dure devient « pas de grosse séance jambes la veille ni le jour même »
+  const placer = (seances, joursSport, souple) => {
     const k = seances.length;
     const groupes = seances.map(s => new Set(s.exercices.map(grosGroupe).filter(Boolean)));
     const jambes = seances.map(s => FOCUS[s.focus] && FOCUS[s.focus].bas);
     const sport = new Set(joursSport);
     let meilleur = null, meilleurScore = -Infinity;
     for (const jours of combinaisons(7, k)) {
-      if (jours.some(d => sport.has(d))) continue;
+      if (!souple && jours.some(d => sport.has(d))) continue;
+      if (souple && jours.some((d, i) => jambes[i] && (sport.has(d) || sport.has(suivant(d))))) continue;
       let ok = true, colles = 0;
       for (let i = 0; i < k; i++) {
         const j = (i + 1) % k, ecart = j > i ? jours[j] - jours[i] : jours[j] + 7 - jours[i];
@@ -483,7 +497,8 @@
       jours.forEach((d, i) => { if (jambes[i] && (sport.has(suivant(d)) || sport.has(precedent(d)))) pres++; });
       let minEcart = 7;
       for (let i = 0; i < k; i++) { const j = (i + 1) % k; minEcart = Math.min(minEcart, j > i ? jours[j] - jours[i] : jours[j] + 7 - jours[i]); }
-      const score = -colles * 10 - bloc * 10 - weekend * 15 - pres * 25 + (k > 1 ? minEcart * 3 : 0) - jours[0];
+      const surSport = souple ? jours.filter(d => sport.has(d)).length : 0;
+      const score = -colles * 10 - bloc * 10 - weekend * 15 - pres * 25 - surSport * 20 + (k > 1 ? minEcart * 3 : 0) - jours[0];
       if (score > meilleurScore) { meilleurScore = score; meilleur = jours; }
     }
     return meilleur; // null si impossible
@@ -528,8 +543,6 @@
     if (intentionSport) prioritaires.push(...sport.prioritaires);
     const favoris = new Set(intentionSport ? sport.favoris : []);
     const difficulteMax = Math.min(niv.difficulteMax, obj.difficulteMax || 3);
-    if (joursSport.length + frequence > 7) avertissements.push(`${frequence} séances et ${joursSport.length} jours de sport ne tiennent pas dans 7 jours : les jours de sport sont ignorés pour le placement.`);
-    const joursSportPlacement = joursSport.length + frequence > 7 ? [] : joursSport;
 
     // squelette ; le jour focus du 5× suit le côté dominant (objectif, puis sport)
     const squelette = SQUELETTES[frequence];
@@ -679,8 +692,17 @@
       if (s.focus !== "recup" && c < nbExos[0]) avertissements.push(`Séance ${s.lettre} : ${c} exercices seulement (minimum ${nbExos[0]} au niveau ${niveau}${objCle === "force" ? " en force" : ""}) — ${s._sousMinimum ? `le temps (${tempsMin} min) l'a emporté sur le nombre d'exercices` : "matériel trop restreint pour ce focus"}.`);
     }
 
-    // règle 4 : placement dans la semaine
-    const jours = placer(seances, joursSportPlacement);
+    // règle 4 : placement dans la semaine — d'abord sans toucher aux jours de sport, sinon en mode
+    // souple (on s'entraîne aussi ces jours-là, jamais de grosse séance jambes la veille ni le jour
+    // même), et en tout dernier recours sans tenir compte du sport
+    let jours = placer(seances, joursSport, false), placementSouple = false;
+    if (!jours && joursSport.length) {
+      jours = placer(seances, joursSport, true);
+      placementSouple = true;
+      const nomSport = sport ? sport.nom.toLowerCase() : "sport";
+      if (jours) avertissements.push(`Avec ${frequence} séances et ${joursSport.length} jour${joursSport.length > 1 ? "s" : ""} de ${nomSport}, tu t'entraînes aussi certains jours de sport (${jours.filter(d => joursSport.includes(d)).map(d => JOURS_NOM[d - 1]).join(", ")}) : jamais de grosse séance jambes la veille ni le jour même.`);
+      else { jours = placer(seances, [], false); if (jours) avertissements.push(`${frequence} séances et ${joursSport.length} jours de ${nomSport} : impossible d'éviter une grosse séance jambes près d'un jour de sport, les séances sont placées sans en tenir compte — à toi d'ajuster.`); }
+    }
     if (!jours) avertissements.push("Aucun placement dans la semaine ne respecte la règle 4 (même gros groupe deux jours consécutifs).");
     const semaine = [];
     for (let d = 1; d <= 7; d++) {
@@ -691,7 +713,7 @@
     return {
       entrees: { frequence, objectif: objCle, objectifLibre: entrees.objectifLibre || "", sport: sport ? entrees.sport : null, intention: intentionSport ? "sport" : "soi", materiel, niveau, tempsMin, joursSport },
       squelette: { nom: squelette.nom, description: squelette.description },
-      semaine, seances, volume, avertissements, limites,
+      semaine, seances, volume, avertissements, limites, placementSouple,
       pointsExtension: [
         "interpreterObjectifLibre(texte) : l'IA choisira les muscles prioritaires depuis un objectif en texte libre (aujourd'hui : mots-clés).",
         "habillage : phrases d'accompagnement par séance et par exercice (nom du programme, mot d'encouragement) — non implémenté, le moteur ne produit que la structure.",
@@ -721,19 +743,39 @@
   // « charge » = il y a une charge à noter en kg : une alternative faisable avec le matériel de la
   // personne qui passe par des poids (haltères, barre, kettlebell, machine, poulie, trap bar)
   const TAGS_CHARGE = new Set(["haltères", "barre", "kettlebell", "machine", "poulie", "trap bar", "rack"]);
+  // « pdc » = l'exercice se fait au poids du corps (éventuellement avec une barre de traction, des
+  // barres de dips ou un banc) : l'app propose alors poids du corps / lesté (+kg) / assisté (−kg)
+  const TAGS_PDC = new Set(["poids du corps", "aucun", "barre de traction", "barres de dips", "banc"]);
+  const pdcPossible = x => (x.materiel || []).some(alt => tagsDe(alt).every(t => TAGS_PDC.has(t)));
+  const MUSCLE_COURT = { "ischio-jambiers": "ischios", "dos (grand dorsal)": "dos", "épaules latérales": "épaules", "arrière d'épaule": "arrière d'épaule", "chaîne postérieure": "chaîne postérieure" };
+  // ce que le sport a changé dans une séance, en une phrase (« Adapté au foot : ischios (Nordic curl), … »)
+  const noteSport = (s, entrees) => {
+    const sp = entrees.intention === "sport" && entrees.sport && SPORTS[entrees.sport] ? SPORTS[entrees.sport] : null;
+    if (!sp) return null;
+    const items = [];
+    for (const x of s.exercices) {
+      if (x.role === "sport" && x.compartiment === "unilateral") items.push(`unilatéral (${x.nom})`);
+      else if (x.role === "sport" && x.compartiment === "gainage") items.push(`gainage anti-rotation (${x.nom})`);
+      else if (sp.favoris.includes(x.id) || (x.compartiment === "isolation" && sp.prioritaires.includes(x.muscle))) items.push(`${MUSCLE_COURT[x.muscle] || x.muscle} (${x.nom})`);
+    }
+    return items.length ? `Adapté ${sp.libelle} : ${[...new Set(items)].join(", ")}` : null;
+  };
   const chargeDe = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.some(u => TAGS_CHARGE.has(u)); }); };
   const presenterPourApp = prog => {
     const seances = {};
     prog.seances.forEach((s, i) => {
       const exos = s.exercices.filter(x => x.compartiment !== "gainage").map(x => ({
         id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
+        pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
         series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
         consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
         id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
       }));
-      seances[s.lettre] = { nom: s.nom, couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
+      // v20.6 : les muscles en grand (nom), le geste en petit (geste), la phrase du sport (sport)
+      const f = FOCUS[s.focus];
+      seances[s.lettre] = { nom: f && f.muscles ? f.muscles : s.nom, geste: s.nom, sport: noteSport(s, prog.entrees), couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
     });
     const obj = OBJECTIFS[prog.entrees.objectif] || OBJECTIFS.mieux;
     const f = prog.entrees.frequence;
@@ -762,16 +804,27 @@
   const HAUT = new Set(["poussee_h", "poussee_v", "tirage_h", "tirage_v"]), ISO_HAUT_M = new Set(ISO_HAUT);
   const surMachine = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.includes("machine"); }); };
   const incrementDe = (x, materiel) => (x.compartiment === "isolation" ? ISO_HAUT_M.has(x.muscle) : HAUT.has(x.compartiment)) && !surMachine(x, materiel) ? 2.5 : 5;
-  const chargeDeSerie = e => e == null ? 0 : e.kg != null ? Number(e.kg) : Math.max(0, ...(e.series || []).filter(v => v != null && v !== "").map(Number));
+  // charge de travail d'une entrée : la meilleure série ; en assisté (valeurs négatives = kg
+  // d'assistance), la « meilleure » est la moins assistée, donc la plus proche de zéro
+  const chargeDeSerie = e => {
+    if (e == null) return 0;
+    if (e.kg != null) return Number(e.kg);
+    const l = (e.series || []).filter(v => v != null && v !== "").map(Number).filter(v => !isNaN(v));
+    const pos = l.filter(v => v > 0);
+    if (pos.length) return Math.max(...pos);
+    const neg = l.filter(v => v < 0);
+    return neg.length ? Math.max(...neg) : 0;
+  };
   const suggererCharge = (x, histo, materiel) => {
-    if (!x || !x.charge || !x.reps || !histo || !histo.length) return null;
+    if (!x || !(x.charge || x.pdc) || !x.reps || !histo || !histo.length) return null;
     const der = histo[histo.length - 1];
     if (!der || !der.hautFourchette) return null;
     if (der.ressenti === "dur" || der.ressenti == null) return null;
     const base = chargeDeSerie(der);
-    if (!(base > 0)) return null;
     const plus = incrementDe(x, materiel);
-    return { kg: base + plus, plus, base, reps: x.reps[1], raison: `+${String(plus).replace(".", ",")} kg, tu as tenu ${x.reps[1]} reps partout` };
+    if (der.type === "assiste" && base < 0) return { kg: Math.min(0, base + plus), plus, base, reps: x.reps[1], type: "assiste", raison: `−${String(plus).replace(".", ",")} kg d'assistance, tu as tenu ${x.reps[1]} reps partout` };
+    if (!(base > 0)) return null;
+    return { kg: base + plus, plus, base, reps: x.reps[1], type: der.type || null, raison: `+${String(plus).replace(".", ",")} kg, tu as tenu ${x.reps[1]} reps partout` };
   };
   // règle 7, niveau observé qui bouge : ressentis sur les GROS exercices (polyarticulaires), du plus ancien au
   // plus récent. Quatre « facile » d'affilée → proposer +1 ; trois « trop dur » sur les six derniers → proposer −1.
@@ -789,7 +842,7 @@
     const reps = iso ? null : cand.reps && cand.reps[1] <= 6 ? cand.reps : orig.reps || cand.reps || [8, 12];
     const x = { compartiment: cand.compartiment, series: orig.series || 3, reps, duree_s: iso ? cand.duree_s : null, unilateral: !!cand.unilateral };
     return {
-      id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel),
+      id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel), pdc: pdcPossible(cand),
       series: x.series, reps, duree: x.duree_s, unilateral: x.unilateral, consigne: cand.consigne || "", erreur: cand.erreur || "",
       compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id
     };
@@ -824,16 +877,50 @@
     const interne = (x, gainage) => { const d = x.reps || x.duree ? { reps: x.reps || null, duree_s: x.duree || null } : lireDose(x); return { ...x, compartiment: gainage ? "gainage" : x.compartiment || "inconnu", series: x.series || parseInt(x.dose) || 3, reps: d.reps, duree_s: d.duree_s, repos_s: x.repos || 0, role: x.role || null, _app: x }; };
     const s = { exercices: [...S.exos.map(x => interne(x, false)), ...(Array.isArray(S.gainage) ? S.gainage : []).map(g => interne(g, true))] };
     if (energie === "petite") for (const x of s.exercices) if (estForce(x) && x.compartiment !== "cardio_mobilite") x.series = Math.max(2, x.series - 1);
+    // à fond (v20.6) : une série de plus sur les gros exercices (5 au plus) ; l'app suggère aussi +un cran de charge
+    if (energie === "fond") for (const x of s.exercices) if (COMPOSES.includes(x.compartiment) && x.series < 5) x.series++;
     const avant = dureeSeance(s);
     const nbMin = Math.min(3, s.exercices.filter(estForce).length);
     const tient = comprimer(s, tempsMin, nbMin);
+    // temps en plus (v20.6) : des compléments tant qu'il reste au moins 8 min — le gainage s'il manque,
+    // une isolation d'un muscle du focus pas encore travaillé, puis un finisher (cardio, ou mobilité
+    // en reprise douce). Jamais plus de trois ajouts, jamais au-delà du temps demandé.
+    const ajouts = [];
+    const banque = opts.banque, entrees = opts.entrees || {};
+    const f = S.focus && FOCUS[S.focus];
+    if (opts.complements !== false && banque && f && f.comp && S.focus !== "recup" && dureeSeance(s) + 8 <= tempsMin) {
+      const niveau = Math.max(1, Math.min(3, parseInt(entrees.niveau) || 2)), niv = NIVEAU[niveau];
+      const obj = OBJECTIFS[entrees.objectif] || OBJECTIFS.mieux, materiel = entrees.materiel || "salle";
+      const ctx = { niveau, niv, materiel, difficulteMax: Math.min(niv.difficulteMax, obj.difficulteMax || 3), obj, prioritaires: [], favoris: new Set(), phares: new Set(), distancePhare: () => 0,
+        unilateral: false, dejaSemaine: new Set(), compteSemaine: {}, musclesSemaine: new Set(), dejaSeance: new Set(s.exercices.map(x => x.id)), musclesSeance: new Set(s.exercices.filter(x => x.compartiment === "isolation").map(x => x.muscle)) };
+      const versApp = x => ({ id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, materiel), pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement" });
+      const ajouter = (e, pourquoi, dureeCardio) => {
+        if (!e || ajouts.length >= 3) return false;
+        const x = exerciceProgramme(e, doser(e, { ...ctx, dureeCardio }), "complement");
+        if (dureeSeance({ exercices: [...s.exercices, x] }) > tempsMin) return false;
+        x._app = versApp(x); s.exercices.push(x); ctx.dejaSeance.add(e.id); if (e.compartiment === "isolation") ctx.musclesSeance.add(e.muscle);
+        ajouts.push({ id: e.id, nom: e.nom, pourquoi }); return true;
+      };
+      if (!s.exercices.some(x => x.compartiment === "gainage")) ajouter(choisir(banque, { c: "gainage" }, S.focus, ctx), "gainage");
+      for (const mu of f.iso) { if (dureeSeance(s) + 5 > tempsMin || ajouts.length >= 2) break; if (ctx.musclesSeance.has(mu)) continue; ajouter(choisir(banque, { c: "isolation", m: [mu] }, S.focus, ctx), `isolation ${MUSCLE_COURT[mu] || mu}`); }
+      if (!s.exercices.some(x => x.compartiment === "cardio_mobilite")) {
+        const type = entrees.objectif === "douce" ? "mobilite" : "cardio";
+        const cands = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === type && faisable(e, materiel) && !ctx.dejaSeance.has(e.id));
+        const reste = Math.max(0, (tempsMin - dureeSeance(s)) * 60 - 60);
+        if (cands.length && reste >= 300) ajouter(cands[0], type === "cardio" ? "finisher cardio" : "mobilité", Math.min(900, Math.max(300, Math.floor(reste / 60) * 60)));
+      }
+      s.exercices.forEach((x, k) => { x._k = k; });
+      s.exercices.sort((a, b) => rangOrdre(a) - rangOrdre(b) || a._k - b._k);
+      s.exercices.forEach(x => { delete x._k; });
+    }
     const retour = x => ({ ...x._app, series: x.series, repos: x.repos_s, dose: doseDe({ ...x, reps: x.reps, duree_s: x.duree_s }) });
     return {
       ...S,
       exos: s.exercices.filter(x => x.compartiment !== "gainage").map(retour),
       gainage: s.exercices.filter(x => x.compartiment === "gainage").map(retour),
       dureeMin: dureeSeance(s),
-      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, avantMin: avant, tient, retires: S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - s.exercices.length }
+      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, intensifie: energie === "fond", ajouts, avantMin: avant, tient, retires: Math.max(0, S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - (s.exercices.length - ajouts.length)) }
     };
   };
 
@@ -937,11 +1024,12 @@
     const parJour = {};
     for (const j of prog.semaine) if (j.seance) parJour[j.jour] = new Set(j.seance.exercices.map(grosGroupe).filter(Boolean));
     for (let d = 1; d <= 7; d++) { const a = parJour[d], b = parJour[suivant(d)]; if (!a || !b) continue; for (const g of a) if (b.has(g)) v.push({ regle: 4, message: `${g} les jours ${d} et ${suivant(d)}` }); }
-    if (prog.entrees.joursSport.length + f <= 7) for (const j of prog.semaine) if (j.seance && j.sport) v.push({ regle: "sport", message: `séance ${j.seance.lettre} un jour de sport (${j.jour})` });
+    if (!prog.placementSouple) for (const j of prog.semaine) if (j.seance && j.sport) v.push({ regle: "sport", message: `séance ${j.seance.lettre} un jour de sport (${j.jour})` });
+    else for (const j of prog.semaine) if (j.seance && FOCUS[j.seance.focus] && FOCUS[j.seance.focus].bas && (j.sport || prog.semaine.find(x => x.jour === suivant(j.jour)).sport) && !prog.avertissements.some(a => /sans en tenir compte/.test(a))) v.push({ regle: "sport", message: `grosse séance jambes ${j.seance.lettre} le jour ${j.jour}, la veille ou le jour d'un sport` });
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
 });
 </script>
 <script id="banque-exercices">
@@ -1761,8 +1849,25 @@ const GAINAGE = [{
 // gainage d'une séance : liste propre (programmes du moteur, v20.0) ou la liste globale (anciens programmes)
 const gainageDe = S => Array.isArray(S.gainage) ? S.gainage : S.gainage ? GAINAGE : [];
 const nbSeries = ex => parseInt(ex.dose) || 3;
-const fmtCharge = e => e == null ? "" : e.kg != null ? `${e.kg} kg` : (e.series || []).filter(v => v != null && v !== "").join(" / ") + " kg";
-const maxCharge = e => e == null ? 0 : e.kg != null ? e.kg : Math.max(0, ...(e.series || []).filter(v => v != null && v !== "").map(Number));
+// v20.6 : une entrée de charge porte un type — rien (charge classique), « leste » (+kg au poids du
+// corps), « assiste » (kg d'assistance, stockés en négatif : moins d'assistance = mieux), « pdc »
+const valeursCharge = e => e == null ? [] : e.kg != null ? [Number(e.kg)] : (e.series || []).filter(v => v != null && v !== "").map(Number).filter(v => !isNaN(v));
+const fmtCharge = e => {
+  if (e == null) return "";
+  if (e.type === "pdc") return "poids du corps";
+  const l = valeursCharge(e);
+  if (!l.length) return "";
+  if (e.type === "assiste" || (l.every(v => v <= 0) && l.some(v => v < 0))) return l.map(v => String(Math.abs(v)).replace(".", ",")).join(" / ") + " kg d'assistance";
+  return (e.type === "leste" ? "+" : "") + l.map(v => String(v).replace(".", ",")).join(" / ") + " kg" + (e.type === "leste" ? " de lest" : "");
+};
+// la charge de travail d'une entrée : la meilleure série ; en assisté, la moins assistée (la plus proche de 0)
+const maxCharge = e => {
+  const l = valeursCharge(e);
+  const pos = l.filter(v => v > 0);
+  if (pos.length) return Math.max(...pos);
+  const neg = l.filter(v => v < 0);
+  return neg.length ? Math.max(...neg) : 0;
+};
 const CARDIO = ["Marche inclinée", "Escaliers / stairmaster", "Rameur", "Vélo", "Corde à sauter"];
 const HABITUDES = [{
   id: "repas",
@@ -2957,13 +3062,63 @@ const proposerNego = async (code, item, maj) => {
   return "local";
 };
 const yt = nom => "https://www.youtube.com/results?search_query=" + encodeURIComponent(nom.replace(/\(.*?\)/g, "").trim() + " exercice technique");
-const VAPID_PUB = "BFqceDQZrCxkL2itH31sa5FVflAvvc-FMtTcg-sRYqhEX5Jc9r6QNSpahe1GytCXjPfLb9bNIQPlZf8S9GkwK7E";
+/* Notifications push (v20.4) : la clé publique VAPID est injectée par le worker dans la
+   balise <meta name="vapid-pub"> — aucune clé dans le code. Sans clé (worker non configuré,
+   ou page servie hors worker), les rappels sont indisponibles et l'app le dit. */
+const metaContenu = nom => { const m = document.querySelector('meta[name="' + nom + '"]'); const v = m ? m.getAttribute("content") || "" : ""; return /^__/.test(v) ? "" : v; };
+const VAPID_PUB = metaContenu("vapid-pub");
+const CONTACT = metaContenu("contact");
 const b64uVersU8 = s => {
   const pad = "=".repeat((4 - s.length % 4) % 4);
   const b = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
   const u = new Uint8Array(b.length);
   for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
   return u;
+};
+// s'abonne aux rappels avec la clé courante (remplace un abonnement existant) et le dépose sur le worker
+// iPhone / iPad : Safari n'expose les notifications web qu'aux apps ajoutées à l'écran
+// d'accueil (mode « standalone »). Dans l'onglet Safari, PushManager n'existe pas : on le dit
+// avec le geste exact plutôt qu'un « navigateur non compatible ».
+const MSG_IOS_ACCUEIL = "Ajoute Level Up! à ton écran d'accueil pour activer les rappels : dans Safari, touche Partager, puis « Sur l'écran d'accueil », et ouvre l'app depuis son icône.";
+const surIOSHorsAccueil = () => {
+  const ua = navigator.userAgent || "";
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (!ios) return false;
+  const accueil = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  return !accueil;
+};
+const abonnerPush = async code => {
+  if (surIOSHorsAccueil()) throw new Error(MSG_IOS_ACCUEIL);
+  if (!VAPID_PUB) throw new Error("Rappels indisponibles côté serveur pour le moment (configuration en cours). Réessaie plus tard.");
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications. Sur iPhone : ajoute d'abord l'app à l'écran d'accueil (Partager → Sur l'écran d'accueil), puis réessaie.");
+  if (typeof Notification !== "undefined" && Notification.permission === "denied") throw new Error("Notifications refusées dans les réglages du téléphone. Autorise-les pour Level Up, puis réessaie.");
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") throw new Error("Permission refusée : sans elle, pas de rappel. Tu peux la donner dans les réglages du téléphone.");
+  const reg = await navigator.serviceWorker.ready;
+  const ancien = await reg.pushManager.getSubscription();
+  if (ancien) { try { await ancien.unsubscribe(); } catch {} }
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uVersU8(VAPID_PUB) });
+  const r = await fetch(api(code, "/abonner"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sub }) });
+  if (r.status === 503) throw new Error("Rappels indisponibles côté serveur pour le moment (configuration en cours). Réessaie plus tard.");
+  if (r.status === 400) { try { await sub.unsubscribe(); } catch {} throw new Error("Ce service de notifications n'est pas encore accepté par l'app."); }
+  if (!r.ok) throw new Error("Serveur injoignable — réessaie plus tard.");
+  return sub;
+};
+// l'abonnement en place a-t-il été pris avec une autre clé que la courante (ou a-t-il disparu) ?
+// Vrai après un changement de clé côté serveur : l'app propose alors de réactiver, en un tap.
+const pushARenouveler = async () => {
+  if (!VAPID_PUB || !("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  try {
+    const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((_, rej) => setTimeout(() => rej(new Error("sw")), 6000))]);
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return true;
+    const k = sub.options && sub.options.applicationServerKey;
+    if (!k) return false;
+    const a = new Uint8Array(k), b = b64uVersU8(VAPID_PUB);
+    return a.length !== b.length || a.some((x, i) => x !== b[i]);
+  } catch {
+    return false;
+  }
 };
 const compresser = file => new Promise((res, rej) => {
   const img = new Image();
@@ -2986,13 +3141,13 @@ const compresser = file => new Promise((res, rej) => {
    c'est ce qui permet au bip de sonner en salle, téléphone en silencieux.
    Safari refuse toute lecture non initiée par un tap : debloquerSon() joue les
    deux sons en muet au premier geste (lancement d'un repos ou d'une série). */
-const wavDataUri = notes => {
+const wavDataUri = (notes, amp = 0.7) => {
   const sr = 22050, echs = [];
   notes.forEach(([f, d]) => {
     const n = Math.round(sr * d);
     for (let i = 0; i < n; i++) {
       const env = Math.min(1, i / 200, (n - i) / 400);
-      echs.push(f ? Math.sin(2 * Math.PI * f * i / sr) * env * 0.7 : 0);
+      echs.push(f ? Math.sin(2 * Math.PI * f * i / sr) * env * amp : 0);
     }
   });
   const buf = new ArrayBuffer(44 + echs.length * 2), v = new DataView(buf);
@@ -3005,26 +3160,34 @@ const wavDataUri = notes => {
   let b = ""; new Uint8Array(buf).forEach(x => b += String.fromCharCode(x));
   return "data:audio/wav;base64," + btoa(b);
 };
-const audioFin = typeof Audio !== "undefined" ? new Audio(wavDataUri([[880, .18], [0, .06], [880, .18], [0, .06], [880, .24]])) : null;
-const audioAlerte = typeof Audio !== "undefined" ? new Audio(wavDataUri([[660, .14], [0, .08], [660, .14]])) : null;
+// v20.5 : des sons plus doux (amplitude 0,5 au lieu de 0,7), un « go » discret à la fin de la mise
+// en place, un tic à chacune des 3 dernières secondes de travail, trois notes montantes à la fin
+const audioFin = typeof Audio !== "undefined" ? new Audio(wavDataUri([[880, .18], [0, .06], [880, .18], [0, .06], [880, .24]], .5)) : null;
+const audioAlerte = typeof Audio !== "undefined" ? new Audio(wavDataUri([[660, .14], [0, .08], [660, .14]], .5)) : null;
+const audioGo = typeof Audio !== "undefined" ? new Audio(wavDataUri([[660, .12]], .3)) : null;
+const audioTic = typeof Audio !== "undefined" ? new Audio(wavDataUri([[1320, .04]], .22)) : null;
+const audioFinTravail = typeof Audio !== "undefined" ? new Audio(wavDataUri([[523, .14], [0, .04], [659, .14], [0, .04], [784, .3]], .5)) : null;
 let sonDebloque = false;
 const debloquerSon = () => {
   if (sonDebloque) return;
   sonDebloque = true;
-  [audioFin, audioAlerte].forEach(a => {
+  [audioFin, audioAlerte, audioGo, audioTic, audioFinTravail].forEach(a => {
     if (!a) return;
     a.muted = true;
     a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
   });
 };
-const jouer = (a, sons) => {
+const jouer = (a, sons, vibre = true) => {
   if (sons && a) {
     try { a.currentTime = 0; a.play().catch(() => {}); } catch (e) {}
   }
-  if (navigator.vibrate) navigator.vibrate(sons ? [200, 100, 200] : [200, 100, 200]);
+  if (vibre && navigator.vibrate) navigator.vibrate([200, 100, 200]);
 };
-const bip = (sons = true) => jouer(audioFin, sons); // fin de repos / de série
+const bip = (sons = true) => jouer(audioFin, sons); // fin de repos
 const bipAlerte = (sons = true) => jouer(audioAlerte, sons); // 10 s avant la fin du repos
+const bipGo = (sons = true) => jouer(audioGo, sons, false); // fin de la mise en place : c'est parti
+const bipTic = (sons = true) => jouer(audioTic, sons, false); // 3, 2, 1
+const bipFinTravail = (sons = true) => jouer(audioFinTravail, sons); // fin du travail de gainage
 const nomDe = id => {
   const ex = Object.values(SEANCES).flatMap(s => s.exos).find(e => e.id === id);
   if (ex) return ex.nom;
@@ -3050,7 +3213,7 @@ function App() {
   const [burst, setBurst] = useState(null);
   const [victoireOuverte, setVictoireOuverte] = useState(false);
   const partagerInvite = async () => {
-    const url = window.location.origin + "/?code=" + encodeURIComponent(code);
+    const url = window.location.origin + "/?code=" + encodeURIComponent(code) + (profil && profil.nom ? "&de=" + encodeURIComponent(profil.nom) : "");
     try {
       if (navigator.share) await navigator.share({
         title: "Level Up !",
@@ -3073,6 +3236,7 @@ function App() {
     setReglagesOuvert(false);
   };
   const urlCode = (new URLSearchParams(window.location.search).get("code") || "").toLowerCase();
+  const urlDe = (new URLSearchParams(window.location.search).get("de") || "").slice(0, 30);
   const solo = !!(profil && profil.solo);
   const creerProfil = (nom, role_, code_, importer, extra) => {
     extra = extra || {};
@@ -3113,6 +3277,12 @@ function App() {
     }
     const l = [...profils, p];
     ecrireProfils(l);
+    // v20.6 : le coach qui veut aussi s'entraîner crée son profil coach sans recharger, puis
+    // enchaîne sur l'onboarding coaché — les deux profils cohabitent sur le téléphone
+    if (extra.sansRecharger) {
+      setProfils(l);
+      return;
+    }
     localStorage.setItem("lvlup-actif", p.id);
     window.location.reload();
   };
@@ -3146,11 +3316,36 @@ function App() {
   const [regen, setRegen] = useState(null); // flux de régénération ouvert : { mode, question }
   const [remplacer, setRemplacer] = useState(null); // exercice en cours de remplacement (v20.1)
   const [adapter, setAdapter] = useState(false); // panneau « Adapter ma séance » (v20.1)
+  const [pushRenouveler, setPushRenouveler] = useState(false); // abonnement push signé avec une ancienne clé (v20.4)
+  const [explicCoach, setExplicCoach] = useState(false); // « Ton coach t'attend » déplié : ce que ça implique (v20.6)
 
   /* ---- chargement + migration + décroissance ---- */
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
+  // enregistrement du code côté serveur, une fois par profil (v20.4) — les routes IA le demandent
+  const profilEnregistre = !!(st && st.profilEnregistre);
+  useEffect(() => {
+    if (!st || profilEnregistre || !code) return;
+    enregistrerCode(code).then(r => { if (r.ok) maj(s => { s.profilEnregistre = true; return s; }); }).catch(() => {});
+  }, [pid, profilEnregistre, !!st]);
+  // rappels voulus, mais abonnement pris avec une autre clé (ou perdu) : une carte, un tap
+  const rappelsVoulus = !!(st && st.reglages && st.reglages.rappels === true);
+  useEffect(() => {
+    if (!rappelsVoulus) { setPushRenouveler(false); return; }
+    let vivant = true;
+    pushARenouveler().then(v => { if (vivant) setPushRenouveler(v); });
+    return () => { vivant = false; };
+  }, [pid, rappelsVoulus]);
+  const renouvelerPush = async () => {
+    try {
+      await abonnerPush(code);
+      setPushRenouveler(false);
+      toast("Rappels réactivés");
+    } catch (e) {
+      toast(String(e.message || e), { erreur: true });
+    }
+  };
   useEffect(() => {
     if (!profil) return;
     let s;
@@ -3183,7 +3378,17 @@ function App() {
     const hier = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
     const debut = s.decayCursor || auj();
     let perdu = 0,
-      jours = 0;
+      jours = 0, // jours de séance PRÉVUS manqués : les seuls que la cagnotte compte (v20.5)
+      joursSans = 0; // jours sans aucun passage : la décroissance d'XP
+    // un jour est « prévu » si la semaine du moteur y place une séance ; un programme sans
+    // semaine (modèle d'avant la v20.0) compte tous les jours, comme avant
+    const semaine = s.programmePerso && s.programmePerso.moteur && s.programmePerso.moteur.semaine;
+    const seancePrevue = k => {
+      if (!semaine || !semaine.length) return true;
+      const g = new Date(k + "T12:00:00").getDay();
+      const e = semaine.find(x => x.jour === (g === 0 ? 7 : g));
+      return !!(e && e.lettre);
+    };
     let d = new Date(debut);
     d.setDate(d.getDate() + 1);
     while (d.toISOString().slice(0, 10) <= hier) {
@@ -3191,7 +3396,8 @@ function App() {
       const pausee = (s.pauses || []).some(p => k >= p.debut && k <= p.fin);
       if (!(s.activeDays || {})[k] && !pausee) {
         perdu += DECAY;
-        jours++;
+        joursSans++;
+        if (seancePrevue(k)) jours++;
       }
       d.setDate(d.getDate() + 1);
     }
@@ -3200,8 +3406,8 @@ function App() {
     setSt(s);
     localStorage.setItem(SKEY(profil.id), JSON.stringify(s));
     setPhotos(lirePhotos(profil.id));
-    if (perdu > 0) setTimeout(() => toast(`−${perdu} XP · ${jours} jour${jours > 1 ? "s" : ""} sans passage 😴`), 600);
-    if (perdu > 0 && !profil.solo && s.reglages.pot !== false) {
+    if (perdu > 0) setTimeout(() => toast(`−${perdu} XP · ${joursSans} jour${joursSans > 1 ? "s" : ""} sans passage 😴`), 600);
+    if (jours > 0 && !profil.solo && s.reglages.pot !== false) {
       fetch(api(profil.code, "/pot"), {
         method: "POST",
         headers: {
@@ -3279,15 +3485,17 @@ function App() {
       }
       if (!tm.fin) return tm;
       const reste = Math.max(0, Math.ceil((tm.fin - Date.now()) / 1000));
+      const sons = stRef.current?.reglages?.sons !== false;
       if (reste > 0) {
-        if (tm.mode === "repos" && tm.reste > 10 && reste <= 10) bipAlerte(stRef.current?.reglages?.sons !== false);
+        if (tm.mode === "repos" && tm.reste > 10 && reste <= 10) bipAlerte(sons);
+        if (tm.mode === "travail" && reste <= 3 && reste !== tm.reste) bipTic(sons);
         return reste === tm.reste ? tm : {
           ...tm,
           reste
         };
       }
-      // segment terminé
-      bip(stRef.current?.reglages?.sons !== false);
+      // segment terminé : un son par nature de segment
+      if (tm.mode === "prep") bipGo(sons);else if (tm.mode === "travail") bipFinTravail(sons);else bip(sons);
       if (tm.mode === "travail" && apresTravail.current) {
         const f = apresTravail.current;
         apresTravail.current = null;
@@ -3344,13 +3552,17 @@ function App() {
     }, 400);
     return nx;
   });
-  const toast = txt => {
+  // v20.5 : tout message reste 4 s et se ferme au tap ; une erreur reste jusqu'au tap
+  const fermerToast = id => setToasts(t => t.filter(x => x.id !== id));
+  const toast = (txt, opts) => {
+    const erreur = !!(opts && opts.erreur);
     const id = Math.random();
-    setToasts(t => [...t, {
+    setToasts(t => [...t.filter(x => x.txt !== txt).slice(-3), {
       id,
-      txt
+      txt,
+      erreur
     }]);
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 1900);
+    if (!erreur) setTimeout(() => fermerToast(id), 4000);
   };
   const pushT = useRef(null);
   const stRef = useRef(null);
@@ -3442,7 +3654,8 @@ function App() {
     profils: profils,
     onCreer: creerProfil,
     onChoisir: changerProfil,
-    urlCode: urlCode
+    urlCode: urlCode,
+    urlDe: urlDe
   });
   if (!st) return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3626,7 +3839,7 @@ function App() {
     } catch (err) {}
     setChargeur(false);
     if (!data) {
-      toast("Photo illisible, réessaie 📷");
+      toast("Photo illisible, réessaie 📷", { erreur: true });
       return;
     }
     const photoId = String(Date.now());
@@ -3872,9 +4085,11 @@ function App() {
     setConfetti(true);
     setTimeout(() => setConfetti(false), 2600);
   };
-  const noterChargeSerie = (exId, idx, kg) => {
+  const noterChargeSerie = (exId, idx, kg, type) => {
     const v = parseFloat(String(kg).replace(",", "."));
-    if (!v || v <= 0) return;
+    // 0 est une valeur : revenir à 0 avec les boutons efface la charge de la série ;
+    // en assisté la valeur arrive négative (kg d'assistance)
+    if (isNaN(v) || (v < 0 && type !== "assiste")) return;
     maj(s => {
       const l = s.charges[exId] || [];
       let e = l[l.length - 1];
@@ -3885,11 +4100,17 @@ function App() {
         };
         l.push(e);
       }
+      if (type) e.type = type;else delete e.type;
       e.series[idx] = v;
       s.charges[exId] = l.slice(-30);
       return s;
     });
   };
+  // v20.6 : type de charge choisi pour un exercice au poids du corps (pdc / leste / assiste), mémorisé
+  const choisirTypeCharge = (exId, type) => maj(s => {
+    s.typesCharge = { ...(s.typesCharge || {}), [exId]: type };
+    return s;
+  });
   const perdre = (pts, label) => {
     maj(s => {
       s.xp = Math.max(0, s.xp - pts);
@@ -3968,7 +4189,7 @@ function App() {
       ...base,
       exos: base.exos.map(e => rempl[e.id] || e)
     };
-    const S1 = window.Moteur.adapterSeance(S0, opts);
+    const S1 = window.Moteur.adapterSeance(S0, { ...opts, banque: window.BANQUE, entrees: PROG && PROG.moteur ? PROG.moteur.entrees : null });
     setJour(j => ({
       ...j,
       adaptee: {
@@ -4419,6 +4640,7 @@ function App() {
   }), adapter && SJ && /*#__PURE__*/React.createElement(AdapterPanneau, {
     S: SJ,
     defautMin: (st.derniereAdaptation || {}).tempsMin,
+    entrees: PROG && PROG.moteur ? PROG.moteur.entrees : null,
     onAdapter: adapterSeanceJour,
     onFermer: () => setAdapter(false)
   }), regen && /*#__PURE__*/React.createElement(Regenerer, {
@@ -4560,28 +4782,45 @@ function App() {
   }, "Je prends !"))), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
-      top: 14,
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: 70,
+      top: "calc(12px + env(safe-area-inset-top))",
+      left: 12,
+      right: 12,
+      zIndex: 120,
       display: "flex",
       flexDirection: "column",
       gap: 6,
-      alignItems: "center"
+      alignItems: "center",
+      pointerEvents: "none"
     }
   }, toasts.map(t => /*#__PURE__*/React.createElement("div", {
     key: t.id,
+    className: t.erreur ? "toast toast-erreur" : "toast",
+    onClick: () => fermerToast(t.id),
     style: {
-      background: "#F2F5F9",
-      color: "#0B0E14",
-      padding: "8px 16px",
-      borderRadius: 999,
+      pointerEvents: "auto",
+      cursor: "pointer",
+      maxWidth: "100%",
+      background: t.erreur ? "#2A1215" : "#F2F5F9",
+      color: t.erreur ? "#FFD5D0" : "#0B0E14",
+      border: t.erreur ? "1.5px solid #FF5C4D" : "none",
+      padding: "10px 16px",
+      borderRadius: 16,
       fontWeight: 600,
-      fontSize: 14,
-      animation: "rise 1.9s ease-out forwards",
-      whiteSpace: "nowrap"
+      fontSize: 13.5,
+      lineHeight: 1.4,
+      textAlign: "center",
+      whiteSpace: "normal",
+      boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+      animation: "apparait .25s ease-out"
     }
-  }, t.txt))), role === "coach" ? /*#__PURE__*/React.createElement("header", {
+  }, t.txt, t.erreur && /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block",
+      fontSize: 10.5,
+      opacity: .7,
+      marginTop: 3
+    }
+  }, "touche pour fermer")))), role === "coach" ? /*#__PURE__*/React.createElement("header", {
     style: {
       padding: "22px 18px 10px",
       display: "flex",
@@ -4784,7 +5023,9 @@ function App() {
     style: {
       padding: "0 14px 108px"
     }
-  }, role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
+  }, pushRenouveler && /*#__PURE__*/React.createElement(CartePush, {
+    onOui: renouvelerPush
+  }), role === "coach" && tab === "suivi" && /*#__PURE__*/React.createElement(SuiviCoach, {
     onZoom: setZoom,
     code: code,
     onAdresse: a => {
@@ -4832,9 +5073,13 @@ function App() {
       color: SUB,
       marginTop: 2
     }
-  }, "Tu vois le nouveau programme avant de décider. Charges et historique restent."))), PROG.moteur && !J.seance && /*#__PURE__*/React.createElement(AvertissementsProgramme, {
+  }, "Tu vois le nouveau programme avant de décider. Charges et historique restent."))), PROG.moteur && !J.seance && st.avertissementsFermes !== signatureAvertissements(PROG) && /*#__PURE__*/React.createElement(AvertissementsProgramme, {
     prog: PROG,
-    compact: true
+    compact: true,
+    onFermer: () => maj(s => {
+      s.avertissementsFermes = signatureAvertissements(PROG);
+      return s;
+    })
   }), propositionNiveau && !J.seance && /*#__PURE__*/React.createElement(CarteNiveau, {
     proposition: propositionNiveau,
     onOui: () => accepterNiveau(propositionNiveau.sens),
@@ -4846,7 +5091,9 @@ function App() {
       return s;
     })
   }), !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
-    onClick: partagerInvite,
+    onClick: () => setExplicCoach(v => !v),
+    className: "carte-coach",
+    "aria-expanded": explicCoach,
     style: {
       display: "flex",
       alignItems: "center",
@@ -4871,7 +5118,32 @@ function App() {
       fontWeight: profil.coachEnTete ? 700 : 600,
       color: profil.coachEnTete ? INK : SUB
     }
-  }, profil.coachEnTete ? "Ton futur coach t'attend — invite-le quand tu veux" : "Invite ton coach quand tu veux — le duo rend l'aventure plus fun")), enPause && /*#__PURE__*/React.createElement("div", {
+  }, profil.coachEnTete ? "Ton futur coach t'attend — invite-le quand tu veux" : "Invite ton coach quand tu veux — le duo rend l'aventure plus fun")), !solo && !st.coachLie && explicCoach && /*#__PURE__*/React.createElement("div", {
+    className: "explic-coach",
+    style: {
+      ...GLASS,
+      borderRadius: 14,
+      padding: "11px 14px",
+      marginTop: -6,
+      marginBottom: 12,
+      fontSize: 12.5,
+      lineHeight: 1.5
+    }
+  }, "Ton coach voit tes séances et tes photos de preuve, valide, et peut t'offrir une récompense à chaque niveau. Ça ne lui coûte rien s'il ne veut pas offrir : suivre et encourager, c'est déjà coacher.", /*#__PURE__*/React.createElement("button", {
+    onClick: partagerInvite,
+    style: {
+      width: "100%",
+      marginTop: 10,
+      background: "linear-gradient(90deg,#3D5AFE,#7C5CFF)",
+      color: "#fff",
+      border: "none",
+      borderRadius: 12,
+      padding: "11px",
+      fontWeight: 800,
+      fontSize: 13,
+      touchAction: "manipulation"
+    }
+  }, "Envoyer l'invitation")), enPause && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(61,90,254,.14)",
       border: `1.5px solid ${COL.B}`,
@@ -4980,7 +5252,15 @@ function App() {
         lineHeight: 1.1,
         position: "relative"
       }
-    }, S.nom), /*#__PURE__*/React.createElement("div", {
+    }, S.nom), S.geste && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: .4,
+        opacity: .8,
+        marginTop: 2
+      }
+    }, S.geste), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11.5,
         opacity: .9,
@@ -5103,7 +5383,50 @@ function App() {
     n: "undo",
     s: 13,
     w: 2.4
-  }), "Changer de séance"), Object.keys(st.activeDays || {}).length > 0 && /*#__PURE__*/React.createElement("div", {
+  }), "Changer de séance"), SJ && recupJ && /*#__PURE__*/React.createElement(RecupView, {
+    S: SJ,
+    J: J,
+    onFait: faireRecup,
+    onAnnuler: annulerRecup,
+    onValider: validerSeance
+  }), SJ && !recupJ && /*#__PURE__*/React.createElement(SeanceView, {
+    S: SJ,
+    J: J,
+    onRessenti: noterRessenti,
+    onHautFourchette: noterHautFourchette,
+    onRemplacer: setRemplacer,
+    onAdapter: () => setAdapter(true),
+    onAnnulerAdaptation: () => setJour(j => ({
+      ...j,
+      adaptee: null
+    })),
+    materiel: st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle",
+    typesCharge: st.typesCharge || {},
+    onTypeCharge: choisirTypeCharge,
+    st: st,
+    photos: photos,
+    chargeur: chargeur,
+    onCamera: ouvrirCamera,
+    onGainSerie: lancerSerieGain,
+    onValider: validerSeance,
+    onValiderGain: validerGainage,
+    onCharge: noterChargeSerie,
+    onRepos: lancerRepos,
+    onZoom: setZoom,
+    onPartager: partagerPreuves,
+    onAnnulerExo: annulerExo,
+    onAnnulerGain: annulerGain,
+    validerSansPhoto: exId => {
+      setJour(j => ({
+        ...j,
+        faits: [...j.faits, exId]
+      }));
+      gagne(10, "· sans photo");
+    },
+    onPartiel: finirPartiel,
+    timer: timer,
+    burst: burst
+  }), Object.keys(st.activeDays || {}).length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14
     }
@@ -5189,48 +5512,7 @@ function App() {
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "shuffle",
     s: 13
-  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), SJ && recupJ && /*#__PURE__*/React.createElement(RecupView, {
-    S: SJ,
-    J: J,
-    onFait: faireRecup,
-    onAnnuler: annulerRecup,
-    onValider: validerSeance
-  }), SJ && !recupJ && /*#__PURE__*/React.createElement(SeanceView, {
-    S: SJ,
-    J: J,
-    onRessenti: noterRessenti,
-    onHautFourchette: noterHautFourchette,
-    onRemplacer: setRemplacer,
-    onAdapter: () => setAdapter(true),
-    onAnnulerAdaptation: () => setJour(j => ({
-      ...j,
-      adaptee: null
-    })),
-    materiel: st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle",
-    st: st,
-    photos: photos,
-    chargeur: chargeur,
-    onCamera: ouvrirCamera,
-    onGainSerie: lancerSerieGain,
-    onValider: validerSeance,
-    onValiderGain: validerGainage,
-    onCharge: noterChargeSerie,
-    onRepos: lancerRepos,
-    onZoom: setZoom,
-    onPartager: partagerPreuves,
-    onAnnulerExo: annulerExo,
-    onAnnulerGain: annulerGain,
-    validerSansPhoto: exId => {
-      setJour(j => ({
-        ...j,
-        faits: [...j.faits, exId]
-      }));
-      gagne(10, "· sans photo");
-    },
-    onPartiel: finirPartiel,
-    timer: timer,
-    burst: burst
-  }), J.seance === "K" && /*#__PURE__*/React.createElement("div", {
+  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), J.seance === "K" && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14
     }
@@ -5675,7 +5957,8 @@ function App() {
     role: role,
     code: code,
     gagne: gagne,
-    solo: solo
+    solo: solo,
+    onInviter: partagerInvite
   })), barreFin && /*#__PURE__*/React.createElement("button", {
     onClick: tousFaitsJ ? validerSeance : finirPartiel,
     style: {
@@ -5889,7 +6172,7 @@ function App() {
       lineHeight: 1.65,
       color: INK
     }
-  }, bulleTexte(cleAide, st, solo)), /*#__PURE__*/React.createElement("button", {
+  }, rendreBulle(bulleTexte(cleAide, st, solo))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setAideOuverte(false);
       if (!(st.vus || {})[cleAide]) maj(x => {
@@ -5915,11 +6198,11 @@ function App() {
     style: {
       position: "fixed",
       bottom: barreFin ? 152 : 84,
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "calc(100% - 24px)",
+      left: 12,
+      right: 12,
+      margin: "0 auto",
       maxWidth: 496,
-      zIndex: 55,
+      zIndex: 87,
       background: timer.mode === "depasse" ? COL.C : timer.mode === "fini" ? COL.G : timer.mode === "travail" ? COL.G : timer.mode === "prep" ? COL.D : COL.B,
       color: "#fff",
       borderRadius: 16,
@@ -6151,7 +6434,9 @@ function SeanceView({
   onRemplacer,
   onAdapter,
   onAnnulerAdaptation,
-  materiel
+  materiel,
+  typesCharge,
+  onTypeCharge
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
   const tousFaits = J.faits.length >= S.exos.length;
@@ -6194,7 +6479,15 @@ function SeanceView({
       opacity: .9,
       fontWeight: 500
     }
-  }, S.nom, " · ", XP.exo, " XP/exercice · +", XP.bonusSeance, " si complète")), /*#__PURE__*/React.createElement("div", {
+  }, S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", XP.exo, " XP/exercice · +", XP.bonusSeance, " si complète"), S.sport && /*#__PURE__*/React.createElement("div", {
+    className: "note-sport",
+    style: {
+      fontSize: 11,
+      opacity: .9,
+      marginTop: 3,
+      lineHeight: 1.35
+    }
+  }, S.sport)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
       fontSize: 15
@@ -6217,7 +6510,7 @@ function SeanceView({
     style: {
       flex: 1
     }
-  }, "Séance ajustée · ", S.dureeMin, " min", S.adaptee.energie === "petite" ? " · petite forme" : S.adaptee.energie === "fond" ? " · à fond" : ""), !J.valide && (J.faits || []).length === 0 && /*#__PURE__*/React.createElement("button", {
+  }, "Séance ajustée · ", S.dureeMin, " min", (S.adaptee.ajouts || []).length ? ` · +${S.adaptee.ajouts.length} complément${S.adaptee.ajouts.length > 1 ? "s" : ""}` : "", S.adaptee.energie === "petite" ? " · petite forme" : S.adaptee.energie === "fond" ? " · à fond" : ""), !J.valide && (J.faits || []).length === 0 && /*#__PURE__*/React.createElement("button", {
     onClick: onAnnulerAdaptation,
     style: {
       background: "none",
@@ -6255,14 +6548,17 @@ function SeanceView({
       fontSize: 12.5,
       fontWeight: 600
     }
-  }, "Pas assez de temps ou d'énergie aujourd'hui ? On ajuste.")), S.exos.map((ex, i) => {
+  }, "Ajuster ma séance du jour — temps, énergie")), S.exos.map((ex, i) => {
     const fait = J.faits.includes(ex.id);
     const hist = st.charges[ex.id];
     const der = hist && hist[hist.length - 1];
     // règle 8 : incrément proposé, jamais imposé ; petite forme : charges suggérées −10 %
     const facteur = S.adaptee ? S.adaptee.chargeFacteur || 1 : 1;
     // pas d'incrément un jour de petite forme : les charges baissent, elles ne montent pas
-    const sugg = !fait && ex.charge && facteur === 1 && window.Moteur ? window.Moteur.suggererCharge(ex, hist, materiel) : null;
+    // v20.6 : type de charge d'un exercice faisable au poids du corps — mémorisé, sinon lesté s'il a une charge, sinon poids du corps
+    const typeCharge = ex.pdc ? (typesCharge || {})[ex.id] || (ex.charge ? "leste" : "pdc") : null;
+    const sugg = !fait && (ex.charge || (ex.pdc && typeCharge !== "pdc")) && facteur === 1 && window.Moteur ? window.Moteur.suggererCharge(ex, hist, materiel) : null;
+    const increment = window.Moteur && window.Moteur.incrementDe ? window.Moteur.incrementDe(ex, materiel) : 2.5;
     const photoId = (J.photos || {})[ex.id];
     const photoSrc = photoId && photos[photoId];
     const ouvert = deploye === ex.id;
@@ -6478,22 +6774,18 @@ function SeanceView({
       s: 14,
       w: 2.4
     }))),
-    /* ---- corps déployé : monté en permanence (comme avant l'accordéon), la
-       hauteur seule est animée, ce qui préserve les saisies de charge ---- */
-    /*#__PURE__*/React.createElement("div", {
-      style: {
-        maxHeight: ouvert ? 900 : 0,
-        opacity: ouvert ? 1 : 0,
-        overflow: "hidden",
-        transition: "max-height .26s ease, opacity .18s ease",
-        pointerEvents: ouvert ? "auto" : "none"
-      }
+    /* ---- mode focus (v20.6, alternative (b) de la v19.16) : le corps s'ouvre en popup quasi
+       plein écran, fond flouté, fermeture par la croix ou un tap à l'extérieur ; la liste
+       compacte reste derrière. Les charges sont enregistrées à chaque saisie, donc rien ne se
+       perd à la fermeture. ---- */
+    ouvert && /*#__PURE__*/React.createElement(FocusExercice, {
+      titre: i + 1 + ". " + ex.nom,
+      sous: ex.dose + " · repos " + fmtSec(ex.repos) + (der ? " · dernier : " + fmtCharge(der) : ""),
+      couleur: S.couleur,
+      onFermer: () => basculer(ex.id)
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        paddingTop: 15,
-        marginTop: 15,
-        borderTop: `1px solid ${LINE}`,
-        animation: ouvert ? "deploie .24s ease-out" : "none"
+        animation: "deploie .24s ease-out"
       }
     }, ex.consigne && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -6568,13 +6860,17 @@ function SeanceView({
         cursor: "pointer",
         marginLeft: "auto"
       }
-    })), !fait && ex.charge && /*#__PURE__*/React.createElement("div", {
+    })), !fait && (ex.charge || ex.pdc) && /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 14
       }
-    }, /*#__PURE__*/React.createElement(SerieInputs, {
-      // remonté quand la suggestion ou le facteur change (séance ajustée après l'ouverture)
-      key: ex.id + ":" + facteur + ":" + (sugg ? sugg.kg : ""),
+    }, ex.pdc && /*#__PURE__*/React.createElement(TypeCharge, {
+      valeur: typeCharge,
+      couleur: S.couleur,
+      onChoisir: t => onTypeCharge(ex.id, t)
+    }), /*#__PURE__*/React.createElement(SerieInputs, {
+      // remonté quand la suggestion, le facteur ou le type change (séance ajustée après l'ouverture)
+      key: ex.id + ":" + facteur + ":" + (sugg ? sugg.kg : "") + ":" + (typeCharge || "") + ":" + (S.adaptee && S.adaptee.intensifie ? "fond" : ""),
       nb: nbSeries(ex),
       exId: ex.id,
       dernier: der,
@@ -6583,6 +6879,9 @@ function SeanceView({
       suggestion: sugg,
       facteur: facteur,
       reps: ex.reps,
+      type: typeCharge,
+      intensifie: !!(S.adaptee && S.adaptee.intensifie),
+      increment: increment,
       hautFourchette: der && der.date === auj() ? !!der.hautFourchette : false,
       onHautFourchette: v => onHautFourchette(ex.id, v)
     })), !fait && ex.repos > 0 && (() => {
@@ -6593,11 +6892,13 @@ function SeanceView({
       const reposDepasse = timer && timer.mode === "depasse" && timer.exId === ex.id;
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => onRepos(ex),
+        className: "bouton-repos",
         style: {
           width: "100%",
-          background: reposDepasse ? COL.C : reposActif ? COL.B : GLASSBG,
-          color: reposActif || reposDepasse ? "#fff" : INK,
-          border: `1.5px solid ${reposDepasse ? COL.C : reposActif ? COL.B : LINE}`,
+          background: reposDepasse ? COL.C : reposActif ? COL.B : tintCss(S.couleur),
+          color: reposActif || reposDepasse ? "#fff" : S.couleur,
+          border: `1.5px solid ${reposDepasse ? COL.C : reposActif ? COL.B : S.couleur}`,
+          boxShadow: reposActif || reposDepasse ? "none" : `0 6px 18px ${tintCss(S.couleur)}`,
           borderRadius: 12,
           padding: "12px",
           fontWeight: 700,
@@ -6633,9 +6934,10 @@ function SeanceView({
           gap: 7
         }
       }, /*#__PURE__*/React.createElement(Ic, {
-        n: "clock",
-        s: 13
-      }), "Fin de série — repos ", fmtSec(ex.repos)));
+        n: "play",
+        s: 13,
+        w: 2.4
+      }), "Fin de série → lancer le repos ", fmtSec(ex.repos)));
     })(), !fait ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
@@ -7029,25 +7331,78 @@ function SerieInputs({
   facteur,
   reps,
   hautFourchette,
-  onHautFourchette
+  onHautFourchette,
+  type,
+  intensifie,
+  increment
 }) {
   // nbLoc : séries affichées — nb au départ, + une à chaque « + une série »
   const [nbLoc, setNbLoc] = useState(nb);
   const [vals, setVals] = useState(Array(nb).fill(""));
   const [saved, setSaved] = useState(Array(nb).fill(false));
   // pré-remplissage : la suggestion d'incrément si elle existe, sinon la dernière fois
-  // (× 0,9 arrondi à 2,5 kg en petite forme)
+  // (× 0,9 arrondi à 2,5 kg en petite forme ; +un cran « à fond ») — jamais d'un autre type de charge
   const f = facteur && facteur < 1 ? facteur : 1;
-  const [derniers] = useState(() => suggestion ? Array(nb).fill(suggestion.kg) : dernier ? (dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || []).map(v => v > 0 && f < 1 ? arrondir25(v * f) : v) : []);
+  const assiste = type === "assiste";
+  const memeType = dernier && ((dernier.type || null) === (type === "leste" || type === "assiste" ? type : null) || (!dernier.type && type === "leste"));
+  const abs = v => typeof v === "number" ? Math.abs(v) : v;
+  const [derniers] = useState(() => suggestion ? Array(nb).fill(abs(suggestion.kg)) : dernier && memeType ? (dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || []).map(v => v > 0 && f < 1 ? arrondir25(v * f) : intensifie && increment && typeof v === "number" && v > 0 ? v + increment : abs(v)) : []);
+  const signe = v => assiste ? -Math.abs(v) : v;
   const sauver = i => {
     if (!vals[i]) return;
-    onSave(exId, i, vals[i]);
+    onSave(exId, i, signe(vals[i]), type);
     setSaved(s => {
       const n = [...s];
       n[i] = true;
       return n;
     });
   };
+  // au poids du corps : rien à noter, la progression se fait en reps puis en passant au lesté
+  if (type === "pdc") return /*#__PURE__*/React.createElement("div", {
+    className: "charge-pdc"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: SUB,
+      lineHeight: 1.45
+    }
+  }, "Au poids du corps : vise le haut de la fourchette, puis passe en lesté quand tout est tenu."), reps && /*#__PURE__*/React.createElement("button", {
+    onClick: () => onHautFourchette && onHautFourchette(!hautFourchette),
+    "aria-pressed": !!hautFourchette,
+    className: "haut-fourchette",
+    style: {
+      marginTop: 8,
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      background: hautFourchette ? tintCss(couleur) : "rgba(255,255,255,.04)",
+      border: `1px solid ${hautFourchette ? couleur : LINE}`,
+      borderRadius: 10,
+      padding: "8px 11px",
+      color: hautFourchette ? couleur : SUB,
+      fontSize: 11.5,
+      fontWeight: 700,
+      textAlign: "left",
+      touchAction: "manipulation"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 16,
+      height: 16,
+      borderRadius: 5,
+      border: `2px solid ${hautFourchette ? couleur : "rgba(255,255,255,.3)"}`,
+      background: hautFourchette ? couleur : "transparent",
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0
+    }
+  }, hautFourchette && /*#__PURE__*/React.createElement(Ic, {
+    n: "check",
+    s: 10,
+    c: "#fff",
+    w: 3
+  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"));
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10.5,
@@ -7055,7 +7410,7 @@ function SerieInputs({
       fontWeight: 600,
       marginBottom: 4
     }
-  }, "CHARGE PAR SÉRIE (KG)"), /*#__PURE__*/React.createElement("div", {
+  }, assiste ? "ASSISTANCE PAR SÉRIE (KG) · moins, c'est mieux" : type === "leste" ? "LEST PAR SÉRIE (KG) · facultatif" : "CHARGE PAR SÉRIE (KG) · facultatif"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: nbLoc > 2 ? "1fr 1fr" : `repeat(${nbLoc},1fr)`,
@@ -7073,7 +7428,7 @@ function SerieInputs({
         n[i] = v;
         return n;
       });
-      onSave(exId, i, v);
+      onSave(exId, i, signe(v), type);
       setSaved(sv => {
         const n = [...sv];
         n[i] = true;
@@ -7169,7 +7524,14 @@ function SerieInputs({
       background: tintCss(couleur),
       borderRadius: 8
     }
-  }, /*#__PURE__*/React.createElement("b", null, "Suggestion : ", fmtKg(suggestion.kg), " kg"), " — ", suggestion.raison, ". Pré-rempli, tu changes si tu veux."), !suggestion && f < 1 && dernier && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, "Suggestion : ", fmtKg(Math.abs(suggestion.kg)), suggestion.type === "assiste" ? " kg d'assistance" : " kg"), " — ", suggestion.raison, ". Pré-rempli, tu changes si tu veux."), !suggestion && intensifie && increment && derniers.some(v => v > 0) && /*#__PURE__*/React.createElement("div", {
+    className: "suggestion-fond",
+    style: {
+      marginTop: 8,
+      fontSize: 11.5,
+      color: SUB
+    }
+  }, "À fond : +", fmtKg(increment), " kg suggéré sur la dernière fois, pré-rempli."), !suggestion && f < 1 && dernier && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8,
       fontSize: 11.5,
@@ -7211,7 +7573,15 @@ function SerieInputs({
     s: 10,
     c: "#fff",
     w: 3
-  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"));
+  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"), reps && /*#__PURE__*/React.createElement("div", {
+    className: "haut-fourchette-aide",
+    style: {
+      fontSize: 11,
+      color: SUB,
+      lineHeight: 1.45,
+      marginTop: 6
+    }
+  }, "Tout tenu ? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures."));
 }
 /* ---------- mise en avant (spotlight) : carte agrandie centrée, fond flouté ---------- */
 function Spotlight({
@@ -7392,7 +7762,8 @@ function Recompenses({
   role,
   code,
   gagne,
-  solo
+  solo,
+  onInviter
 }) {
   const [label, setLabel] = useState("");
   const [lvl, setLvl] = useState("");
@@ -7780,7 +8151,8 @@ function Recompenses({
     maj: maj,
     toast: toast,
     role: role,
-    code: code
+    code: code,
+    onInviter: onInviter
   }), !solo && /*#__PURE__*/React.createElement(Paris, {
     st: st,
     maj: maj,
@@ -7923,9 +8295,11 @@ function Negos({
   maj,
   toast,
   role,
-  code
+  code,
+  onInviter
 }) {
   const [mode, setMode] = useState("boot"); // boot | sync | local
+  const [inviter, setInviter] = useState(false); // après une proposition sans coach relié (v20.6)
   const [remote, setRemote] = useState([]);
   const [ouvert, setOuvert] = useState(false);
   const [label, setLabel] = useState("");
@@ -7992,7 +8366,7 @@ function Negos({
         });
         if (r.ok) setRemote(await r.json());
       } catch {
-        toast("Réseau capricieux — réessaie");
+        toast("Réseau capricieux — réessaie", { erreur: true });
       }
       setBusy(false);
     } else {
@@ -8020,7 +8394,7 @@ function Negos({
     setLabel("");
     setNiv("");
     setMot("");
-    toast("🤝 Proposition envoyée au coach");
+    if (!st.coachLie && onInviter) setInviter(true);else toast("🤝 Proposition envoyée au coach");
   };
   const accepter = (g, final) => {
     const kif = g.type === "kiff";
@@ -8125,7 +8499,102 @@ function Negos({
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "users",
     s: 14
-  }), "La table des négos")), mode === "local" && chip("○ Hors ligne — ton coach ne voit pas ces propositions", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("div", {
+  }), "La table des négos")), mode === "local" && chip("○ Hors ligne — ton coach ne voit pas ces propositions", SUB, "rgba(255,255,255,.10)"), !st.coachLie && role !== "coach" && onInviter && /*#__PURE__*/React.createElement("div", {
+    className: "sans-coach",
+    style: {
+      ...GLASS,
+      borderRadius: 14,
+      padding: "10px 12px",
+      marginBottom: 10,
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      borderColor: COL.G + "66"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      fontSize: 12,
+      lineHeight: 1.45
+    }
+  }, "Ton coach n'a pas encore rejoint : tes propositions l'attendent, il les verra dès qu'il sera là."), /*#__PURE__*/React.createElement("button", {
+    onClick: onInviter,
+    style: {
+      background: COL.G,
+      color: "#fff",
+      border: "none",
+      borderRadius: 10,
+      padding: "8px 11px",
+      fontWeight: 800,
+      fontSize: 11.5,
+      flexShrink: 0,
+      touchAction: "manipulation"
+    }
+  }, "Inviter")), inviter && /*#__PURE__*/React.createElement("div", {
+    className: "modale-inviter",
+    onClick: () => setInviter(false),
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 96,
+      background: "rgba(4,6,10,.72)",
+      display: "grid",
+      placeItems: "center",
+      padding: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: PAPER,
+      borderRadius: 20,
+      padding: "20px 18px",
+      maxWidth: 380,
+      width: "100%",
+      border: `1.5px solid ${COL.G}66`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 800,
+      fontSize: 17
+    }
+  }, "Ta proposition est prête"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: SUB,
+      lineHeight: 1.5,
+      margin: "8px 0 16px"
+    }
+  }, "Ton coach la verra dès qu'il aura rejoint — tu veux l'inviter maintenant ? Le lien contient ton code duo, il crée son profil en 30 secondes."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setInviter(false);
+      onInviter();
+    },
+    style: {
+      width: "100%",
+      background: "linear-gradient(90deg,#3D5AFE,#7C5CFF)",
+      color: "#fff",
+      border: "none",
+      borderRadius: 12,
+      padding: "13px",
+      fontWeight: 800,
+      fontSize: 14,
+      touchAction: "manipulation"
+    }
+  }, "Inviter mon coach"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setInviter(false),
+    style: {
+      width: "100%",
+      marginTop: 8,
+      ...GLASS,
+      color: INK,
+      borderRadius: 12,
+      padding: "11px",
+      fontWeight: 700,
+      fontSize: 13,
+      touchAction: "manipulation"
+    }
+  }, "Plus tard"))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginLeft: "auto",
       display: "flex",
@@ -9153,7 +9622,9 @@ const BoutonRetour = ({
 }), "Retour");
 const Cadre = ({
   children,
-  onRetour
+  onRetour,
+  pied,
+  centre
 }) => {
   // swipe gauche→droite = retour, sur tout l'onboarding (le geste iOS natif)
   const tx = useRef(0);
@@ -9169,22 +9640,44 @@ const Cadre = ({
       const dy = Math.abs(e.changedTouches[0].clientY - ty.current);
       if (dx > 55 && dy < 45) onRetour();
     },
+    className: "cadre-onb",
     style: {
-      minHeight: "100vh",
       background: PAPER,
       fontFamily: FONT,
-      padding: "18px 20px 32px",
-      overflowY: "auto"
+      padding: "18px 20px 24px",
+      display: "flex",
+      flexDirection: "column"
     }
   }, /*#__PURE__*/React.createElement("style", null, `* { box-sizing:border-box; } input, button, textarea { font-family:inherit; max-width:100%; }`), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 380,
       width: "100%",
-      margin: "0 auto"
+      margin: "0 auto",
+      flex: 1,
+      display: "flex",
+      flexDirection: "column"
     }
   }, onRetour && /*#__PURE__*/React.createElement(BoutonRetour, {
     onTap: onRetour
-  }), children));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "cadre-corps",
+    style: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: centre ? "center" : "flex-start"
+    }
+  }, children), pied && /*#__PURE__*/React.createElement("div", {
+    className: "cadre-pied",
+    style: {
+      marginTop: "auto",
+      paddingTop: 14,
+      textAlign: "center",
+      fontSize: 10.5,
+      color: SUB,
+      lineHeight: 1.4
+    }
+  }, pied)));
 };
 /* ============================ PROGRAMME PAR LE MOTEUR (v20.0) ============================ */
 /* Composants écrits à la main (pas de JSX précompilé) : h = React.createElement. */
@@ -9192,17 +9685,28 @@ const h = React.createElement;
 // le moteur et la banque sont embarqués dans la page (copies synchronisées par outils/sync.js)
 const genererAvecMoteur = reponses => window.Moteur.programmePourApp(reponses, window.BANQUE);
 // point d'extension IA : l'objectif en texte libre → muscles prioritaires. Toute erreur = repli honnête.
+// enregistre le code duo côté serveur (v20.4) : les routes IA refusent un code inconnu.
+// Idempotent, appelé à la création du profil, au premier démarrage, et sur un refus 403.
+const enregistrerCode = code => fetch(api(code, "/profil"), { method: "POST" });
+// raison lisible d'un refus IA : quota du code, budget de toute l'app, ou autre
+const raisonRefus = async r => {
+  if (r.status === 503) return "nonconfig";
+  if (r.status === 429) { try { const d = await r.json(); return d.erreur === "budget" ? "budget" : d.erreur === "trop_vite" ? "trop_vite" : "quota"; } catch { return "quota"; } }
+  return "echec";
+};
 const interpreterObjectif = async (code, texte) => {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 9000);
   try {
-    const r = await fetch(api(code, "/interpreter"), {
+    const appel = () => fetch(api(code, "/interpreter"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ objectif: texte }),
       signal: ctrl.signal
     });
-    if (!r.ok) return { repli: true, raison: r.status === 503 ? "nonconfig" : "echec" };
+    let r = await appel();
+    if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
+    if (!r.ok) return { repli: true, raison: await raisonRefus(r) };
     const d = await r.json();
     if (!d || typeof d.base !== "string") return { repli: true, raison: "format" };
     return { base: d.base, prioritaires: Array.isArray(d.prioritaires) ? d.prioritaires.map(String).slice(0, 6) : [] };
@@ -9335,13 +9839,13 @@ function QuestionsProgramme({ reponses, setReponses, qIdx, setQIdx, onFin, onRet
     if (Q.type === "materiel") {
       const coche = t => (reponses.materiel || []).includes(t);
       return h("div", null,
-        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 } }, RACCOURCIS_MATERIEL.map(([id, l, tags]) => h("button", {
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 } }, RACCOURCIS_MATERIEL.map(([id, l, tags]) => h("button", {
           key: id, onClick: () => setReponses(r => ({ ...r, raccourci: id, materiel: tags.slice() })),
-          style: { ...GLASS, border: `1.5px solid ${reponses.raccourci === id ? COL.G : LINE}`, background: reponses.raccourci === id ? tintCss(COL.G) : GLASSBG, color: reponses.raccourci === id ? COL.G : INK, borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 12.5 }
+          style: { ...GLASS, border: `1.5px solid ${reponses.raccourci === id ? COL.G : LINE}`, background: reponses.raccourci === id ? tintCss(COL.G) : GLASSBG, color: reponses.raccourci === id ? COL.G : INK, borderRadius: 12, padding: "9px 8px", fontWeight: 800, fontSize: 12.5 }
         }, l))),
-        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" } }, MATERIEL_UI.map(([t, l]) => h("label", { key: t, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, padding: "5px 0", color: coche(t) ? INK : SUB } },
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px 10px" } }, MATERIEL_UI.map(([t, l]) => h("label", { key: t, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12, lineHeight: 1.25, padding: "3px 0", color: coche(t) ? INK : SUB } },
           h("input", { type: "checkbox", checked: coche(t), onChange: () => setReponses(r => ({ ...r, raccourci: null, materiel: coche(t) ? r.materiel.filter(x => x !== t) : [...r.materiel, t] })), style: { accentColor: COL.G, width: 16, height: 16, margin: 0 } }), l))),
-        h("div", { style: { fontSize: 11, color: SUB, marginTop: 8 } }, "Le poids du corps est toujours disponible.", (reponses.materiel || []).length ? "" : " Sans rien du tout, l'app te dira ce qui manque."),
+        h("div", { style: { fontSize: 11, color: SUB, marginTop: 6 } }, "Le poids du corps est toujours disponible.", (reponses.materiel || []).length ? "" : " Sans rien du tout, l'app te dira ce qui manque."),
         h(BoutonContinuer, { onTap: suivant }));
     }
     if (Q.type === "temps") {
@@ -9359,11 +9863,11 @@ function QuestionsProgramme({ reponses, setReponses, qIdx, setQIdx, onFin, onRet
     }
     return null;
   };
-  return h(Cadre, { onRetour: () => i > 0 ? setQIdx(i - 1) : onRetour() },
-    h("div", { style: { minHeight: "78vh", display: "flex", flexDirection: "column", justifyContent: "center" } },
-      h("div", { style: { display: "flex", gap: 4, marginBottom: 22 } }, QS.map((q, k) => h("div", { key: q.cle, style: { flex: 1, height: 4, borderRadius: 2, background: k <= i ? COL.G : "rgba(255,255,255,.10)", transition: "background .3s" } }))),
+  return h(Cadre, { onRetour: () => i > 0 ? setQIdx(i - 1) : onRetour(), pied: "Tu pourras tout modifier plus tard : Réglages → Mon programme." },
+    h("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" } },
+      h("div", { style: { display: "flex", gap: 4, marginBottom: 16 } }, QS.map((q, k) => h("div", { key: q.cle, style: { flex: 1, height: 4, borderRadius: 2, background: k <= i ? COL.G : "rgba(255,255,255,.10)", transition: "background .3s" } }))),
       h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: 1.4, color: SUB } }, etiquette || "TON PROGRAMME", " · ", i + 1, "/", QS.length),
-      h("div", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 26, lineHeight: 1.15, margin: "8px 0 8px" } }, Q.titre),
+      h("div", { style: { fontFamily: DISPLAY, fontWeight: 700, fontSize: 24, lineHeight: 1.15, margin: "8px 0 8px" } }, Q.titre),
       Q.sous && h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.45, marginBottom: 14 } }, Q.sous),
       !Q.sous && h("div", { style: { height: 10 } }),
       corps()));
@@ -9379,11 +9883,14 @@ function ErreurFrequente({ texte, couleur }) {
 }
 
 /* Les avertissements du moteur, en langage clair, jamais cachés */
-function AvertissementsProgramme({ prog, compact }) {
+const signatureAvertissements = prog => (prog && prog.moteur ? prog.moteur.avertissements || [] : []).join("|");
+function AvertissementsProgramme({ prog, compact, onFermer }) {
   const l = prog && prog.moteur ? prog.moteur.avertissements || [] : [];
   if (!l.length) return null;
-  return h("div", { style: { ...GLASS, borderRadius: 14, padding: "11px 14px", marginBottom: compact ? 10 : 14, borderColor: "rgba(255,176,32,.35)" } },
-    h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: COL.D, marginBottom: 6 } }, "À SAVOIR SUR CE PROGRAMME"),
+  return h("div", { className: "avertissements-programme", style: { ...GLASS, borderRadius: 14, padding: "11px 14px", marginBottom: compact ? 10 : 14, borderColor: "rgba(255,176,32,.35)" } },
+    h("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 } },
+      h("div", { style: { flex: 1, fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: COL.D } }, "À SAVOIR SUR CE PROGRAMME"),
+      onFermer && h("button", { onClick: onFermer, className: "fermer-avertissements", style: { background: "none", border: `1px solid ${LINE}`, borderRadius: 999, padding: "4px 10px", fontSize: 10.5, fontWeight: 800, color: SUB, touchAction: "manipulation" } }, "Compris")),
     l.map((a, k) => h("div", { key: k, style: { fontSize: 12, lineHeight: 1.5, color: INK, marginTop: k ? 5 : 0, display: "flex", gap: 7 } }, h("span", { style: { color: COL.D, flexShrink: 0 } }, "•"), h("span", null, a))));
 }
 
@@ -9408,7 +9915,8 @@ function ApercuProgramme({ prog, onAdopter, onGarder, libAdopter, libGarder, tit
         h("button", { onClick: () => setOuverte(ouv ? null : l), "aria-expanded": ouv, style: { display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", background: "none", border: "none", padding: "12px 14px", color: INK } },
           h("span", { style: { fontFamily: DISPLAY, fontWeight: 800, fontSize: 18, color: "#fff", background: S.couleur, borderRadius: 10, width: 34, height: 34, display: "grid", placeItems: "center", flexShrink: 0 } }, l),
           h("span", { style: { flex: 1, minWidth: 0 } },
-            h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, S.nom),
+            h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, S.nom, S.geste ? h("span", { style: { fontWeight: 600, fontSize: 11, color: SUB } }, " · ", S.geste) : null),
+            S.sport && h("span", { className: "note-sport", style: { display: "block", fontSize: 11, color: COL.K, marginTop: 2, lineHeight: 1.35 } }, S.sport),
             h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, S.exos.length, " exercice", S.exos.length > 1 ? "s" : "", gain.length ? " + gainage" : "", S.dureeMin ? ` · ${S.dureeMin} min` : "")),
           h("span", { style: { color: SUB, transform: ouv ? "rotate(90deg)" : "rotate(-90deg)", transition: "transform .2s", display: "grid" } }, h(Ic, { n: "chevron", s: 14, w: 2.4 }))),
         ouv && h("div", { style: { padding: "0 14px 12px" } },
@@ -9476,6 +9984,7 @@ function SectionProgramme({ st, onRegen }) {
   ] : null;
   return h("div", { style: { marginBottom: 14 } },
     h("div", { style: { fontSize: 11, fontWeight: 800, color: SUB, letterSpacing: .4, marginBottom: 6 } }, "MON PROGRAMME"),
+    h(AvertissementsProgramme, { prog: st.programmePerso, compact: true }),
     lignes ? h("div", { style: { ...GLASS, borderRadius: 14, padding: "2px 14px", marginBottom: 8 } },
       lignes.map(([cle, t, v]) => h("button", { key: cle, onClick: () => onRegen("reglage", cle), style: { display: "flex", width: "100%", alignItems: "center", gap: 10, background: "none", border: "none", borderBottom: `1px solid ${LINE}`, padding: "10px 0", textAlign: "left", color: INK } },
         h("span", { style: { flex: 1, minWidth: 0 } },
@@ -9531,28 +10040,39 @@ function RemplacerPanneau({ ex, st, S, onRemplacer, onFermer }) {
 }
 
 /* « Adapter ma séance » : temps (saisie exacte) et énergie, avant de commencer */
-function AdapterPanneau({ S, defautMin, onAdapter, onFermer }) {
+function AdapterPanneau({ S, defautMin, entrees, onAdapter, onFermer }) {
   const [temps, setTemps] = useState(defautMin || S.dureeMin || 45);
   const [energie, setEnergie] = useState("normal");
+  const [complements, setComplements] = useState(true);
   const fixer = v => { const n = Math.round(Number(v)); if (!isNaN(n)) setTemps(Math.max(10, Math.min(180, n))); };
-  const apercu = window.Moteur.adapterSeance(S, { tempsMin: temps, energie });
+  const opts = { tempsMin: temps, energie, complements, banque: window.BANQUE, entrees };
+  const apercu = window.Moteur.adapterSeance(S, opts);
+  const enPlus = temps >= (S.dureeMin || 0) + 8;
+  const ajouts = apercu.adaptee.ajouts || [];
   return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
-    h("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", fontFamily: FONT, color: INK } },
-      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "On ajuste la séance"),
-      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 14px" } }, "Les gros exercices restent. Les isolations, les séries puis les repos s'ajustent, dans cet ordre."),
+    h("div", { className: "panneau-ajuster", onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", fontFamily: FONT, maxHeight: "88vh", overflowY: "auto" } },
+      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "Ajuster ma séance du jour"),
+      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 14px" } }, "Temps et énergie, dans les deux sens : moins de temps, la séance se compresse ; plus de temps, on ajoute. Les gros exercices restent."),
       h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: SUB, marginBottom: 6 } }, "TEMPS DISPONIBLE"),
       h("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
         h("input", { type: "range", min: 10, max: 120, step: 1, value: Math.min(120, temps), onChange: e => fixer(e.target.value), style: { flex: 1, accentColor: COL.G } }),
-        h("input", { type: "number", inputMode: "numeric", min: 10, max: 180, value: temps, onChange: e => fixer(e.target.value), "aria-label": "Minutes disponibles", style: { width: 64, fontFamily: DISPLAY, fontSize: 18, fontWeight: 800, textAlign: "center", background: FIELD, color: INK, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "6px 4px", outline: "none" } }),
+        h("input", { type: "number", inputMode: "numeric", min: 10, max: 180, value: temps, onChange: e => fixer(e.target.value), "aria-label": "Minutes disponibles", style: { width: 64, fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, textAlign: "center", background: FIELD, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "6px 4px", outline: "none" } }),
         h("span", { style: { fontSize: 12, color: SUB } }, "min")),
       h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: SUB, margin: "14px 0 6px" } }, "ÉNERGIE"),
       h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7 } },
-        [["fond", "À fond"], ["normal", "Normal"], ["petite", "Petite forme"]].map(([v, l]) => h("button", { key: v, onClick: () => setEnergie(v), style: { ...GLASS, border: `1.5px solid ${energie === v ? COL.G : LINE}`, background: energie === v ? tintCss(COL.G) : GLASSBG, color: energie === v ? COL.G : INK, borderRadius: 12, padding: "10px 6px", fontWeight: 800, fontSize: 12, touchAction: "manipulation" } }, l))),
+        [["fond", "À fond"], ["normal", "Normal"], ["petite", "Petite forme"]].map(([v, l]) => h("button", { key: v, onClick: () => setEnergie(v), "aria-pressed": energie === v, style: { ...GLASS, border: `1.5px solid ${energie === v ? COL.G : LINE}`, background: energie === v ? tintCss(COL.G) : GLASSBG, color: energie === v ? COL.G : INK, borderRadius: 12, padding: "10px 4px", fontWeight: 800, fontSize: 12.5, touchAction: "manipulation" } }, l))),
+      energie === "fond" && h("div", { className: "note-fond", style: { fontSize: 11.5, color: SUB, marginTop: 8, lineHeight: 1.45 } }, "À fond : une série de plus sur les gros exercices, et un cran de charge suggéré sur tes dernières fois."),
+      enPlus && h("div", { className: "temps-en-plus", style: { ...GLASS, borderRadius: 14, padding: "10px 12px", marginTop: 14 } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+          h("div", { style: { flex: 1, fontSize: 13, fontWeight: 700 } }, "Tu as du temps en plus, on ajoute ?"),
+          h("button", { onClick: () => setComplements(c => !c), "aria-pressed": complements, className: "bascule-complements", style: { ...GLASS, border: `1.5px solid ${complements ? COL.G : LINE}`, background: complements ? tintCss(COL.G) : GLASSBG, color: complements ? COL.G : SUB, borderRadius: 999, padding: "6px 12px", fontWeight: 800, fontSize: 11.5, touchAction: "manipulation" } }, complements ? "Oui" : "Non")),
+        complements && (ajouts.length ? h("div", { style: { marginTop: 8, display: "grid", gap: 4 } }, ajouts.map(a => h("div", { key: a.id, className: "ajout", style: { fontSize: 12, display: "flex", gap: 8, alignItems: "baseline" } }, h("span", { style: { color: COL.G, fontWeight: 800 } }, "+"), h("span", { style: { flex: 1 } }, a.nom), h("span", { style: { fontSize: 10.5, color: SUB } }, a.pourquoi))))
+          : h("div", { style: { fontSize: 11.5, color: SUB, marginTop: 6 } }, "Rien à ajouter : la séance est déjà complète pour ce temps."))),
       h("div", { style: { fontSize: 12, color: SUB, marginTop: 12, lineHeight: 1.5 } },
         "Résultat : ", h("b", { style: { color: INK } }, apercu.exos.length, " exercice", apercu.exos.length > 1 ? "s" : "", apercu.gainage.length ? " + gainage" : "", " · ", apercu.dureeMin, " min"),
         energie === "petite" ? " · une série de moins, charges suggérées −10 %, repos gardés." : "",
         !apercu.adaptee.tient ? " · même compressée, la séance dépasse un peu : à toi de voir." : ""),
-      h("button", { onClick: () => onAdapter({ tempsMin: temps, energie }), style: { width: "100%", marginTop: 14, background: COL.G, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Ajuster ma séance"),
+      h("button", { onClick: () => onAdapter({ tempsMin: temps, energie, complements }), style: { width: "100%", marginTop: 14, background: COL.G, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Ajuster ma séance"),
       h("button", { onClick: onFermer, style: { width: "100%", marginTop: 8, ...GLASS, color: INK, borderRadius: 12, padding: "11px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Laisser comme ça")));
 }
 
@@ -9581,6 +10101,58 @@ function RecupView({ S, J, onFait, onAnnuler, onValider }) {
 }
 
 /* Le niveau observé bouge, jamais à l'insu : la proposition, et le choix */
+/* ============================ CONFIDENTIALITÉ ET MENTIONS LÉGALES (v20.4) ============================ */
+/* En langage clair : ce qui est gardé, où, combien de temps, comment tout effacer, qui contacter.
+   Le contact vient du worker (meta contact, variable CONTACT). Même texte dans CONFIDENTIALITE.md. */
+function Confidentialite({ onFermer }) {
+  const B = ({ t, x }) => h("div", { style: { marginBottom: 12 } },
+    h("div", { style: { fontWeight: 800, fontSize: 13 } }, t),
+    h("div", { style: { fontSize: 12, color: SUB, lineHeight: 1.55, marginTop: 2 } }, x));
+  const contact = CONTACT ? h("a", { href: "mailto:" + CONTACT, style: { color: COL.K, fontWeight: 700 } }, CONTACT) : h("span", null, "l'adresse de contact n'est pas encore renseignée");
+  return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(4,6,10,.72)", display: "grid", placeItems: "center", padding: 20 }, onClick: onFermer },
+    h("div", { className: "page-confidentialite", onClick: e => e.stopPropagation(), style: { background: PAPER, borderRadius: 20, padding: "20px 18px", maxWidth: 380, width: "100%", maxHeight: "85vh", overflowY: "auto" } },
+      h("div", { style: { fontFamily: DISPLAY, fontWeight: 800, fontSize: 17, marginBottom: 4 } }, "Confidentialité et mentions légales"),
+      h("div", { style: { fontSize: 12, color: SUB, lineHeight: 1.5, marginBottom: 14 } }, "En clair : ce que l'app garde, où, combien de temps, et comment tout effacer."),
+      h(B, { t: "Sur ton téléphone", x: "Tout ce que tu fais vit d'abord ici : ton prénom ou pseudo, ton rôle, ton code duo, ta préférence elle / il / neutre, ton programme et tes réponses, tes XP, ton historique, tes charges et ressentis, tes habitudes, et tes photos de preuve — réduites à 380 pixels, sans aucune métadonnée (ni position, ni appareil). En solo, rien de tout ça ne quitte le téléphone, sauf ce qui est écrit plus bas pour l'IA." }),
+      h(B, { t: "Sur le serveur, en duo", x: "Pour que ton coach te suive, l'app publie sous ton code duo : tes XP, tes 30 dernières séances, tes jours actifs, tes jokers, tes pauses, tes photos de preuve, les négociations, les paris, la cagnotte (un compteur, jamais d'argent), ta préférence de rappels et, si tu actives les rappels, l'adresse technique que ton navigateur donne pour les notifications. Le serveur est un Worker Cloudflare avec son espace de stockage ; les données peuvent être répliquées dans plusieurs centres de données, en Europe et ailleurs. Pas de compte, pas d'e-mail, pas de mot de passe, pas de publicité, pas de mesure d'audience : la seule clé, c'est le code duo. Quiconque le connaît peut lire et écrire ces données — ne le partage qu'avec ton coach." }),
+      h(B, { t: "Ce qui part vers l'IA", x: "Deux choses seulement, et seulement si tu les utilises : l'objectif que tu écris en texte libre (pour le traduire en programme) et le contexte que tu tapes pour des idées de récompenses. Ils sont envoyés aux serveurs d'Anthropic (États-Unis), sans ton prénom, sans photo, sans historique. Dix lectures par jour au plus." }),
+      h(B, { t: "Combien de temps", x: "Photos de preuve : 90 jours sur le serveur, puis effacées d'elles-mêmes. Le reste : tant que ton code duo existe. Sur ton téléphone : tant que tu ne l'effaces pas." }),
+      h(B, { t: "Tout effacer", x: "Réglages → Zone danger : « Effacer les données serveur du duo » efface tout ce qui est rangé sous ton code, photos comprises, pour vous deux ; « Supprimer ce profil de ce téléphone » efface ce qui est ici. Ton coach fait la même chose sur son téléphone. Il n'y a pas de compte à fermer, ni de permission à demander." }),
+      h(B, { t: "Tes droits", x: h("span", null, "Accès, rectification, effacement : tout est dans l'app, sans intermédiaire. Pour une question, une demande, ou signaler un problème de sécurité : ", contact, ".") }),
+      h(B, { t: "Mentions légales", x: "Éditeur : la personne joignable à l'adresse ci-dessus, à titre personnel et sans but lucratif. Hébergeur : Cloudflare, Inc., 101 Townsend Street, San Francisco, CA 94107, États-Unis. Le code source de l'app est public. Police Space Grotesk (licence OFL), React (licence MIT)." }),
+      h("button", { onClick: onFermer, style: { width: "100%", marginTop: 6, background: "#F2F5F9", color: "#0B0E14", border: "none", borderRadius: 12, padding: "12px", fontWeight: 800 } }, "Fermer")));
+}
+/* ============================ MODE FOCUS (v20.6) ============================ */
+/* La carte d'exercice s'ouvre en popup quasi plein écran, fond flouté comme le spotlight des
+   récompenses ; fermeture par la croix ou un tap à l'extérieur. Les bandes haut et bas font
+   24 px : en dessous, le doigt est « attiré » vers la carte par le navigateur (ajustement
+   tactile) et le tap à l'extérieur ne ferme jamais. Alternative (b) de la v19.16,
+   choisie après test terrain : remplace l'accordéon. */
+function FocusExercice({ titre, sous, couleur, onFermer, children }) {
+  useEffect(() => { const avant = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = avant; }; }, []);
+  return h("div", { className: "focus-exercice-fond", onClick: onFermer, style: { position: "fixed", inset: 0, zIndex: 86, background: "rgba(4,6,10,.55)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", display: "flex", padding: "max(24px, env(safe-area-inset-top)) 10px max(24px, env(safe-area-inset-bottom))", touchAction: "manipulation" } },
+    h("div", { className: "focus-exercice", onClick: e => e.stopPropagation(), style: { flex: 1, minHeight: 0, background: "#10141D", border: `1.5px solid ${couleur}`, borderRadius: 20, display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,.5)", animation: "pop .22s" } },
+      h("div", { style: { display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 10px", borderBottom: `1px solid ${LINE}` } },
+        h("div", { style: { flex: 1, minWidth: 0 } },
+          h("div", { style: { fontWeight: 800, fontSize: 16, lineHeight: 1.25 } }, titre),
+          sous && h("div", { style: { fontSize: 12, color: SUB, marginTop: 2 } }, sous)),
+        h("button", { onClick: onFermer, "aria-label": "Fermer", className: "fermer-focus", style: { width: 34, height: 34, borderRadius: 999, border: `1px solid ${LINE}`, background: GLASSBG, color: INK, fontSize: 18, lineHeight: 1, display: "grid", placeItems: "center", padding: 0, flexShrink: 0, touchAction: "manipulation" } }, "✕")),
+      h("div", { style: { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "12px 16px 20px" } }, children)));
+}
+/* Type de charge d'un exercice faisable au poids du corps (v20.6) : poids du corps, lesté, assisté */
+function TypeCharge({ valeur, couleur, onChoisir }) {
+  return h("div", { className: "type-charge", style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 10 } },
+    [["pdc", "Poids du corps", ""], ["leste", "Lesté", "+ kg"], ["assiste", "Assisté", "− kg"]].map(([v, l, d]) => h("button", { key: v, onClick: () => onChoisir(v), "aria-pressed": valeur === v, style: { ...GLASS, border: `1.5px solid ${valeur === v ? couleur : LINE}`, background: valeur === v ? tintCss(couleur) : GLASSBG, color: valeur === v ? couleur : SUB, borderRadius: 10, padding: "7px 4px", fontWeight: 800, fontSize: 11, lineHeight: 1.2, touchAction: "manipulation" } }, l, d && h("span", { style: { display: "block", fontSize: 9.5, fontWeight: 700, opacity: .8 } }, d))));
+}
+/* Rappels à réactiver (v20.4) : après un changement de clé push côté serveur, l'abonnement en
+   place ne vaut plus rien. Une seule carte, un seul tap, pas de vocabulaire technique. */
+function CartePush({ onOui }) {
+  return h("div", { className: "carte-push", style: { ...GLASS, borderRadius: 14, padding: "12px 14px", marginBottom: 12, borderColor: COL.B + "66" } },
+    h("div", { style: { display: "flex", gap: 10, alignItems: "flex-start" } },
+      h(Ic, { n: "bell", s: 18, c: COL.B }),
+      h("div", { style: { flex: 1, fontSize: 12.5, lineHeight: 1.5, color: INK } }, "On a renforcé la sécurité de l'app. Réactive tes rappels en un tap, et on n'en parle plus.")),
+    h("button", { onClick: onOui, style: { width: "100%", marginTop: 10, background: COL.B, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontWeight: 800, fontSize: 13, touchAction: "manipulation" } }, "Réactiver mes rappels"));
+}
 function CarteNiveau({ proposition, onOui, onNon }) {
   return h("div", { style: { ...GLASS, borderRadius: 14, padding: "12px 14px", marginBottom: 12, borderColor: COL.C + "66" } },
     h("div", { style: { display: "flex", gap: 10, alignItems: "flex-start" } },
@@ -9627,12 +10199,20 @@ function GrapheCharge({ id, nom, l, estDur }) {
       h("text", { x: pL - 6, y: H - pB + 3, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtKg(minV)),
       h("text", { x: pL, y: H - 6, fontSize: 9, fill: SUB, fontFamily: FONT }, fmtDateCourte(l[0].date)),
       h("text", { x: W - pR, y: H - 6, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtDateCourte(der.date))),
+    vals.every(v => v < 0) && h("div", { style: { fontSize: 10, color: SUB, marginTop: 2 } }, "kg d'assistance : moins, c'est mieux"),
     durs.length > 0 && h("div", { style: { fontSize: 10, color: SUB, marginTop: 2, display: "flex", alignItems: "center", gap: 5 } },
       h("span", { style: { width: 10, height: 10, borderRadius: "50%", border: `1.5px dashed ${COL.A}`, display: "inline-block" } }), "séance ressentie « trop dur »"));
 }
 function CarnetCharges({ st }) {
-  const entrees = Object.entries(st.charges || {}).map(([id, l]) => ({ id, l: (l || []).filter(e => maxCharge(e) > 0) })).filter(x => x.l.length);
-  if (!entrees.length) return h(Carte, null, h("div", { style: { fontSize: 13, color: SUB } }, "Rien encore ! Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais, et ta courbe se dessinera ici."));
+  const entrees = Object.entries(st.charges || {}).map(([id, l]) => ({ id, l: (l || []).filter(e => maxCharge(e) !== 0) })).filter(x => x.l.length);
+  if (!entrees.length) {
+    // v20.6 : un exemple grisé, pour voir ce qui attend
+    const ilya = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+    const exemple = [{ date: ilya(21), series: [30, 30, 30] }, { date: ilya(14), series: [32.5, 32.5, 32.5] }, { date: ilya(7), series: [32.5, 35, 35] }, { date: ilya(0), series: [35, 35, 37.5] }];
+    return h("div", null,
+      h("div", { className: "graphe-exemple", style: { opacity: .45, filter: "grayscale(1)", pointerEvents: "none" } }, h(GrapheCharge, { id: "exemple", nom: "Exemple · développé couché", l: exemple, estDur: () => false })),
+      h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.5, margin: "-2px 2px 10px" } }, "Ta courbe apparaîtra ici dès ta deuxième séance. Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais."));
+  }
   // triés par récence : le dernier exercice pratiqué en premier
   entrees.sort((a, b) => b.l[b.l.length - 1].date.localeCompare(a.l[a.l.length - 1].date));
   const estDur = id => e => e.ressenti === "dur" || ((st.ressentis || {})[id] || []).some(r => r.date === e.date && r.r === "dur");
@@ -9651,8 +10231,11 @@ function Onboarding({
   profils,
   onCreer,
   onChoisir,
-  urlCode
+  urlCode,
+  urlDe
 }) {
+  const [coachEtape, setCoachEtape] = useState(0); // 0 prénom · 1 « tu veux aussi t'entraîner ? »
+  const [coachFait, setCoachFait] = useState(null); // profil coach créé, on enchaîne : "duo" (avec la personne) ou "autre"
   const [etape, setEtape] = useState(urlCode ? "coach" : "promesse");
   const [mode, setMode] = useState(null); // solo | duo | coach
   const [nom, setNom] = useState("");
@@ -9689,7 +10272,10 @@ function Onboarding({
   if (etape === "promesse") return /*#__PURE__*/React.createElement(Cadre, null, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
-      paddingTop: 2
+      paddingTop: 2,
+      flex: 1,
+      display: "flex",
+      flexDirection: "column"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9702,7 +10288,11 @@ function Onboarding({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
-      zIndex: 1
+      zIndex: 1,
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-evenly"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9762,6 +10352,14 @@ function Onboarding({
       textAlign: "center"
     }
   }, "Quelqu'un qui tient à toi devient ", /*#__PURE__*/React.createElement("b", null, "ton coach"), ". Tu prouves tes séances", /*#__PURE__*/React.createElement("b", null, " en photo"), ", tes efforts te font ", /*#__PURE__*/React.createElement("b", null, "monter de niveau"), " — et chaque niveau débloque une ", /*#__PURE__*/React.createElement("b", null, "vraie récompense"), " qu'il ou elle t'offre."), /*#__PURE__*/React.createElement("div", {
+    className: "promesse-photos",
+    style: {
+      fontSize: 11.5,
+      color: SUB,
+      marginTop: 8,
+      lineHeight: 1.45
+    }
+  }, "Tes photos restent entre vous deux, effaçables à tout moment."), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 12,
       display: "grid",
@@ -9871,14 +10469,15 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.3"));
+  }, "v20.6"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    pied: "Tu pourras changer d'avis plus tard — rien n'est définitif."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      minHeight: "calc(100vh - 112px)",
+      flex: 1,
       display: "flex",
       flexDirection: "column"
     }
@@ -9897,12 +10496,13 @@ function Onboarding({
       margin: "7px 0 16px",
       lineHeight: 1.45
     }
-  }, "Tu pourras changer d'avis plus tard — rien n'est définitif."), /*#__PURE__*/React.createElement("div", {
+  }, "Trois façons de jouer. Choisis la tienne."), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       display: "flex",
       flexDirection: "column",
-      gap: 11
+      justifyContent: "center",
+      gap: 10
     }
   }, [["duo", "users", "En duo", "quelqu'un me coache : il vérifie mes preuves, on négocie mes récompenses, on parie"], ["solo", "zap", "En solo", "je me coache moi-même : XP, série, défis et récompenses auto-définies"], ["coach", "activity", "Je supervise quelqu'un", "pas besoin d'être un vrai coach : partenaire, pote, parent… tu vérifies les preuves et tu offres les récompenses"]].map(([m, e, t, d]) => /*#__PURE__*/React.createElement("button", {
     key: m,
@@ -9912,24 +10512,34 @@ function Onboarding({
     },
     className: "carte-mode",
     style: {
-      flex: 1,
       display: "flex",
       width: "100%",
       alignItems: "center",
-      gap: 13,
+      gap: 12,
       textAlign: "left",
       background: GLASSBG,
       border: `1.5px solid ${LINE}`,
       borderRadius: 16,
-      padding: "16px 15px"
+      padding: "14px 13px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 44,
+      height: 44,
+      borderRadius: 13,
+      flexShrink: 0,
+      background: "rgba(124,92,255,.16)",
+      display: "grid",
+      placeItems: "center"
     }
   }, /*#__PURE__*/React.createElement(Ic, {
     n: e,
-    s: 26,
+    s: 22,
     c: COL.G
-  }), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
-      flex: 1
+      flex: 1,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9943,81 +10553,174 @@ function Onboarding({
       marginTop: 3,
       lineHeight: 1.4
     }
-  }, d)))))));
+  }, d)), /*#__PURE__*/React.createElement(Ic, {
+    n: "chevron",
+    s: 16,
+    c: SUB,
+    style: {
+      transform: "rotate(180deg)",
+      flexShrink: 0
+    }
+  }))))));
 
   /* ---- écran coach : nom + code ---- */
-  if (etape === "coach") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: DISPLAY,
-      fontSize: 20,
-      textAlign: "center",
-      margin: "10px 0 16px"
-    }
-  }, "MODE COACH"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: GLASSBG,
-      border: `1px solid ${LINE}`,
-      borderRadius: 16,
-      padding: 16
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    value: nom,
-    onChange: e => setNom(e.target.value),
-    placeholder: "Ton prénom / pseudo",
-    style: {
-      width: "100%",
-      border: `1.5px solid ${LINE}`,
-      borderRadius: 10,
-      padding: "11px 12px",
-      fontSize: 14,
-      background: FIELD,
-      outline: "none",
-      marginBottom: 10
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10.5,
-      color: SUB,
-      fontWeight: 700,
-      marginBottom: 4
-    }
-  }, "CODE DUO — celui de la personne que tu coaches"), /*#__PURE__*/React.createElement("input", {
-    value: code,
-    onChange: e => setCode(e.target.value),
-    style: {
-      width: "100%",
-      border: `1.5px solid ${urlCode ? COL.C : LINE}`,
-      borderRadius: 10,
-      padding: "11px 12px",
-      fontSize: 14,
-      background: FIELD,
-      outline: "none",
-      fontFamily: "monospace",
-      marginBottom: 4
-    }
-  }), urlCode && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: COL.C,
-      fontWeight: 700,
-      marginBottom: 6
-    }
-  }, "✓ Rempli automatiquement par le lien d'invitation"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => onCreer(nom, "coach", code, false, {}),
-    style: {
-      width: "100%",
-      marginTop: 8,
-      background: "#F2F5F9",
-      color: "#0B0E14",
-      border: "none",
-      borderRadius: 12,
-      padding: "14px",
-      fontWeight: 800,
-      fontSize: 15
-    }
-  }, "C'est parti !")));
+  if (etape === "coach") {
+    const de = urlDe || "";
+    const coachPuisCoachee = quoi => {
+      onCreer(nom, "coach", code, false, { sansRecharger: true });
+      setCoachFait(quoi);
+      setMode("duo");
+      setCode(codeAlea());
+      setEtape("questions");
+    };
+    return /*#__PURE__*/React.createElement(Cadre, {
+      onRetour: coachEtape ? () => setCoachEtape(0) : retour,
+      centre: true,
+      pied: "Coacher ne coûte rien : tu suis, tu valides, tu encourages — offrir une récompense reste ton choix."
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontFamily: DISPLAY,
+        fontSize: 20,
+        textAlign: "center",
+        margin: "10px 0 6px"
+      }
+    }, de ? "TU DEVIENS LE COACH DE " + de.toUpperCase() : "MODE COACH"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        color: SUB,
+        textAlign: "center",
+        margin: "0 0 16px",
+        lineHeight: 1.45
+      }
+    }, urlCode ? (de ? de + " t'a envoyé ce lien : son code duo est déjà rempli, tu n'as rien à taper." : "Le lien d'invitation a rempli le code duo pour toi.") : "Entre le code duo de la personne que tu coaches."), coachEtape === 0 ? /*#__PURE__*/React.createElement("div", {
+      className: "coach-prenom",
+      style: {
+        background: GLASSBG,
+        border: `1px solid ${LINE}`,
+        borderRadius: 16,
+        padding: 16
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      value: nom,
+      onChange: e => setNom(e.target.value),
+      placeholder: "Ton prénom / pseudo",
+      autoFocus: !urlCode,
+      style: {
+        width: "100%",
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 10,
+        padding: "11px 12px",
+        fontSize: 14,
+        background: FIELD,
+        outline: "none",
+        marginBottom: 10
+      }
+    }), !urlCode && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10.5,
+        color: SUB,
+        fontWeight: 700,
+        marginBottom: 4
+      }
+    }, "CODE DUO — celui de la personne que tu coaches"), !urlCode && /*#__PURE__*/React.createElement("input", {
+      value: code,
+      onChange: e => setCode(e.target.value),
+      style: {
+        width: "100%",
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 10,
+        padding: "11px 12px",
+        fontSize: 14,
+        background: FIELD,
+        outline: "none",
+        fontFamily: "monospace",
+        marginBottom: 4
+      }
+    }), urlCode && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: COL.C,
+        fontWeight: 700,
+        marginBottom: 6
+      }
+    }, "✓ Code duo rempli par le lien d'invitation"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => nom.trim() && setCoachEtape(1),
+      disabled: !nom.trim(),
+      style: {
+        width: "100%",
+        marginTop: 8,
+        background: nom.trim() ? "#F2F5F9" : "rgba(255,255,255,.08)",
+        color: nom.trim() ? "#0B0E14" : "#5A6274",
+        border: "none",
+        borderRadius: 12,
+        padding: "14px",
+        fontWeight: 800,
+        fontSize: 15
+      }
+    }, "Continuer")) : /*#__PURE__*/React.createElement("div", {
+      className: "coach-choix",
+      style: {
+        display: "grid",
+        gap: 9
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontFamily: DISPLAY,
+        fontWeight: 700,
+        fontSize: 20,
+        lineHeight: 1.2,
+        margin: "4px 0 6px"
+      }
+    }, "Tu veux aussi t'entraîner, ", nom.trim(), " ?"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        color: SUB,
+        lineHeight: 1.45,
+        marginBottom: 4
+      }
+    }, "Un coach peut aussi être coaché : tu aurais ton propre programme, tes XP, et quelqu'un qui te suit."), [["non", "Non, je coache seulement", "Tu arrives directement sur le Suivi de " + (de || "la personne que tu coaches") + "."], ["duo", "Oui, en duo avec " + (de || "la personne qui m'invite"), "Vous vous coachez l'un l'autre : tu réponds à quelques questions, puis tu " + (de ? "invites " + de : "l'invites") + " à devenir ton coach."], ["autre", "Oui, avec quelqu'un d'autre", "Tu choisis ton propre coach ensuite, depuis les Réglages."]].map(([v, t, d]) => /*#__PURE__*/React.createElement("button", {
+      key: v,
+      className: "carte-mode",
+      onClick: () => v === "non" ? onCreer(nom, "coach", code, false, {}) : coachPuisCoachee(v),
+      style: {
+        display: "flex",
+        width: "100%",
+        alignItems: "center",
+        gap: 12,
+        textAlign: "left",
+        color: INK,
+        background: GLASSBG,
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 16,
+        padding: "13px 13px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontWeight: 800,
+        fontSize: 15
+      }
+    }, t), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11.5,
+        color: SUB,
+        marginTop: 3,
+        lineHeight: 1.4
+      }
+    }, d)), /*#__PURE__*/React.createElement(Ic, {
+      n: "chevron",
+      s: 16,
+      c: SUB,
+      style: {
+        transform: "rotate(180deg)",
+        flexShrink: 0
+      }
+    })))));
+  }
 
   /* ---- écran 3 : les questions du programme (fréquence, objectif, expérience, sport, matériel, temps) ---- */
   if (etape === "questions") return /*#__PURE__*/React.createElement(QuestionsProgramme, {
@@ -10047,10 +10750,11 @@ function Onboarding({
 
   /* ---- écran graine d'invitation (duo) : intention seule, aucun envoi ---- */
   if (etape === "invitation") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    pied: "Le lien contient ton code duo, rien d'autre."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      minHeight: "78vh",
+      flex: 1,
       display: "flex",
       flexDirection: "column",
       justifyContent: "center"
@@ -10086,7 +10790,7 @@ function Onboarding({
       lineHeight: 1.55,
       margin: "10px 0 24px"
     }
-  }, "Un coach rend l'aventure bien plus fun. Rien à envoyer maintenant — tu l'inviteras quand tu voudras."), /*#__PURE__*/React.createElement("button", {
+  }, coachFait === "duo" && urlDe ? "Tu coaches " + urlDe + " ; maintenant, c'est " + urlDe + " qui peut te coacher. Rien à envoyer tout de suite — l'invitation part quand tu veux." : "Un coach rend l'aventure bien plus fun. Rien à envoyer maintenant — tu l'inviteras quand tu voudras."), /*#__PURE__*/React.createElement("button", {
     onClick: () => creer(true),
     style: {
       width: "100%",
@@ -10113,7 +10817,9 @@ function Onboarding({
   }, "Je verrai plus tard")));
   /* ---- écran prénom : dernier pas avant la création ---- */
   if (etape === "prenom") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    centre: true,
+    pied: "Ton prénom reste sur ton téléphone."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
@@ -10215,7 +10921,7 @@ function Onboarding({
       color: SUB,
       lineHeight: 1.5
     }
-  }, interp && interp.raison === "nonconfig" ? "La lecture de ton objectif par l'IA n'est pas activée ici : programme esthétique équilibré, tu pourras préciser dans les réglages. " : "Je n'ai pas réussi à lire ton objectif : programme esthétique équilibré, modifiable dans les réglages. ", /*#__PURE__*/React.createElement("button", {
+  }, interp && interp.raison === "nonconfig" ? "La lecture de ton objectif par l'IA n'est pas activée ici : programme esthétique équilibré, tu pourras préciser dans les réglages. " : interp && interp.raison === "budget" ? "Le quota de lecture du jour est atteint pour toute l'app : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : interp && interp.raison === "quota" ? "Tu as utilisé tes 10 lectures du jour : programme esthétique équilibré pour l'instant, tu pourras relancer demain depuis Mon programme. " : interp && interp.raison === "trop_vite" ? "Trop de demandes d'un coup : programme esthétique équilibré pour l'instant, réessaie dans une minute. " : "Je n'ai pas réussi à lire ton objectif : programme esthétique équilibré, modifiable dans les réglages. ", /*#__PURE__*/React.createElement("button", {
     onClick: relire,
     style: {
       background: "none",
@@ -10252,7 +10958,9 @@ function Onboarding({
 
   /* ---- écran styles : entièrement dédié au choix des récompenses ---- */
   return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour
+    onRetour: retour,
+    centre: true,
+    pied: "Tu pourras changer de style dans les Réglages."
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
@@ -10344,6 +11052,7 @@ function Reglages({
   onRegen
 }) {
   const [regles, setRegles] = useState(false);
+  const [conf, setConf] = useState(false); // page Confidentialité et mentions légales (v20.4)
   const tx = useRef(0),
     ty = useRef(0); // swipe gauche→droite = fermer, comme dans l'onboarding
   const [pMotif, setPMotif] = useState("");
@@ -10362,7 +11071,7 @@ function Reglages({
         toast("⏸️ C'est noté");
       }
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
   };
   const [busyPush, setBusyPush] = useState(false);
@@ -10372,24 +11081,7 @@ function Reglages({
     setBusyPush(true);
     try {
       if (!rappelsOn) {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications (iPhone : ajoute d'abord l'app à l'écran d'accueil).");
-        const perm = await Notification.requestPermission();
-        if (perm !== "granted") throw new Error("Permission refusée dans les réglages du téléphone.");
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: b64uVersU8(VAPID_PUB)
-        });
-        const r = await fetch(api(code, "/abonner"), {
-          method: "POST",
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify({
-            sub
-          })
-        });
-        if (!r.ok) throw new Error("Serveur injoignable — déploiement Worker requis.");
+        await abonnerPush(code);
         maj(s => {
           s.reglages = {
             ...s.reglages,
@@ -10423,7 +11115,7 @@ function Reglages({
         toast("🔕 Rappel désactivé");
       }
     } catch (e) {
-      toast(String(e.message || e).slice(0, 80));
+      toast(String(e.message || e), { erreur: true });
     }
     setBusyPush(false);
   };
@@ -10435,7 +11127,7 @@ function Reglages({
       const d = await r.json();
       toast(d.envoyes > 0 ? "📨 Test envoyé — la notif arrive !" : "Aucun abonnement actif côté serveur");
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
   };
   const r = st.reglages || {};
@@ -10729,7 +11421,7 @@ function Reglages({
         });
         toast(!on ? "💊 Rappel du matin activé" : "Rappel du matin désactivé");
       } catch {
-        toast("Serveur injoignable");
+        toast("Serveur injoignable", { erreur: true });
       }
     },
     style: {
@@ -11077,7 +11769,22 @@ function Reglages({
       fontWeight: 700,
       fontSize: 12.5
     }
-  }, "Revoir le tuto")), regles && /*#__PURE__*/React.createElement(ReglesJeu, {
+  }, "Revoir le tuto")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConf(true),
+    style: {
+      width: "100%",
+      marginTop: 8,
+      background: GLASSBG,
+      color: INK,
+      border: `1.5px solid ${LINE}`,
+      borderRadius: 12,
+      padding: "11px",
+      fontWeight: 700,
+      fontSize: 12.5
+    }
+  }, "Confidentialité et mentions légales"), conf && /*#__PURE__*/React.createElement(Confidentialite, {
+    onFermer: () => setConf(false)
+  }), regles && /*#__PURE__*/React.createElement(ReglesJeu, {
     onFermer: () => setRegles(false)
   }), /*#__PURE__*/React.createElement(DangerZone, {
     profil: profil,
@@ -11151,7 +11858,7 @@ function Paris({
       });
       if (r.ok) setListe(await r.json());
     } catch {
-      toast("Réseau capricieux — réessaie");
+      toast("Réseau capricieux — réessaie", { erreur: true });
     }
     setBusy(false);
   };
@@ -11599,7 +12306,7 @@ function Pot({
       });
       if (r.ok) setPot(await r.json());
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
   };
   if (pot === false) return null;
@@ -11932,9 +12639,9 @@ function DangerZone({
       const r = await fetch(api(code, "/supprimer"), {
         method: "POST"
       });
-      if (r.ok) toast("🗑️ Données serveur du duo effacées");else toast("Échec — réessaie");
+      if (r.ok) toast("🗑️ Données serveur du duo effacées");else toast("Échec — réessaie", { erreur: true });
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
     setC1(false);
   };
@@ -12081,7 +12788,7 @@ function Idees({
   const generer = async () => {
     setBusy(true);
     try {
-      const r = await fetch(api(code, "/idees"), {
+      const appel = () => fetch(api(code, "/idees"), {
         method: "POST",
         headers: {
           "content-type": "application/json"
@@ -12092,9 +12799,11 @@ function Idees({
           contexte
         })
       });
-      if (r.status === 503) toast("Génération non configurée (clé API manquante)");else if (r.status === 429) toast("Limite du jour atteinte — réessaie demain");else if (!r.ok) toast("Oups, réessaie");else setListe(await r.json());
+      let r = await appel();
+      if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
+      if (r.status === 503) toast("Génération non configurée (clé API manquante)", { erreur: true });else if (r.status === 502) { let d = null; try { d = await r.json(); } catch {} toast(d && d.statut ? `L'IA n'a pas répondu (erreur ${d.statut}) — réessaie plus tard` : "L'IA a répondu dans un format inattendu — réessaie", { erreur: true }); }else if (r.status === 403) toast("Code duo inconnu du serveur — réessaie dans un instant", { erreur: true });else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain", { erreur: true }); }else if (!r.ok) toast("Oups, réessaie", { erreur: true });else setListe(await r.json());
     } catch {
-      toast("Serveur injoignable");
+      toast("Serveur injoignable", { erreur: true });
     }
     setBusy(false);
   };
@@ -12167,14 +12876,17 @@ const TITRES_AIDE = {
 // Les bulles d'aide (v20.3) : simples, chaleureuses, une idée par bulle, dans la voix de l'app.
 // Passées par accorde() à l'affichage (elle / il / neutre) ; « rec » a une variante solo.
 const BULLES = {
-  jour: "Ici, c'est ta séance du jour. Choisis-la dans le carrousel, puis touche un exercice pour le déplier : la consigne, la démo et tes charges sont dedans. Valide-le avec ta photo, puis dis en un tap si c'était facile, juste ou trop dur — c'est comme ça que l'app apprend où tu en es. Pas le temps, pas la forme ? « On ajuste » raccourcit la séance au lieu de la sauter. Et un jour off, coche Repos : ça compte aussi.",
+  // une action par puce (v20.5)
+  jour: ["Choisis ta séance dans le carrousel, puis touche un exercice : consigne, démo et charges sont dedans.", "Valide chaque exercice avec ta photo — c'est la preuve.", "Dis en un tap si c'était facile, juste ou trop dur : l'app apprend où tu en es.", "Pas le temps, pas la forme ? « On ajuste ». Jour off ? Coche Repos, ça compte aussi."],
   hab: "Tes petites habitudes du quotidien, prouvées en photo : 5 XP chacune. Une seule cochée suffit à couvrir ta journée, donc pas de malus ce soir-là. Pas besoin de tout faire, juste de ne pas disparaître — même fatigué·e.",
   prog: "Tout ce que tu construis, séance après séance : ton niveau, tes badges, et la courbe de charge de chaque exercice, comme sur une balance connectée. Elle monte quand tu progresses et marque les jours trop durs, pour que tu voies d'où tu viens.",
   rec: ({ solo }) => solo ? "Ta motivation, en vrai : les récompenses que tu t'offres se débloquent à chaque niveau, et les mini-kifs sont là pour les petites victoires. Tu les choisis, tu les changes, c'est ton coin à toi." : "Ta motivation, en vrai : les récompenses de ton coach se débloquent à chaque niveau, tu négocies celles que tu veux (un aller-retour, pas plus), tu paries sur toi, et la cagnotte grossit avec tes oublis. C'est ton coin à toi, et tu y es attendu·e.",
   rec_coach: "Tes outils de coach, tout simplement : réponds aux négos avec une seule contre-offre, accepte ou refuse les paris, et garde un œil sur la cagnotte, qui grossit à chaque oubli. Ton rôle, c'est de tenir la barre — pas de tout contrôler.",
   suivi: "Son aventure en direct : XP, séances de la semaine, jokers utilisés, et ses photos de preuve (touche pour agrandir). Un petit mot au bon moment vaut plus qu'un long discours."
 };
-const bulleTexte = (cle, st, solo) => { const v = BULLES[cle]; return v ? accorde(typeof v === "function" ? v({ solo }) : v, st && st.adresse) : ""; };
+const bulleTexte = (cle, st, solo) => { const v = BULLES[cle]; if (!v) return ""; const t = typeof v === "function" ? v({ solo }) : v; return Array.isArray(t) ? t.map(x => accorde(x, st && st.adresse)) : accorde(t, st && st.adresse); };
+// une bulle en liste = des puces numérotées, une action par puce
+const rendreBulle = v => Array.isArray(v) ? h("ol", { className: "bulle-puces", style: { margin: 0, paddingLeft: 22, display: "grid", gap: 8 } }, v.map((t, i) => h("li", { key: i }, t))) : v;
 
 /* ============================ VISITE GUIDÉE ============================ */
 function Tour({

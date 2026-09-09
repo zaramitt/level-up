@@ -16,18 +16,50 @@ Les fondations sur lesquelles reposent plusieurs chantiers à la fois.
   (Hevy, Strong).
 - **Records personnels célébrés** : meilleure charge et meilleure série par
   exercice, avec une célébration à la séance.
+- **PRIORITÉ HAUTE — Séparation des rôles côté serveur.** Prérequis avant
+  toute ouverture hors du cercle proche. Aujourd'hui le code duo est l'unique
+  capacité, partagée par les deux membres : la coachée peut forger une action
+  coach (plafond de cagnotte, résolution d'un pari, validation d'une pause) et
+  le coach peut réécrire l'état publié. Schéma « un secret par rôle » : à la
+  création du duo, l'app tire deux secrets dérivés du code — une clé coachée
+  (gardée sur son téléphone) et une clé coach (portée par le lien
+  d'invitation) ; chaque requête envoie sa clé dans un en-tête ; le worker
+  mémorise les deux empreintes à la première écriture de chaque rôle (première
+  arrivée, puis verrouillé) et n'autorise `/etat`, `/photo` qu'à la clé
+  coachée, `plafond`, `vider`, `resoudre`, `valider` qu'à la clé coach, le
+  reste aux deux. Migration : les duos existants gardent le code seul jusqu'à
+  ce que les deux téléphones aient présenté leur clé. Voir `SECURITE.md`,
+  point 2.
+- **Turnstile sur les routes IA et `/profil`** (mode géré, invisible la plupart
+  du temps) : en réserve, si le budget journalier et la limitation de débit ne
+  suffisent pas.
+- **Chiffrement des photos côté client** (clé dérivée du code) : protège
+  contre une fuite du stockage ou un regard sur le dashboard, pas contre qui a
+  le code. À décider quand l'app s'ouvre.
+
+## Solo
+
+- **Cagnotte personnelle en solo — mise que l'on récupère en tenant ses
+  séances. Cœur du mode contrat.**
+
+## UI / UX
+
+- **Onboarding « la photo fait foi » → « tes récompenses » : design à revoir.
+  Onglet Récompenses : refonte. → chantier UI/UX.**
 
 ## Écran Séance
 
 Accordéon, aération, gainage, « Ta base » (v19.16), puis ressenti, incrément
 proposé, remplacement d'exercice, « Adapter ma séance » et récupération
-active (v20.1), textes des bulles d'aide (v20.3) : traités. Ce qui reste :
+active (v20.1), textes des bulles d'aide (v20.3), corrections terrain (v20.5)
+et mode focus, types de charge, ajustement dans les deux sens (v20.6) :
+traités. Ce qui reste :
 
-- Vérifier en salle réelle le ressenti et « Remplacer » sur iOS Safari (tap
-  franc) — le harnais le vérifie en Chromium seulement.
-- « Temps en plus → proposer un complément » (DECISIONS, « Adapter ma
-  séance ») : non fait, seule la compression existe.
+- Vérifier en salle réelle le mode focus, le ressenti et « Remplacer » sur
+  iOS Safari (tap franc) — le harnais le vérifie en Chromium seulement.
 - Supersets, dernier cran de la compression : non fait.
+- Ajustement : les compléments sont choisis par le moteur ; laisser choisir
+  parmi plusieurs candidats (« plutôt du cardio ») reste à faire.
 - **PRIORITÉ BASSE — En-tête global trop serré à 390 px** : sur l'écran
   coachée, « LEVEL UP ! » et la ligne d'XP passent sur plusieurs lignes, coincés
   entre l'orbe de niveau et le bloc « 7 DERNIERS JOURS ». Antérieur à la v19.16
@@ -38,6 +70,11 @@ active (v20.1), textes des bulles d'aide (v20.3) : traités. Ce qui reste :
 
 Générateur incohérent traité : le moteur (règles en code, banque étiquetée)
 est branché en v20.0, étape 3 passe 1. Ce qui reste :
+
+- **PRIORITÉ HAUTE — Champ permanent « Ajuster mon programme »** : renforcer
+  X en ce moment, éviter Y (blessure), cycles de plusieurs semaines sur un
+  focus. Passe par `/interpreter` → contraintes du moteur (exclusions,
+  priorités, durée du cycle). Étape 4 du chantier.
 
 - Passe 2 faite en v20.1 (ressenti, incrément, remplacement, adapter,
   récupération active). Reste : monter d'un cran dans l'échelle d'un exercice
@@ -112,9 +149,8 @@ XP, pas de la structure de l'onglet.
 
 ## Coach
 
-- Plusieurs coachs pour une même personne (partager sa séance avec plusieurs
-  amis). Décision produit à prendre : un coach principal + spectateurs, ou
-  plusieurs coachs égaux ?
+- **Plusieurs personnes autour d'une coachée : un seul finance, les autres
+  regardent et encouragent (spectateurs). Décision de positionnement.**
 - **PRIORITÉ MOYENNE — Page d'accueil du coach à repenser comme un vrai tableau
   de bord** : aujourd'hui elle paraît vide à l'ouverture. Enjeu lié à la
   rétention du coach passif (cf. `DECISIONS.md`).
@@ -127,6 +163,10 @@ Sport, intention, matériel et temps demandés depuis la v20.0. Ce qui reste :
   profils connus migrés, retirer les templates `PROGRAMMES` du code (v20.x).
 - Prénom demandé après les questions du programme : vérifier avec les
   testeuses que l'ordre ne fait pas décrocher (neuf écrans avant le prénom).
+- Parcours coach par lien (v20.6) : « en duo avec [prénom] » crée un second
+  duo (un code = une personne coachée) ; la personne qui a invité doit encore
+  accepter l'invitation en retour. Un duo symétrique natif (chacun coache
+  l'autre sous un seul lien) reste à décider.
 
 ## Écran Choix de programme
 
@@ -138,6 +178,14 @@ un aperçu. Reste à discuter :
 
 ## Réglages
 
+- **Mentions légales complètes** si ouverture au public : nom de l'éditeur,
+  registre des traitements minimal, durée de conservation par donnée, base
+  légale. La page « Confidentialité et mentions légales » (v20.4) couvre
+  l'usage personnel actuel.
+- **HSTS explicite et règle WAF de limitation de débit** le jour d'un domaine
+  à soi (sur `workers.dev` : HSTS préchargé, pas de WAF).
+- **Edge sur Windows (WNS)** refusé par `/abonner` (liste : Apple, Google/FCM,
+  Mozilla) : élargir si une utilisatrice le demande.
 - « Habitude compléments » : libellé pas explicite pour un novice
 - Pause limitée à 14 jours : lever ou élargir la limite ?
 - « Recharger les listes de ce style » : incompréhensible — clarifier, et

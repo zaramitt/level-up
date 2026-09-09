@@ -5,6 +5,15 @@ const path = require('path');
 
 const DIR = __dirname;
 const COACH_LIE = process.env.COACH_LIE === '1';
+// v20.4 : clé publique push injectée dans la page comme le fait le worker (MOCK_VAPID=off → aucune clé,
+// rappels indisponibles). Une clé factice suffit : les suites remplacent l'API push du navigateur.
+const VAPID_MOCK = process.env.MOCK_VAPID === 'off' ? '' : 'B' + 'A'.repeat(86);
+const CONTACT_MOCK = process.env.MOCK_CONTACT || 'contact@example.org';
+// v20.4 : la page est servie avec les en-têtes et la CSP du vrai worker (fonction exportée par worker.js)
+let preparerPage = null;
+const chargerWorker = import(require('url').pathToFileURL(path.join(DIR, '..', '..', 'worker.js')).href).then(m => { preparerPage = m.preparerPage; });
+const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
+const lire = (req, cb) => { let body = ''; req.on('data', c => body += c); req.on('end', () => cb(body)); };
 
 const PROG_5 = {
   nom: 'Muscu 5 jours sur mesure',
@@ -24,21 +33,55 @@ const PROG_5 = {
   }]))
 };
 
-http.createServer((req, res) => {
+chargerWorker.then(() => http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
+  const code = (u.pathname.match(/^\/api\/([^/]+)\//) || [])[1] || '';
+  // v20.4 : enregistrement du code ; les routes IA refusent un code jamais enregistré (403), comme le worker
+  global.__profils = global.__profils || new Set();
+  if (/^\/api\/[^/]+\/profil$/.test(u.pathname) && req.method === 'POST') { lire(req, () => { global.__profils.add(code); global.__enregistrements = (global.__enregistrements || 0) + 1; json(res, 200, { ok: true }); }); return; }
+  // garde IA commune : MOCK_IA=off → 503 ; code inconnu → 403 ; un code contenant « budget » → 429 budget, « quota » → 429 quota
+  const gardeIA = () => {
+    if (process.env.MOCK_IA === 'off') { json(res, 503, { erreur: 'non_configure' }); return true; }
+    if (!global.__profils.has(code)) { json(res, 403, { erreur: 'code_inconnu' }); return true; }
+    if (/budget/.test(code)) { json(res, 429, { erreur: 'budget' }); return true; }
+    if (/quota/.test(code)) { json(res, 429, { erreur: 'quota' }); return true; }
+    return false;
+  };
   // v20.0 : lecture IA de l'objectif libre (le programme est calculé dans l'app). MOCK_IA=off → 503, MOCK_IA=ko → 502
   if (/^\/api\/[^/]+\/interpreter$/.test(u.pathname) && req.method === 'POST') {
-    let body = '';
-    req.on('data', c => body += c);
-    req.on('end', () => {
+    lire(req, body => {
       console.log('MOCK /interpreter reçu:', body.slice(0, 160));
-      if (process.env.MOCK_IA === 'off') { res.writeHead(503, { 'content-type': 'application/json' }); res.end(JSON.stringify({ erreur: 'non_configure' })); return; }
+      if (gardeIA()) return;
       if (process.env.MOCK_IA === 'ko') { res.writeHead(502); res.end('lecture impossible'); return; }
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ base: 'tonifier', prioritaires: ['fessiers', 'quadriceps'] }));
+      json(res, 200, { base: 'tonifier', prioritaires: ['fessiers', 'quadriceps'] });
     });
     return;
   }
+  if (/^\/api\/[^/]+\/idees$/.test(u.pathname) && req.method === 'POST') {
+    lire(req, body => {
+      console.log('MOCK /idees reçu:', body.slice(0, 160));
+      if (gardeIA()) return;
+      json(res, 200, [2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: 'Idée factice ' + (i + 1) })));
+    });
+    return;
+  }
+  // v20.4 : rappels push — 503 non_configure sans clé, comme le worker
+  if (/^\/api\/[^/]+\/(abonner|testpush)$/.test(u.pathname) && req.method === 'POST') {
+    lire(req, body => {
+      console.log('MOCK ' + u.pathname.split('/').pop() + ' reçu:', body.slice(0, 160));
+      if (!VAPID_MOCK) return json(res, 503, { erreur: 'non_configure' });
+      if (u.pathname.endsWith('/abonner')) {
+        global.__subs = global.__subs || [];
+        let sub = null; try { sub = JSON.parse(body).sub; } catch {}
+        const hote = (() => { try { return new URL(sub.endpoint).hostname; } catch { return ''; } })();
+        if (!['web.push.apple.com', 'fcm.googleapis.com', 'updates.push.services.mozilla.com'].includes(hote)) return json(res, 400, { erreur: 'endpoint_refuse' });
+        global.__subs.push(sub); return json(res, 200, { ok: true });
+      }
+      json(res, 200, { envoyes: (global.__subs || []).length });
+    });
+    return;
+  }
+  if (/^\/api\/[^/]+\/desabonner$/.test(u.pathname) && req.method === 'POST') { lire(req, () => json(res, 200, { ok: true })); return; }
   if (/^\/api\/[^/]+\/generer$/.test(u.pathname) && req.method === 'POST') {
     let body = '';
     req.on('data', c => body += c);
@@ -130,10 +173,16 @@ http.createServer((req, res) => {
     });
     return;
   }
-  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__pot = null; global.__etat = null; res.writeHead(200); res.end('ok'); return; }
+  if (u.pathname === '/__profils') { json(res, 200, { codes: [...global.__profils], enregistrements: global.__enregistrements || 0 }); return; }
+  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__pot = null; global.__etat = null; global.__subs = []; global.__profils = new Set(); global.__enregistrements = 0; res.writeHead(200); res.end('ok'); return; }
   if (u.pathname.startsWith('/api/')) { res.writeHead(404); res.end('route inconnue'); return; }
+  if (u.pathname === '/polices/space-grotesk.woff2') { res.writeHead(200, { 'content-type': 'font/woff2', 'cache-control': 'public, max-age=31536000, immutable' }); return res.end(fs.readFileSync(path.join(DIR, '..', 'polices', 'space-grotesk-latin.woff2'))); }
   const f = path.join(DIR, u.pathname === '/' ? 'app.html' : u.pathname.slice(1));
   if (!fs.existsSync(f)) { res.writeHead(404); res.end('nf'); return; }
-  res.writeHead(200, { 'content-type': f.endsWith('.html') ? 'text/html;charset=utf-8' : 'application/javascript' });
+  if (f.endsWith('.html')) {
+    const { corps, entetes } = preparerPage(fs.readFileSync(f, 'utf8'), { VAPID_PUB: VAPID_MOCK, CONTACT: CONTACT_MOCK });
+    res.writeHead(200, entetes); return res.end(corps);
+  }
+  res.writeHead(200, { 'content-type': 'application/javascript' });
   res.end(fs.readFileSync(f));
-}).listen(parseInt(process.env.PORT) || 8323, () => console.log('mock sur 8323, coachLie=' + COACH_LIE));
+}).listen(parseInt(process.env.PORT) || 8323, () => console.log('mock sur ' + (process.env.PORT || 8323) + ', coachLie=' + COACH_LIE)));
