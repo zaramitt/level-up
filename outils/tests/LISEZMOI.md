@@ -28,6 +28,10 @@ node outils/sync.test.js             # les copies embarquées sont-elles à jour
   focus, séance choisie en avant, types de charge, ajustement dans les deux
   sens, jours de sport et note sport, proposition sans coach → inviter,
   parcours coach par lien, « Ton coach t'attend », Progrès vide.
+- `09-v2007-terrain.js` — v20.7 : ressenti replié sur le choix retenu,
+  « dernier » seulement avec une valeur, phare du jour push, cagnotte et paris
+  toujours présents en duo (coach pas relié, serveur en erreur), session audio
+  « ambient », Progrès dès la première charge, « Terminer la séance ».
 - `10` à `21` — non-régressions v19.10 → v19.21, portées sur les nouvelles
   questions d'onboarding quand elles passaient par les anciennes.
 

@@ -325,9 +325,10 @@ test("force — un seul rowing horizontal par séance pull, poussée verticale =
     }
     assert.deepStrictEqual(verifierRegles(p, banque), []);
   }
-  // hors force, l'Arnold press reste disponible
-  const m = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau: 3, tempsMin: 75 }, banque);
-  assert.ok(seances(m).flatMap(s => s.exercices).some(e => e.id === "arnold"), "muscler 6× : Arnold press attendu quelque part");
+  // hors force, l'Arnold press reste disponible — comme remplaçant du militaire (v20.7 : le phare ouvre
+  // toujours la case de poussée verticale, l'Arnold press ne s'y place donc plus de lui-même)
+  const r = M.remplacerExercice(banque, "militaire", { materiel: "salle", niveau: 3 });
+  assert.ok(r.candidats.some(c => c.id === "arnold"), "Arnold press attendu parmi les remplaçants du militaire hors force");
 });
 test("régressions — dès le niveau 2 en salle : ni pompes genoux, ni pompes au mur, ni planche sur les genoux, ni traction négative", () => {
   for (const o of ["tonifier", "muscler", "mieux", "poids"]) for (const f of [3, 4, 6]) {
@@ -554,6 +555,61 @@ test("v20.6 — noms de séances : les muscles en grand, le geste en petit ; poi
   assert.ok(M.pdcPossible(byId.dips_banc) && M.pdcPossible(byId.pompes) && !M.pdcPossible(byId.developpe_couche), "dips et pompes oui, développé couché non");
   const sugg = M.suggererCharge({ id: "traction_assistee", charge: false, pdc: true, reps: [5, 8], compartiment: "tirage_v" }, [{ date: "2026-09-01", series: [-20, -20, -20], type: "assiste", hautFourchette: true, ressenti: "juste" }], "salle");
   assert.ok(sugg && sugg.kg === -17.5 && sugg.plus === 2.5 && sugg.type === "assiste" && /−2,5 kg d'assistance/.test(sugg.raison), JSON.stringify(sugg));
+});
+
+test("v20.7 — foot : au moins 2 exercices adaptés par séance bas et 1 par séance haut, à tous les niveaux et toutes les fréquences", () => {
+  for (const [frequence, muscu, technique] of [[3, "jamais", "pas_sur"], [4, "mois", "oui"], [6, "an", "oui"], [4, "jamais", "oui"], [5, "an", "oui"]]) {
+    const rep = { frequence, objectif: "mieux", muscu, technique, sport: "football", intention: "sport", joursSport: [2, 5], materiel: "salle", tempsMin: 60 };
+    const prog = M.genererProgramme(M.entreesDepuisReponses(rep), banque);
+    for (const s of seances(prog)) {
+      if (s.focus === "recup") continue;
+      const items = M.adaptesSport(s, prog.entrees);
+      const exos = items.filter(i => i.x.compartiment !== "gainage");
+      if (M.FOCUS[s.focus].bas) assert.ok(exos.length >= 2, `${frequence}× niveau ${prog.entrees.niveau}, séance ${s.lettre} (bas) : ${exos.length} exercice(s) adapté(s) — ${items.map(i => i.libelle).join(", ")}`);
+      else assert.ok(items.length >= 1, `${frequence}× niveau ${prog.entrees.niveau}, séance ${s.lettre} (haut) : rien d'adapté`);
+      for (const i of items) if (/^gainage anti-rotation/.test(i.libelle)) assert.ok(i.x.muscle === "obliques" || i.x.id === "bird_dog", `${i.x.nom} n'est pas de l'anti-rotation`);
+    }
+    // ischios présents chaque semaine, et les hanches ou les mollets aussi
+    const tous = seances(prog).flatMap(s => s.exercices);
+    assert.ok(tous.some(e => e.muscle === "ischio-jambiers"), `${frequence}× : ischios`);
+    // (débutante : 4-5 exercices par séance, les cases d'isolation vont à l'unilatéral et aux ischios — pas la place pour plus)
+    if (prog.entrees.niveau >= 2) assert.ok(tous.some(e => ["abducteurs", "adducteurs", "mollets"].includes(e.muscle)), `${frequence}× niveau ${prog.entrees.niveau} : hanches ou mollets`);
+    assert.deepStrictEqual(verifierRegles(prog, banque), []);
+  }
+});
+test("v20.7 — le phare ouvre la première case de son compartiment : jour push = développé couché + un second exercice pecs, jamais le phare remplacé", () => {
+  const ppl = M.programmePourApp({ frequence: 6, objectif: "muscler", muscu: "an", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  for (const l of ["A", "D"]) {
+    const ids = ppl.seances[l].exos.map(e => e.id);
+    assert.strictEqual(ids[0], "developpe_couche", `séance ${l} : ${ids.join(", ")}`);
+    const pecs = ppl.seances[l].exos.filter(e => e.compartiment === "poussee_h");
+    assert.ok(pecs.length === 2 && pecs[1].id !== "developpe_couche", `séance ${l} : second exercice pecs différent du phare — ${pecs.map(e => e.id).join(", ")}`);
+  }
+  assert.notStrictEqual(ppl.seances.A.exos[1].id, ppl.seances.D.exos[1].id, "la variation joue sur le second exercice pecs");
+  const hb = M.programmePourApp({ frequence: 4, objectif: "muscler", muscu: "an", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  const idsA = hb.seances.A.exos.map(e => e.id);
+  for (const ph of ["developpe_couche", "rowing_barre", "militaire", "traction"]) assert.ok(idsA.includes(ph), `haut niveau 3 : ${ph} attendu — ${idsA.join(", ")}`);
+  // sans le matériel du phare (haltères et banc) : pas de développé couché, la case se remplit normalement
+  const hal = M.programmePourApp({ frequence: 4, objectif: "muscler", muscu: "an", technique: "oui", materiel: "halteres", tempsMin: 60 }, banque);
+  assert.ok(!hal.seances.A.exos.some(e => e.id === "developpe_couche") && hal.seances.A.exos.some(e => e.compartiment === "poussee_h"), hal.seances.A.exos.map(e => e.id).join(", "));
+  // niveau 1 : le phare (difficulté 2) n'est pas admissible, la version simple reste
+  const deb = M.programmePourApp({ frequence: 3, objectif: "mieux", muscu: "jamais", technique: "pas_sur", materiel: "salle", tempsMin: 60 }, banque);
+  assert.ok(!Object.values(deb.seances).flatMap(s => s.exos).some(e => e.id === "developpe_couche"), "débutante : pas de développé couché barre");
+});
+test("v20.7 — banque : « Dips à la machine assise », variante machine des dips, charge en kg, remplaçant des dips quand les barres manquent", () => {
+  const dm = byId.dips_machine;
+  assert.ok(dm && dm.compartiment === "poussee_h" && dm.muscle === "pectoraux" && dm.materiel.length === 1 && dm.materiel[0] === "machine" && dm.difficulte === 2 && dm.monte_vers === "dips", JSON.stringify(dm));
+  assert.ok(M.faisable(dm, "salle") && !M.faisable(dm, "pdc") && !M.faisable(dm, "halteres"), "machine : salle seulement");
+  const sansBarres = ["machine", "poulie", "barre", "haltères", "banc"];
+  const r = M.remplacerExercice(banque, "dips", { materiel: sansBarres, niveau: 2 });
+  assert.ok(r.candidats.some(c => c.id === "dips_machine"), "remplaçant des dips : " + r.candidats.map(c => c.id).join(", "));
+  const app = M.remplacantsPour(banque, { id: "dips", compartiment: "poussee_h", muscle: "pectoraux", series: 3, reps: [6, 10], repos: 180, nom: "Dips aux barres parallèles" }, { materiel: sansBarres, niveau: 2, motif: "materiel" });
+  const cand = app.candidats.find(c => c.exo.id === "dips_machine");
+  assert.ok(cand && cand.exo.charge && !cand.exo.pdc, "côté app : charge en kg, pas poids du corps — " + JSON.stringify(cand && cand.exo));
+  // les autres exercices au poids du corps ont déjà leur version machine ou poulie
+  for (const [pdc, machine] of [["pompes", "chest_press"], ["traction", "traction_assistee"], ["rowing_inverse", "rowing"], ["pike", "shoulder_press_machine"], ["squat_pdc", "presse"], ["dips_banc", "triceps"], ["mollets_marche", "mollets"], ["nordic", "legcurl"], ["pont", "hipthrust_machine"], ["clamshell", "abduction"]]) {
+    assert.ok(byId[machine] && byId[machine].compartiment === byId[pdc].compartiment && byId[machine].muscle === byId[pdc].muscle && byId[machine].materiel.some(m => /machine|poulie/.test(m)), `${pdc} → ${machine}`);
+  }
 });
 
 console.log("\n=== cas demandés ===");

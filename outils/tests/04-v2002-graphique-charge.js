@@ -39,21 +39,22 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     const ressentis = { squat: [{ date: '2026-09-02', r: 'dur', compose: true }] };
     const { ctx, p } = await ouvrir({ charges, ressentis });
     const t = await texte(p);
-    check('un graphique par exercice pratiqué au moins deux fois (3), pas pour la note unique', (await p.locator('.graphe-charge').count()) === 3 && (await p.locator('.note-unique').count()) === 1, [await p.locator('.graphe-charge').count(), await p.locator('.note-unique').count()]);
+    // v20.7 : un graphique par exercice dès la première charge notée (un point), plus de liste à part
+    check('un graphique par exercice, y compris celui noté une seule fois (4)', (await p.locator('.graphe-charge').count()) === 4 && (await p.locator('.note-unique').count()) === 0, [await p.locator('.graphe-charge').count(), await p.locator('.note-unique').count()]);
     const noms = await p.evaluate(() => [...document.querySelectorAll('.graphe-charge')].map(g => g.innerText.split('\n')[0]));
-    check('triés par récence : squat (2 sept.), développé couché (31 août), rowing Pendlay (19 août)', /^Squat barre/.test(noms[0]) && /^Développé couché/.test(noms[1]) && /^Rowing Pendlay/.test(noms[2]), noms.join(' | '));
+    check('triés par récence : squat (2 sept.), développé couché et élévations (31 août), rowing Pendlay (19 août)', /^Squat barre/.test(noms[0]) && /^(Développé couché|Élévations latérales)/.test(noms[1]) && /^(Développé couché|Élévations latérales)/.test(noms[2]) && /^Rowing Pendlay/.test(noms[3]), noms.join(' | '));
     check('un exercice absent du programme (remplacé) apparaît sous son propre nom, pris dans la banque', /Rowing Pendlay/.test(t));
     check('chaque carte reprend le carnet : nombre de séances, dernière date, record', /4 séances · dernier : 31\/08 · record : 42,5 kg/.test(t) && /2 séances · dernier : 02\/09 · record : 65 kg/.test(t), t.slice(t.indexOf('Ton carnet'), t.indexOf('Ton carnet') + 300));
     check('la charge de travail par séance est la meilleure série (42,5 kg pour la dernière du développé couché)', await p.evaluate(() => [...document.querySelectorAll('.graphe-charge')].some(g => /42,5 kg/.test(g.innerText))));
     check('les points « trop dur » sont marqués discrètement : un sur le développé (entrée), un sur le squat (ressenti du jour)', (await p.locator('.graphe-charge .point-dur').count()) === 2 && /séance ressentie « trop dur »/.test(t));
     check('record : badge PR sur le développé (dernière = meilleure), pas sur le Pendlay (à plat)', await p.evaluate(() => { const g = [...document.querySelectorAll('.graphe-charge')]; const dc = g.find(x => /Développé couché/.test(x.innerText)), rp = g.find(x => /Pendlay/.test(x.innerText)); return /PR/.test(dc.innerText) && !/PR/.test(rp.innerText); }));
     check('courbe SVG lisible sur mobile : viewBox, axe des kg (min / max) et dates aux extrémités', await p.evaluate(() => { const s = document.querySelector('.graphe-charge svg'); const tx = [...s.querySelectorAll('text')].map(x => x.textContent); return s.getAttribute('viewBox') && s.clientWidth > 250 && s.clientWidth <= 390 && tx.includes('65') && tx.includes('60') && tx.includes('12/08') && tx.includes('02/09'); }));
-    check('la note unique liste nom, date et charge', await p.evaluate(() => /Élévations latérales.*31\/08.*8 \/ 8 \/ 8 kg/s.test(document.querySelector('.note-unique').innerText)));
+    check('un premier point dès la première séance : la carte des élévations a un point, sa date, et le dit', await p.evaluate(() => { const g = [...document.querySelectorAll('.graphe-charge')].find(x => /Élévations latérales/.test(x.innerText)); return !!g && g.querySelectorAll('circle').length === 1 && /1 séance · 31\/08/.test(g.innerText) && /dès la prochaine/.test(g.innerText) && /8 kg/.test(g.innerText); }));
     check('l\'ancien carnet n\'est plus dupliqué en dessous', !/dernières charges notées/.test(t));
     await ctx.close(); }
   { const { ctx, p } = await ouvrir({});
-    // v20.6 : sans historique, un graphique exemple grisé et la promesse « dès ta deuxième séance » (plus de « Rien encore »)
-    check('sans charge notée : graphique exemple grisé, pas de vraie courbe', (await p.locator('.graphe-exemple .graphe-charge').count()) === 1 && (await p.locator('.graphe-charge').count()) === 1 && /Ta courbe apparaîtra ici dès ta deuxième séance/.test(await texte(p)) && !/Rien encore/.test(await texte(p)));
+    // v20.6 : sans historique, un graphique exemple grisé (plus de « Rien encore ») ; v20.7 : la promesse dit « dès ta première charge notée »
+    check('sans charge notée : graphique exemple grisé, pas de vraie courbe', (await p.locator('.graphe-exemple .graphe-charge').count()) === 1 && (await p.locator('.graphe-charge').count()) === 1 && /Ta courbe apparaîtra ici dès ta première charge notée/.test(await texte(p)) && !/Rien encore/.test(await texte(p)));
     await ctx.close(); }
 
   await b.close();

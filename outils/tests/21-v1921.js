@@ -103,9 +103,9 @@ const jour = new Date().toISOString().slice(0, 10);
     console.log('  bouton pilule « Changer de séance »:', await b.count() === 1, JSON.stringify(st), '→', st.fs >= 12 && st.border !== '0px' && st.deco === 'none');
     await ctx.close(); }
 
-  console.log('\n=== 9/10. Barre « Fin de séance » + célébration ===');
+  console.log('\n=== 9/10. Barre « Terminer la séance » + célébration ===');
   { const { ctx, p } = await ouvrir({ jour: { [jour]: { seance: 'A', faits: ['goblet', 'hipthrust'], gainage: [], valide: false, gainValide: false, photos: {} } } });
-    let bar = p.locator('button', { hasText: 'Fin de séance' });
+    let bar = p.locator('button', { hasText: 'Terminer la séance' });
     const bb = await bar.boundingBox();
     console.log('  barre fixe visible sans défiler (y =', bb && Math.round(bb.y), '):', !!bb && bb.y > 600 && bb.y < 720);
     console.log('  compte « 2/6 exercices gardés »:', (await bar.textContent()).includes('2/6 exercices gardés'));
@@ -116,7 +116,7 @@ const jour = new Date().toISOString().slice(0, 10);
     console.log('  récap XP : « 2 exercices × 15 XP = 30 » :', t.includes('2 exercices × 15 XP = 30') && t.includes('+30 XP'));
     console.log('  barre de niveau (« niveau 3 dans N XP »):', /niveau 3 dans \d+ XP/.test(t));
     await p.locator('button', { hasText: 'Continuer' }).tap(); await p.waitForTimeout(400);
-    console.log('  barre « Fin de séance » disparue après clôture:', await p.locator('button', { hasText: 'Fin de séance' }).count() === 0);
+    console.log('  barre « Terminer la séance » disparue après clôture:', await p.locator('button', { hasText: 'Terminer la séance' }).count() === 0);
     await p.screenshot({ path: 'v1921-celebration-partielle.png' });
     await ctx.close(); }
   { const { ctx, p } = await ouvrir({ jour: { [jour]: { seance: 'A', faits: ['goblet', 'hipthrust', 'presse', 'legcurl', 'abduction', 'mollets'], gainage: [], valide: false, gainValide: false, photos: {} } } });

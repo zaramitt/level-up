@@ -811,6 +811,33 @@
       "demo": "Dips aux barres parallèles"
     },
     {
+      "id": "dips_machine",
+      "nom": "Dips à la machine assise",
+      "compartiment": "poussee_h",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "triceps",
+        "épaules"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": "dips",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Assise, poignées à hauteur de la poitrine, buste légèrement penché en avant, pousse vers le bas jusqu'à l'extension des bras sans verrouiller les coudes, remonte en contrôlant.",
+      "erreur": "Épaules qui remontent vers les oreilles en poussant : garde-les basses et en arrière.",
+      "lot": 2,
+      "trou": "version machine des dips (charge en kg) : remplaçant direct quand les barres manquent",
+      "repos_s": 120,
+      "demo": "Dips à la machine assise"
+    },
+    {
       "id": "pike",
       "nom": "Pompes piquées (épaules)",
       "compartiment": "poussee_v",

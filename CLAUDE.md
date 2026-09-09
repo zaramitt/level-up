@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.6**
+Version actuelle : **v20.7**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.6"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.7"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -27,7 +27,8 @@ Déploiement : **Cloudflare Worker** (pas Pages).
 - `moteur-programmes.js` — le **moteur de génération de programmes**
   (fonction pure, règles 1-12 de `DECISIONS.md`, testé par
   `moteur-programmes.test.js`) ; `banque-exercices.json` — la banque
-  d'exercices (vue lisible : `EXERCICES.md`). Tous deux sont **embarqués dans
+  d'exercices (vue lisible : `EXERCICES.md`, à tenir à la main à chaque ajout —
+  118 exercices). Tous deux sont **embarqués dans
   `index.html`** (balises `<script id="moteur-programmes">` et
   `<script id="banque-exercices">`) : la génération se fait dans l'app,
   instantanément et hors ligne.
@@ -43,8 +44,8 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   dans l'ordre), et les suites numérotées — `01-securite-profils-existants.js`
   en premier (aucun profil existant ne change de programme sans action
   explicite), puis v20.0, la séance vivante, le graphique, les bulles, la
-  sécurité côté front (`06-securite-front.js`) et les non-régressions
-  v19.10 → v19.21.
+  sécurité côté front (`06-securite-front.js`), les retours terrain (`07`,
+  `09`), les évolutions v20.6 (`08`) et les non-régressions v19.10 → v19.21.
 - `outils/worker.test.js` — le worker importé dans Node avec un faux KV et un
   faux `fetch` : secrets hors du code, en-têtes, validation, quotas, photos,
   limitation de débit. `node outils/worker.test.js`, à chaque modification
@@ -159,6 +160,25 @@ exercices et un cran de charge suggéré (`adaptee.intensifie`). Les jours de
 sport ne bloquent jamais un programme : placement souple
 (`moteur.placementSouple`, jamais de grosse séance jambes la veille ni le jour
 même), dit dans « À savoir ».
+
+Depuis la v20.7 : le **phare** d'un compartiment (règle 9 : développé couché,
+squat barre, soulevé de terre roumain, militaire, rowing barre, traction)
+ouvre toujours la première case de son compartiment dans la séance quand il
+est faisable et admissible (`phareDe` dans `choisir`) ; la variation joue sur
+la seconde case, jamais sur le phare. Sauf pour l'unilatéral, et sauf quand le
+sport pousse un favori du même compartiment. Le **modificateur foot** pèse à
+tous les niveaux (ischios obligatoires, hanches, mollets, unilatéral,
+anti-rotation, avec des options de difficulté 1) ; `adaptesSport(s, entrees)`
+liste ce que le sport a marqué dans une séance, `noteSport` en fait la phrase.
+Le **ressenti** se replie sur le choix retenu après le tap (« modifier » rouvre
+les trois). « dernier » n'est affiché qu'avec une vraie valeur (`derAffiche`).
+Les **sons** demandent une session audio `ambient` (`navigator.audioSession`,
+iOS 17+) pour se mêler à la musique au lieu de la couper ; sans l'API, volume
+baissé. La barre de clôture dit « Terminer la séance ». En duo, **cagnotte et
+paris sont toujours présents** : état « dès que ton coach a rejoint » tant que
+`st.coachLie` est faux, et « indisponible — réessayer » si le serveur ne répond
+pas (plus jamais masqués). Progrès : **un graphique par exercice dès la
+première charge notée** (un point au centre).
 
 Migration, option (b) : un profil d'avant la v20.0 **garde son programme tel
 quel**. Une carte dans l'onglet Séance (« Nouveau moteur de programmes —

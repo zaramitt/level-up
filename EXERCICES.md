@@ -1,6 +1,6 @@
 # Banque d'exercices — étape 1 du chantier Programmes
 
-Document de relecture. La source est `banque-exercices.json` (un seul fichier, 117 exercices, 10 compartiments) ; ce document en est la vue lisible, régénérée à partir de la même source.
+Document de relecture. La source est `banque-exercices.json` (un seul fichier, 118 exercices, 10 compartiments) ; ce document en est la vue lisible, régénérée à partir de la même source.
 
 Chaque exercice porte : compartiment, muscle principal et secondaires, matériel (une liste d'**alternatives** : n'importe laquelle suffit ; « a + b » est une combinaison obligatoire, comme barre + banc), difficulté (1 débutant / 2 intermédiaire / 3 avancé), place dans l'échelle (simple → **phare** → avancé, avec l'exercice vers lequel on « monte »), fourchette de reps et repos par défaut (règle 5), unilatéral ou non, une consigne et une erreur fréquente, et sa démo (recherche par nom, système existant).
 
@@ -49,6 +49,7 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 | Développé couché | pectoraux · triceps, épaules | barre | 2 | **phare** → Développé incliné haltères | 5-8 reps · repos 180 s | Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière. | Rebondir la barre sur la poitrine ou décoller les fesses du banc. |
 | Développé incliné haltères | pectoraux · épaules, triceps | haltères + banc | 2 | avance → Dips aux barres parallèles | 8-12 reps · repos 120 s | Banc à 30°, haltères qui descendent à hauteur du haut de la poitrine, poussée légèrement convergente. | Banc trop redressé : ça devient un exercice d'épaules. |
 | Dips aux barres parallèles | pectoraux · triceps, épaules | barres de dips | 3 | avance | 6-10 reps · repos 180 s | Buste légèrement penché en avant, descends jusqu'à ce que les épaules soient au niveau des coudes, remonte sans balancer. | Descendre trop bas épaules en avant : douleur à l'avant de l'épaule. |
+| Dips à la machine assise | pectoraux · triceps, épaules | machine | 2 | simple → Dips aux barres parallèles | 8-12 reps · repos 120 s | Assise, poignées à hauteur de la poitrine, buste légèrement penché en avant, pousse vers le bas jusqu'à l'extension des bras sans verrouiller les coudes, remonte en contrôlant. | Épaules qui remontent vers les oreilles en poussant : garde-les basses et en arrière. |
 
 ## 4. Poussée verticale — phare : Développé militaire
 

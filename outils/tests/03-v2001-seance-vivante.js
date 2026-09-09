@@ -50,14 +50,19 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
     check('après validation : « C\'était comment ? » avec Facile / Juste / Trop dur', /C'était comment \?/.test(t) && /Facile/.test(t) && /Juste/.test(t) && /Trop dur/.test(t));
     let st = await etat(p);
     check('rien n\'est bloqué si on ignore : l\'exercice est validé, aucun ressenti stocké', st.jour[jour].faits.includes(exo.id) && !(st.jour[jour].ressentis || {})[exo.id] && !(st.ressentis || {})[exo.id]);
+    check('les boutons sont de vrais <button> (iOS : tap franc)', await p.evaluate(() => [...document.querySelectorAll('button')].filter(b => /^(Facile|Juste|Trop dur)$/.test(b.textContent.trim())).length === 3));
     await tap(p, 'Facile');
     st = await etat(p);
     const r = (st.ressentis || {})[exo.id];
     check('« Facile » : stocké pour la séance du jour et dans l\'historique de l\'exercice, marqué polyarticulaire', st.jour[jour].ressentis[exo.id] === 'facile' && r && r.length === 1 && r[0].r === 'facile' && r[0].date === jour && r[0].compose === true, JSON.stringify([st.jour[jour].ressentis, r]));
+    // v20.7 : après le tap, seul le choix retenu reste (modifiable), plus les trois boutons
+    check('après le tap : « Ressenti : Facile » seul, les deux autres boutons ont disparu, un lien « modifier »', (await p.locator('.ressenti-choisi').count()) === 1 && await p.evaluate(() => { const l = [...document.querySelectorAll('button')].filter(b => /^(Facile|Juste|Trop dur)$/.test(b.textContent.trim())); return l.length === 1 && l[0].textContent.trim() === 'Facile'; }) && (await p.locator('.modifier-ressenti').count()) === 1);
+    await p.locator('.modifier-ressenti').tap(); await p.waitForTimeout(300);
+    check('« modifier » rouvre les trois boutons', await p.evaluate(() => [...document.querySelectorAll('button')].filter(b => /^(Facile|Juste|Trop dur)$/.test(b.textContent.trim())).length === 3));
     await tap(p, 'Trop dur');
     st = await etat(p);
     check('modifiable : « Trop dur » remplace, une seule entrée par jour', st.jour[jour].ressentis[exo.id] === 'dur' && st.ressentis[exo.id].length === 1 && st.ressentis[exo.id][0].r === 'dur');
-    check('les boutons sont de vrais <button> (iOS : tap franc)', await p.evaluate(() => [...document.querySelectorAll('button')].filter(b => /^(Facile|Juste|Trop dur)$/.test(b.textContent.trim())).length === 3));
+    check('… et le choix retenu se referme sur « Trop dur »', await p.evaluate(() => { const l = [...document.querySelectorAll('button')].filter(b => /^(Facile|Juste|Trop dur)$/.test(b.textContent.trim())); return l.length === 1 && l[0].textContent.trim() === 'Trop dur'; }));
     await ctx.close(); }
 
   console.log('\n=== 2. Incrément proposé (règle 8) : pré-rempli, visible, jamais imposé ; « trop dur » l\'annule ===');
@@ -181,7 +186,7 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
     await ouvrirSeance(p, prog, 'G');
     let t = await texte(p);
     check('écran dédié : ton différent, durées, XP réduits annoncés', /RÉCUPÉRATION ACTIVE/.test(t) && /Pas de charge aujourd'hui/.test(t) && /5 XP par activité/.test(t) && /Fait · \+5/.test(t));
-    check('pas de repos, pas de saisie de charge, pas de barre « Fin de séance »', !/Repos \d/.test(t) && (await p.locator('input[inputmode]').count()) === 0 && !/Fin de séance/.test(t));
+    check('pas de repos, pas de saisie de charge, pas de barre « Terminer la séance »', !/Repos \d/.test(t) && (await p.locator('input[inputmode]').count()) === 0 && !/Terminer la séance/.test(t));
     const n = prog.seances.G.exos.length;
     for (let i = 0; i < n; i++) { await tap(p, 'Fait · +5'); }
     t = await texte(p);
