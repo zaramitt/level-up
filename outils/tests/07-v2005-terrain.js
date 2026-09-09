@@ -62,8 +62,8 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
   // ---------- profils prêts pour la suite ----------
   const rep = { frequence: 3, objectif: 'mieux', muscu: 'jamais', technique: 'pas_sur', materiel: 'salle', tempsMin: 60 };
   const prog = M.programmePourApp(rep, banque);
-  const ouvrir = async ({ url = U, extra = {}, solo = true, code = 'solo-terrainab', vus = true, height = 780 }) => {
-    const ctx = await b.newContext({ viewport: { width: 390, height }, hasTouch: true, isMobile: true });
+  const ouvrir = async ({ url = U, extra = {}, solo = true, code = 'solo-terrainab', vus = true, height = 780, ua }) => {
+    const ctx = await b.newContext({ viewport: { width: 390, height }, hasTouch: true, isMobile: true, ...(ua ? { userAgent: ua } : {}) });
     const p = await ctx.newPage();
     p.on('pageerror', e => console.log('  ⛔ PAGE ERR:', String(e).slice(0, 240)));
     await p.addInitScript(([ex, jk]) => {
@@ -88,6 +88,14 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     check('… et reste après 4,5 s (jusqu\'au tap)', (await t.count()) === 1);
     await t.first().tap(); await p.waitForTimeout(300);
     check('un tap la ferme', (await p.locator('.toast-erreur').count()) === 0);
+    await ctx.close(); }
+  // iPhone dans l'onglet Safari (pas sur l'écran d'accueil) : le message dit le geste exact
+  { const { ctx, p } = await ouvrir({ extra: { decayCursor: jour }, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' });
+    await p.goto(U, { waitUntil: 'load' }); await p.waitForTimeout(1400);
+    await p.locator('header button').last().tap(); await p.waitForTimeout(700);
+    await p.locator('xpath=//div[div[normalize-space()="Rappel du soir"]]/following-sibling::button[1]').first().tap(); await p.waitForTimeout(500);
+    const t = p.locator('.toast-erreur');
+    check('iPhone hors écran d\'accueil → « Ajoute Level Up! à ton écran d\'accueil pour activer les rappels », avec Partager → Sur l\'écran d\'accueil', (await t.count()) === 1 && /Ajoute Level Up! à ton écran d'accueil pour activer les rappels/.test(await t.innerText()) && /Partager/.test(await t.innerText()) && /Sur l'écran d'accueil/.test(await t.innerText()), (await t.count()) && await t.innerText());
     await ctx.close(); }
   { const { ctx, p } = await ouvrir({ extra: { decayCursor: jour } });
     await p.goto(U, { waitUntil: 'load' }); await p.waitForTimeout(1400);

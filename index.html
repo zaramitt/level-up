@@ -3076,9 +3076,21 @@ const b64uVersU8 = s => {
   return u;
 };
 // s'abonne aux rappels avec la clé courante (remplace un abonnement existant) et le dépose sur le worker
+// iPhone / iPad : Safari n'expose les notifications web qu'aux apps ajoutées à l'écran
+// d'accueil (mode « standalone »). Dans l'onglet Safari, PushManager n'existe pas : on le dit
+// avec le geste exact plutôt qu'un « navigateur non compatible ».
+const MSG_IOS_ACCUEIL = "Ajoute Level Up! à ton écran d'accueil pour activer les rappels : dans Safari, touche Partager, puis « Sur l'écran d'accueil », et ouvre l'app depuis son icône.";
+const surIOSHorsAccueil = () => {
+  const ua = navigator.userAgent || "";
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (!ios) return false;
+  const accueil = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  return !accueil;
+};
 const abonnerPush = async code => {
+  if (surIOSHorsAccueil()) throw new Error(MSG_IOS_ACCUEIL);
   if (!VAPID_PUB) throw new Error("Rappels indisponibles côté serveur pour le moment (configuration en cours). Réessaie plus tard.");
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications. Sur iPhone : ajoute d'abord l'app à l'écran d'accueil, puis réessaie.");
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Ce navigateur ne gère pas les notifications. Sur iPhone : ajoute d'abord l'app à l'écran d'accueil (Partager → Sur l'écran d'accueil), puis réessaie.");
   if (typeof Notification !== "undefined" && Notification.permission === "denied") throw new Error("Notifications refusées dans les réglages du téléphone. Autorise-les pour Level Up, puis réessaie.");
   const perm = await Notification.requestPermission();
   if (perm !== "granted") throw new Error("Permission refusée : sans elle, pas de rappel. Tu peux la donner dans les réglages du téléphone.");
