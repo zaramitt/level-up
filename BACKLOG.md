@@ -9,11 +9,12 @@ item.
 
 Les fondations sur lesquelles reposent plusieurs chantiers à la fois.
 
-- **PRIORITÉ HAUTE — Répétitions par série** : les logguer réellement
+- ~~**PRIORITÉ HAUTE — Répétitions par série** : les logguer réellement
   (saisie rapide par série, dernière valeur pré-remplie) à la place de la case
-  « j'ai tenu N reps partout ». Prérequis pour une double progression précise,
-  les records personnels et un graphique de volume. Standard de la catégorie
-  (Hevy, Strong).
+  « j'ai tenu N reps partout ».~~ **Traité en v20.9** (étape 4) : reps par
+  série pré-remplies au haut de la fourchette, règle 8 sur les reps réelles,
+  journal par séance. Restent ouverts derrière : records personnels,
+  graphique de volume.
 - **Records personnels célébrés** : meilleure charge et meilleure série par
   exercice, avec une célébration à la séance.
 - **PRIORITÉ HAUTE — Séparation des rôles côté serveur.** Prérequis avant
@@ -71,8 +72,10 @@ traités. Ce qui reste :
 Générateur incohérent traité : le moteur (règles en code, banque étiquetée)
 est branché en v20.0, étape 3 passe 1. Ce qui reste :
 
-- **PRIORITÉ HAUTE — ÉTAPE 4, avant le champ « ajuster mon programme » : la
-  séance libre — voir cadrage à venir.**
+- ~~**PRIORITÉ HAUTE — ÉTAPE 4, avant le champ « ajuster mon programme » : la
+  séance libre.**~~ **Traité en v20.9** : ajout / retrait / réordonnancement
+  pour le jour, panneau à trois onglets, séance libre permanente, journal,
+  proposition après 3 retraits (voir DECISIONS, Étape 4).
 - **PRIORITÉ HAUTE — Champ permanent « Ajuster mon programme »** : renforcer
   X en ce moment, éviter Y (blessure), cycles de plusieurs semaines sur un
   focus. Passe par `/interpreter` → contraintes du moteur (exclusions,
@@ -104,8 +107,9 @@ est branché en v20.0, étape 3 passe 1. Ce qui reste :
 ## Onglet Progrès
 
 - Graphique de charge par exercice : fait en v20.2 (remplace le carnet).
-  Reste : afficher aussi les reps (une seule case « haut de fourchette » est
-  notée aujourd'hui, pas les reps par série).
+  Reste : afficher aussi les reps sur le graphique — elles sont notées par
+  série depuis la v20.9 (`e.reps` sur chaque entrée de charge), il ne manque
+  que l'affichage (volume, meilleure série).
 - Appui long sur « tes preuves » / « tes badges » / carnet pour réorganiser
   les sections (haut/bas)
 

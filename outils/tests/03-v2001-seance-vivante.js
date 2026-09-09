@@ -74,11 +74,19 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
     const c = await carte(p, 'Développé couché');
     check('suggestion visible et expliquée : « Suggestion : 42,5 kg — +2,5 kg, tu as tenu 8 reps partout »', /Suggestion : 42,5 kg — \+2,5 kg, tu as tenu 8 reps partout/.test(c), c.slice(0, 260));
     check('les séries sont pré-remplies à 42,5', (c.match(/42[.,]5 kg/g) || []).length >= 3, c.slice(0, 300));
-    check('modifiable : la case « J\'ai tenu 8 reps sur toutes les séries » est là, décochée', /J'ai tenu 8 reps sur toutes les séries/.test(c) && await p.evaluate(() => document.querySelector('.haut-fourchette').getAttribute('aria-pressed') === 'false'));
-    await p.locator('button[aria-expanded="true"]').locator('xpath=..').locator('.haut-fourchette').tap(); await p.waitForTimeout(500);
+    // v20.9 : les reps réelles par série remplacent la case « j'ai tenu » — pré-remplies au haut de la fourchette (8)
+    const focus = p.locator('.focus-exercice');
+    check('reps par série à côté de la charge, pré-remplies à 8 (haut de la fourchette), « Tout tenu ? » affiché', (await focus.locator('.reps-serie').count()) === 3 && await focus.locator('.reps-serie').evaluateAll(l => l.every(x => /\b8\b/.test(x.innerText))) && /Tout tenu \? C'est le signal/.test(c));
+    const appui = async b => { await b.dispatchEvent('pointerdown'); await p.waitForTimeout(60); await b.dispatchEvent('pointerup'); await p.waitForTimeout(500); };
+    await appui(focus.locator('.reps-serie').nth(2).locator('button', { hasText: /^[−-]$/ }));
     let st = await etat(p);
-    const der = st.charges.developpe_couche[st.charges.developpe_couche.length - 1];
-    check('cocher crée l\'entrée du jour avec hautFourchette', der.date === jour && der.hautFourchette === true, JSON.stringify(der));
+    let der = st.charges.developpe_couche[st.charges.developpe_couche.length - 1];
+    check('« − » sur la 3e série : entrée du jour avec reps [8, 8, 7], haut de fourchette non tenu', der.date === jour && JSON.stringify(der.reps) === '[8,8,7]' && der.hautFourchette === false, JSON.stringify(der));
+    check('… et la phrase « Tout tenu ? » laisse la place au rappel des reps pré-remplies', !/Tout tenu \?/.test(await focus.innerText()) && /corrige celles que tu n'as pas tenues/.test(await focus.innerText()));
+    await appui(focus.locator('.reps-serie').nth(2).locator('button', { hasText: /^[+＋]$/ }));
+    st = await etat(p);
+    der = st.charges.developpe_couche[st.charges.developpe_couche.length - 1];
+    check('« + » : retour à [8, 8, 8], haut de fourchette tenu', JSON.stringify(der.reps) === '[8,8,8]' && der.hautFourchette === true, JSON.stringify(der));
     await deplier(p, 'Rowing barre');
     check('reps pas atteintes la dernière fois → pas de suggestion, dernière charge rappelée', !/Suggestion/.test(await carte(p, 'Rowing barre')) && /dernier : 50/.test(await carte(p, 'Rowing barre')));
     await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(1200);
@@ -89,34 +97,33 @@ const repBase = { frequence: 4, objectif: 'muscler', objectifLibre: '', muscu: '
     check('« trop dur » la dernière fois → pas de suggestion sur le squat', !/Suggestion/.test(await carte(p, 'Squat barre')));
     await ctx.close(); }
 
-  console.log('\n=== 3. « Remplacer » (règle 12) : deux motifs, 2 à 3 candidats, aujourd\'hui ou pour de bon ===');
+  console.log('\n=== 3. « Remplacer » (règle 12) : le panneau unique, les remplaçants directs en premier, aujourd\'hui ou pour de bon ===');
   { const charges = { rowing_barre: [{ date: '2026-08-30', series: [50, 50, 50] }] };
     const { ctx, p, prog } = await ouvrir(repBase, { charges });
     const L = lettreDe(prog, 'rowing_barre');
     await ouvrirSeance(p, prog, L); await deplier(p, 'Rowing barre');
     await tapOuvert(p, 'Remplacer');
-    let t = await texte(p);
-    check('panneau : deux motifs', /Matériel indisponible/.test(t) && /Je préfère autre chose/.test(t));
-    await tap(p, 'Je préfère autre chose');
-    const cands = await p.evaluate(() => [...document.querySelectorAll('button')].filter(b => /·.*·/.test(b.textContent) && b.closest('[style*="z-index: 95"], [style*="zIndex"]')).map(b => b.innerText));
-    const attendu = M.remplacantsPour(banque, prog.seances[L].exos.find(e => e.id === 'rowing_barre'), { materiel: repBase.materiel, niveau: 2, motif: 'prefere', exclure: prog.seances[L].exos.map(e => e.id) });
-    check('2 à 3 candidats, chacun avec muscle, matériel et dose', cands.length >= 2 && cands.length <= 3 && cands.every(c => /dos \(grand dorsal\)/.test(c) && /×/.test(c)), cands.join(' | '));
-    check('dans l\'ordre du moteur (phare en premier quand il y en a un)', cands[0].includes(attendu.candidats[0].exo.nom), cands[0]);
+    const panneau = p.locator('.panneau-exercices');
+    check('panneau unique (v20.9) : « Remplacer « Rowing barre » », onglets Similaires / Toute la banque / Cardio & mobilité', (await panneau.count()) === 1 && /Remplacer « Rowing barre »/.test(await panneau.innerText()) && (await panneau.locator('.onglet-panneau').count()) === 3 && await panneau.locator('.onglet-panneau').first().getAttribute('aria-pressed') === 'true');
+    const attendu = M.remplacantsPour(banque, prog.seances[L].exos.find(e => e.id === 'rowing_barre'), { materiel: repBase.materiel, niveau: 2, exclure: prog.seances[L].exos.filter(e => e.id !== 'rowing_barre').map(e => e.id) });
+    const cands = await panneau.locator('.exo-candidat').evaluateAll(l => l.map(b => b.innerText));
+    check('les remplaçants directs (même geste, même muscle) en premier, chacun avec muscle, matériel et dose', cands.length >= attendu.candidats.length + 1 && attendu.candidats.every((c, k) => cands[k].includes(c.exo.nom) && /dos \(grand dorsal\)/.test(cands[k]) && /×/.test(cands[k])), cands.slice(0, 4).join(' | '));
+    check('dans l\'ordre du moteur (phare en premier quand il y en a un), étiqueté', cands[0].includes(attendu.candidats[0].exo.nom) && /PHARE|même geste/.test(cands[0]), cands[0]);
     const premier = attendu.candidats[0].exo;
-    await p.locator('button', { hasText: premier.nom }).first().tap(); await p.waitForTimeout(700);
+    await panneau.locator('.exo-candidat', { hasText: premier.nom }).first().tap(); await p.waitForTimeout(700);
     let st = await etat(p);
-    check('remplacé pour aujourd\'hui : la séance affiche le remplaçant, le programme est intact', (await texte(p)).includes(premier.nom) && st.jour[jour].remplacements.rowing_barre.id === premier.id && st.programmePerso.seances[L].exos.some(e => e.id === 'rowing_barre'), JSON.stringify(Object.keys(st.jour[jour].remplacements)));
+    check('remplacé pour aujourd\'hui : la séance affiche le remplaçant, le programme est intact', (await texte(p)).includes(premier.nom) && st.jour[jour].remplacements.rowing_barre.id === premier.id && st.programmePerso.seances[L].exos.some(e => e.id === 'rowing_barre'), JSON.stringify(Object.keys(st.jour[jour].remplacements || {})));
     check('l\'historique des charges de l\'ancien exercice est intact', st.charges.rowing_barre[0].series[0] === 50);
-    // pour toutes les prochaines séances : le développé militaire
-    await deplier(p, 'Développé militaire'); await tapOuvert(p, 'Remplacer'); await tap(p, 'Matériel indisponible');
-    t = await texte(p);
-    check('motif matériel : des candidats sans barre d\'abord', await p.evaluate(() => { const l = [...document.querySelectorAll('button')].filter(b => /épaules ·/.test(b.textContent)); return l.length >= 2 && !/barre(?! de)/.test(l[0].textContent.split('·')[1] || ''); }), t.slice(t.indexOf('Remplacer «'), t.indexOf('Remplacer «') + 300));
+    // pour toutes les prochaines séances : le développé militaire, remplacé par un exercice pris dans « Toute la banque »
+    await deplier(p, 'Développé militaire'); await tapOuvert(p, 'Remplacer');
+    await p.locator('.onglet-panneau', { hasText: 'Toute la banque' }).tap(); await p.waitForTimeout(300);
+    await p.locator('.recherche-exo').fill('épaules machine'); await p.waitForTimeout(300);
+    check('recherche : « épaules machine » trouve le développé épaules machine', (await p.locator('.exo-candidat', { hasText: 'Développé épaules machine' }).count()) === 1);
     await p.locator('label', { hasText: 'Pour toutes les prochaines séances' }).tap(); await p.waitForTimeout(300);
-    const nom2 = await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /épaules ·/.test(b.textContent)).textContent.split('\n')[0].replace('PHARE', '').trim());
-    await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /épaules ·/.test(b.textContent)).click()); await p.waitForTimeout(700);
+    await p.locator('.exo-candidat', { hasText: 'Développé épaules machine' }).first().tap(); await p.waitForTimeout(700);
     st = await etat(p);
     const dansProg = Object.values(st.programmePerso.seances).filter(s => s.exos.some(e => e.remplace === 'militaire')).length;
-    check('« pour toutes les prochaines séances » : le programme lui-même est modifié, dans chaque séance qui l\'avait', dansProg >= 1 && !Object.values(st.programmePerso.seances).some(s => s.exos.some(e => e.id === 'militaire')), JSON.stringify([nom2, dansProg]));
+    check('« pour toutes les prochaines séances » : le programme lui-même est modifié, dans chaque séance qui l\'avait, avec les doses de la banque', dansProg >= 1 && !Object.values(st.programmePerso.seances).some(s => s.exos.some(e => e.id === 'militaire')) && Object.values(st.programmePerso.seances).some(s => s.exos.some(e => e.id === 'shoulder_press_machine' && e.remplace === 'militaire')), JSON.stringify(dansProg));
     await ctx.close(); }
 
   console.log('\n=== 4. « Adapter ma séance » : temps exact + énergie, recompression, marquée dans l\'historique ===');

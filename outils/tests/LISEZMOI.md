@@ -36,6 +36,11 @@ node outils/sync.test.js             # les copies embarquées sont-elles à jour
   (cartes, pastilles, validation, récap), idées de récompenses avec leur ligne
   « Concrètement », notifications de séance planifiées et annulées (mock
   `/planifier`, `/__planifs`), clôture automatique après 3 h sans activité.
+- `09c-v2009-seance-libre.js` — v20.9, étape 4 : ajout depuis chaque onglet
+  du panneau (Similaires, Toute la banque avec recherche et filtre, Cardio &
+  mobilité, après l'exercice ouvert), retrait et réordonnancement, reps
+  réelles par série → incrément, séance libre complète, journal fidèle,
+  programme inchangé après les ajouts d'un jour, proposition après 3 retraits.
 - `10` à `21` — non-régressions v19.10 → v19.21, portées sur les nouvelles
   questions d'onboarding quand elles passaient par les anciennes.
 

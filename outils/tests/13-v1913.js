@@ -14,6 +14,8 @@ const seed = () => {
   page.on('pageerror', e => console.log('PAGE ERR:', String(e).slice(0,200)));
   await page.addInitScript(seed);
   const cdp = await ctx.newCDPSession(page);
+  // état du mock remis à neuf : la suite 10 vide la cagnotte, cette suite attend le solde de départ (12 €)
+  await fetch('http://127.0.0.1:8323/__reset');
   const ouvrir = async (onglet) => { await page.goto('http://127.0.0.1:8323/app.html', { waitUntil:'load' });
     await page.waitForTimeout(1400); await page.tap('nav >> text=' + onglet); await page.waitForTimeout(1300); };
   const tapSur = async (sel) => { const l = page.locator(sel).first(); await l.scrollIntoViewIfNeeded();

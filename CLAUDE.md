@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.8**
+Version actuelle : **v20.9**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.8"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.9"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -46,7 +46,10 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   explicite), puis v20.0, la séance vivante, le graphique, les bulles, la
   sécurité côté front (`06-securite-front.js`), les retours terrain (`07`,
   `09`), les évolutions v20.6 (`08`), v20.8 (`09b` : XP par difficulté, idées,
-  notifications de séance, clôture à 3 h) et les non-régressions v19.10 → v19.21.
+  notifications de séance, clôture à 3 h), v20.9 (`09c` : la séance libre —
+  ajout depuis chaque onglet du panneau, retrait, réordonnancement, reps
+  réelles, journal, programme inchangé, proposition après 3 retraits) et les
+  non-régressions v19.10 → v19.21.
 - `outils/worker.test.js` — le worker importé dans Node avec un faux KV et un
   faux `fetch` : secrets hors du code, en-têtes, validation, quotas, photos,
   limitation de débit. `node outils/worker.test.js`, à chaque modification
@@ -217,6 +220,63 @@ retour au premier plan ou à la minute — règle « venir compte ».
 sans photo 5 de moins (`xpExoSansPhoto`). Les points attribués sont mémorisés
 par exercice dans `J.xpExos` (annulation, récap) ; `xpSeance(S)` donne le
 « jusqu'à N XP » des cartes et `fourchetteXP(S)` la ligne d'en-tête.
+
+### La séance libre (v20.9, étape 4 du Chantier Programmes)
+
+Principe : **le programme est une proposition, la séance est ce que tu as
+fait.** Tout ce qui se fait en salle se note sans quitter la séance, et rien de
+ce qu'on change pour un jour ne touche le programme.
+
+- **La séance du jour telle qu'elle se joue** est `SJ = seanceDuJour(J,
+  SEANCES)` dans `App` : programme (ou `SEANCE_LIBRE` quand `J.seance === "L"`),
+  séance adaptée, remplacements du jour, **retirés** (`J.retires`, ids),
+  **ajoutés** (`J.ajouts`, exercices au format app portant `ajoute: true` et
+  éventuellement `apres`, l'id de l'exercice après lequel se placer) et
+  l'**ordre du jour** (`J.ordre`). `SJ.retiresExos` garde id + nom des retirés
+  pour le journal. Le programme (`st.programmePerso`) ne bouge que par les
+  actions « pour toutes les prochaines séances » (remplacement pour de bon,
+  « Oui, on l'enlève » de la proposition ci-dessous).
+- **Panneau d'exercices** (`PanneauExercices`, mode `ajouter` ou `remplacer`,
+  style spotlight) : trois onglets — « Similaires » (muscle principal dans le
+  focus de la séance, triés par compartiment, phare en premier),
+  « Toute la banque » (recherche par nom, filtres muscle / compartiment /
+  matériel) et « Cardio & mobilité ». Le contenu vient du moteur :
+  `catalogue(banque, {focus, materiel, exclure})` → `{similaires, tous,
+  cardio}` (faisables d'abord, puis ordre des compartiments, phare, difficulté,
+  nom), `exerciceLibrePourApp(banque, id, {materiel})` fabrique l'exercice au
+  format app avec les doses de la banque (3 séries, reps ou durée, repos,
+  `difficulte` → XP). Bouton `.ajouter-exercice` sous la liste (toujours
+  visible, ajout en fin) et `.ajouter-apres` dans la carte focus (après
+  l'exercice ouvert). « Remplacer » utilise le même panneau, remplaçants
+  directs (`remplacantsPour`) en tête, case « Pour toutes les prochaines
+  séances aussi ».
+- **Retirer et déplacer** dans la carte focus : `.retirer-exercice` →
+  `ConfirmRetrait` (« Retiré. Ça ne change rien à tes XP. »), `.monter` /
+  `.descendre`. Un exercice retiré ne compte ni en positif ni en négatif.
+- **Reps réelles par série** (`SerieInputs`) : un stepper `.reps-serie` à côté
+  de chaque charge, pré-rempli au haut de la fourchette, modifiable au tap
+  (clavier) ou −/+ ; une série non modifiée vaut la valeur pré-remplie.
+  `noterReps` / `persisterReps` écrivent `e.reps` sur l'entrée de charge du
+  jour et en déduisent `e.hautFourchette` ; `figerReps` à la validation. Le
+  moteur (`suggererCharge`, règle 8) lit `der.reps` (toutes ≥ haut de
+  fourchette) et retombe sur `hautFourchette` pour les entrées d'avant ; sans
+  charge notée ce jour-là, la dernière charge connue du même type sert de
+  base. La phrase « Tout tenu ? … » ne s'affiche que quand c'est le cas.
+- **Séance libre** : carte permanente `.carte-libre` dans le carrousel,
+  `choisir("L")`, démarre vide, pas de bouton « Valider ma séance » ni
+  d'« Ajuster » : la barre dit « Terminer la séance », XP des exercices
+  faits, pas de bonus « complète ». Historique `type: "L"`, `libre: true`,
+  « Séance libre — N exercices ».
+- **Le journal** : chaque entrée d'historique porte `...journalDe(J, SJ,
+  charges, jourKey)` — `exos` (id, nom, fait, xp, ajoute, remplace, series,
+  reps, type, ressenti) et `retires` ({id, nom}). Progrès et « dernier » lisent
+  les charges (`st.charges[exId]`), donc un exercice ajouté une fois a son
+  graphique comme les autres.
+- **Proposition après 3 retraits** : `compterRetraits` (à chaque clôture)
+  tient `st.retraits[exId]` — retiré ou remplacé pour le jour trois séances de
+  suite → carte `.proposition-retrait` « on l'enlève du programme ? »
+  (`enleverDuProgramme` retire l'exercice de chaque séance du programme,
+  `garderDansProgramme` remet le compteur à zéro).
 
 ## Structure de l'interface
 
