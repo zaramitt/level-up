@@ -87,7 +87,8 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     check('lesté : saisie du lest (+ kg)', /LEST PAR SÉRIE \(KG\)/.test(await focus.innerText()));
     await p.locator('.fermer-focus').tap(); await p.waitForTimeout(300);
     await p.locator('button', { hasText: 'Progrès' }).first().tap(); await p.waitForTimeout(700);
-    check('le graphique tient compte de l\'assistance (valeur négative, note « moins, c\'est mieux »)', /kg d'assistance|assistance/.test(await texte(p)) && (await p.locator('.note-unique').count()) === 1);
+    // v20.7 : un graphique dès la première note (plus de « note unique »)
+    check('le graphique tient compte de l\'assistance (valeur négative, note « moins, c\'est mieux »)', (await p.locator('.graphe-charge').count()) === 1 && /kg d'assistance : moins, c'est mieux/.test(await p.locator('.graphe-charge').innerText()));
     await ctx.close(); }
 
   console.log('\n=== 18. Ajuster dans les deux sens : temps en plus → compléments ; à fond → intensification ===');
@@ -176,7 +177,7 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     const e = p.locator('.explic-coach');
     check('un tap : une ligne explique (voir tes séances, valider, offrir — et que ça ne lui coûte rien)', (await e.count()) === 1 && /voit tes séances/.test(await e.innerText()) && /valide/.test(await e.innerText()) && /ne lui coûte rien/.test(await e.innerText()) && (await e.locator('button', { hasText: "Envoyer l'invitation" }).count()) === 1);
     await p.locator('button', { hasText: 'Progrès' }).first().tap(); await p.waitForTimeout(700);
-    check('Progrès sans historique : un graphique exemple grisé, « Ta courbe apparaîtra ici dès ta deuxième séance »', (await p.locator('.graphe-exemple .graphe-charge').count()) === 1 && /Ta courbe apparaîtra ici dès ta deuxième séance/.test(await texte(p)) && await p.locator('.graphe-exemple').evaluate(el => parseFloat(getComputedStyle(el).opacity) < 0.6));
+    check('Progrès sans historique : un graphique exemple grisé, « Ta courbe apparaîtra ici dès ta première charge notée »', (await p.locator('.graphe-exemple .graphe-charge').count()) === 1 && /Ta courbe apparaîtra ici dès ta première charge notée/.test(await texte(p)) && await p.locator('.graphe-exemple').evaluate(el => parseFloat(getComputedStyle(el).opacity) < 0.6));
     await ctx.close(); }
 
   await b.close();

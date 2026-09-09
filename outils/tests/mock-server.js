@@ -61,10 +61,17 @@ chargerWorker.then(() => http.createServer((req, res) => {
     lire(req, body => {
       console.log('MOCK /idees reçu:', body.slice(0, 160));
       if (gardeIA()) return;
-      json(res, 200, [2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: 'Idée factice ' + (i + 1) })));
+      json(res, 200, [2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: 'Idée factice ' + (i + 1), concret: 'ce qui se passe vraiment pour l\'idée ' + (i + 1) })));
     });
     return;
   }
+  // v20.8 : notifications de séance — la page planifie (repos, relance) ; le mock mémorise le dernier appel
+  if (/^\/api\/[^/]+\/planifier$/.test(u.pathname) && req.method === 'POST') {
+    lire(req, body => { const b = JSON.parse(body || '{}'); global.__planifs = [...(global.__planifs || []), b]; json(res, 200, { type: b.type, quand: b.quand == null ? null : b.quand }); });
+    return;
+  }
+  if (/^\/api\/[^/]+\/notif$/.test(u.pathname)) { res.writeHead(404, { 'content-type': 'application/json' }); res.end(''); return; }
+  if (u.pathname === '/__planifs') { json(res, 200, global.__planifs || []); return; }
   // v20.4 : rappels push — 503 non_configure sans clé, comme le worker
   if (/^\/api\/[^/]+\/(abonner|testpush)$/.test(u.pathname) && req.method === 'POST') {
     lire(req, body => {
@@ -174,7 +181,7 @@ chargerWorker.then(() => http.createServer((req, res) => {
     return;
   }
   if (u.pathname === '/__profils') { json(res, 200, { codes: [...global.__profils], enregistrements: global.__enregistrements || 0 }); return; }
-  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__pot = null; global.__etat = null; global.__subs = []; global.__profils = new Set(); global.__enregistrements = 0; res.writeHead(200); res.end('ok'); return; }
+  if (u.pathname === '/__reset') { global.__negos = []; global.__paris = []; global.__planifs = []; global.__pot = null; global.__etat = null; global.__subs = []; global.__profils = new Set(); global.__enregistrements = 0; res.writeHead(200); res.end('ok'); return; }
   if (u.pathname.startsWith('/api/')) { res.writeHead(404); res.end('route inconnue'); return; }
   if (u.pathname === '/polices/space-grotesk.woff2') { res.writeHead(200, { 'content-type': 'font/woff2', 'cache-control': 'public, max-age=31536000, immutable' }); return res.end(fs.readFileSync(path.join(DIR, '..', 'polices', 'space-grotesk-latin.woff2'))); }
   const f = path.join(DIR, u.pathname === '/' ? 'app.html' : u.pathname.slice(1));

@@ -84,11 +84,11 @@ Vérification des règles : aucune violation.
 | 6 | **Leg curl allongé** | Isolations (ischio-jambiers) | 3 × 12-15 · repos 90 s |  | Hanches plaquées sur le banc, ramène les talons vers les fesses, redescends lentement. |
 | 7 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s |  | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
 
-### Séance C — Haut du corps · 55 min
+### Séance C — Haut du corps · 54 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
-| 1 | **Pompes** | Poussée horizontale | 3 × 8-12 · repos 120 s |  | Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. |
+| 1 | **Développé couché** | Poussée horizontale | 3 × 5-8 · repos 120 s |  | Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière. |
 | 2 | **Rowing barre** | Tirage horizontal | 3 × 8-12 · repos 120 s |  | Buste penché à 45°, dos plat, tire la barre vers le bas du ventre coudes vers l'arrière, redescends bras tendus. |
 | 3 | **Développé militaire** | Poussée verticale | 3 × 5-8 · repos 120 s |  | Debout, barre sur le haut de la poitrine, fesses et ventre serrés, pousse la barre au-dessus de la tête en reculant légèrement le menton. |
 | 4 | **Traction assistée (machine ou élastique)** | Tirage vertical | 3 × 8-12 · repos 120 s |  | Choisis une assistance qui te laisse 8 à 12 répétitions propres, menton au-dessus de la barre, descente contrôlée. |
@@ -151,13 +151,13 @@ Vérification des règles : aucune violation.
 | 6 | **Abduction machine** | Isolations (abducteurs) | 3 × 8-12 · repos 90 s |  | Buste légèrement penché en avant, écarte les genoux contre la résistance, tiens une seconde en fin de course. |
 | 7 | **Planche** | Gainage | 3 × 40 s · repos 45 s |  | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. |
 
-### Séance D — Push (poussée) · 69 min
+### Séance D — Push (poussée) · 72 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
-| 1 | **Développé incliné haltères** | Poussée horizontale | 5 × 3-6 · repos 180 s |  | Banc à 30°, haltères qui descendent à hauteur du haut de la poitrine, poussée légèrement convergente. |
-| 2 | **Pompes** | Poussée horizontale | 4 × 3-6 · repos 180 s |  | Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. |
-| 3 | **Push press** | Poussée verticale | 5 × 3-6 · repos 180 s |  | Petite flexion de genoux puis extension explosive des jambes pour lancer la barre, termine la poussée avec les bras. |
+| 1 | **Développé couché** | Poussée horizontale | 5 × 3-6 · repos 180 s |  | Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière. |
+| 2 | **Développé incliné haltères** | Poussée horizontale | 5 × 3-6 · repos 180 s |  | Banc à 30°, haltères qui descendent à hauteur du haut de la poitrine, poussée légèrement convergente. |
+| 3 | **Développé militaire** | Poussée verticale | 5 × 3-6 · repos 180 s |  | Debout, barre sur le haut de la poitrine, fesses et ventre serrés, pousse la barre au-dessus de la tête en reculant légèrement le menton. |
 | 4 | **Barre au front** | Isolations (triceps) | 3 × 8-12 · repos 90 s |  | Allongé, barre au-dessus du front, plie les coudes seulement pour descendre la barre vers le front, remonte. |
 | 5 | **Élévation latérale machine** | Isolations (épaules latérales) | 3 × 8-12 · repos 90 s |  | Coussinets contre les bras, monte jusqu'à l'horizontale sans hausser les épaules. |
 | 6 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s |  | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
@@ -166,8 +166,8 @@ Vérification des règles : aucune violation.
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
-| 1 | **Rowing Pendlay** | Tirage horizontal | 5 × 3-6 · repos 180 s |  | Buste à l'horizontale, barre repose au sol entre chaque répétition, tire explosif vers le bas de la poitrine. |
-| 2 | **Traction lestée** | Tirage vertical | 5 × 4-6 · repos 180 s |  | Ceinture de lest ou haltère entre les pieds, même geste strict que la traction, amplitude complète. |
+| 1 | **Rowing barre** | Tirage horizontal | 5 × 3-6 · repos 180 s |  | Buste penché à 45°, dos plat, tire la barre vers le bas du ventre coudes vers l'arrière, redescends bras tendus. |
+| 2 | **Traction** | Tirage vertical | 5 × 3-6 · repos 180 s |  | Départ bras tendus épaules basses, tire les coudes vers les hanches jusqu'au menton au-dessus de la barre, redescends complètement. |
 | 3 | **Oiseau (élévations arrière)** | Isolations (arrière d'épaule) | 3 × 8-12 · repos 90 s |  | Buste penché à l'horizontale, monte les haltères sur les côtés en serrant les omoplates, coudes à peine fléchis. |
 | 4 | **Curl barre** | Isolations (biceps) | 3 × 8-12 · repos 90 s |  | Prise largeur d'épaules, coudes collés aux flancs, monte sans avancer les coudes, descends jusqu'aux bras tendus. |
 | 5 | **Hollow hold** | Gainage | 3 × 20 s · repos 45 s |  | Sur le dos, bas du dos collé au sol, bras et jambes tendus décollés, forme de banane, tiens. |
@@ -176,7 +176,7 @@ Vérification des règles : aucune violation.
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
-| 1 | **Squat avant (front squat)** | Squat (s'accroupir) | 5 × 3-6 · repos 180 s |  | Barre posée sur les épaules devant, coudes hauts tout le mouvement, buste vertical, descends profond. |
+| 1 | **Squat barre** | Squat (s'accroupir) | 5 × 3-6 · repos 180 s |  | Barre sur les trapèzes, inspire et bloque, descends genoux dans l'axe des pieds jusqu'aux cuisses parallèles, remonte en poussant le sol. |
 | 2 | **Soulevé de terre roumain** | Hinge (charnière de hanche) | 5 × 3-6 · repos 180 s |  | Barre collée aux cuisses, hanches qui reculent, dos plat, descends jusqu'à mi-tibia ou l'étirement, remonte en serrant les fesses. |
 | 3 | **Fentes bulgares lestées** | Unilatéral jambes | 4 × 5-8 / côté · repos 120 s |  | Pied arrière sur le banc, haltères en main ou barre sur les épaules, descends jusqu'à ce que le genou arrière frôle le sol, buste légèrement penché, remonte en poussant dans le talon avant. |
 | 4 | **Hip thrust** | Isolations (fessiers) | 3 × 8-12 · repos 90 s |  | Omoplates sur le banc, barre sur les hanches, tibias verticaux en haut, monte en serrant fort les fesses, menton rentré. |
@@ -184,7 +184,7 @@ Vérification des règles : aucune violation.
 | 6 | **Mollets debout (machine)** | Isolations (mollets) | 3 × 8-12 · repos 90 s |  | Jambes tendues, monte sur la pointe le plus haut possible, tiens une seconde, redescends jusqu'à l'étirement complet. |
 | 7 | **Relevés de jambes** | Gainage | 3 × 10-15 · repos 45 s |  | Allongé ou suspendu, monte les jambes jusqu'à 90° en enroulant le bassin, redescends lentement sans toucher. |
 
-**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 18 / 23 · fessiers 9 / 26 · ischio-jambiers 16 / 19 · pectoraux 19 / 21.5 · dos 20 / 32 · épaules 16 / 25.5 — bornes du niveau 3 : 10-20.
+**Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 18 / 20.5 · fessiers 9 / 26 · ischio-jambiers 16 / 19 · pectoraux 20 / 25 · dos 20 / 29.5 · épaules 16 / 26 — bornes du niveau 3 : 10-20.
 
 **Avertissements du moteur** :
 - Objectif libre « je veux être plus fort, soulever plus lourd » interprété comme « Force » (mots-clés, sans IA).
@@ -223,17 +223,18 @@ Vérification des règles : aucune violation.
 | 7 | **Planche** | Gainage | 3 × 40 s · repos 45 s |  | Coudes sous les épaules, corps d'une seule pièce des talons à la tête, fesses et ventre serrés, respire. |
 | 8 | **Pallof press à demi-genou** | Gainage | 3 × 8-12 / côté · repos 45 s | sport | Un genou au sol, l'autre pied devant, poulie sur le côté à hauteur de poitrine, pousse les mains devant toi et tiens deux secondes sans que le buste tourne. |
 
-### Séance C — Haut du corps · 56 min
+### Séance C — Haut du corps · 60 min
 
 | # | Exercice | Compartiment | Dose | Pourquoi | Consigne |
 |---|---|---|---|---|---|
-| 1 | **Pompes** | Poussée horizontale | 3 × 8-12 · repos 120 s |  | Corps gainé d'une pièce, descends jusqu'à frôler le sol avec la poitrine, coudes à 45° du buste. |
-| 2 | **Rowing haltère un bras** | Tirage horizontal | 3 × 8-12 / côté · repos 120 s |  | Main et genou sur le banc, dos plat, tire l'haltère vers la hanche coude près du corps, redescends jusqu'à l'étirement. |
+| 1 | **Développé couché** | Poussée horizontale | 3 × 5-8 · repos 120 s |  | Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière. |
+| 2 | **Rowing barre** | Tirage horizontal | 3 × 8-12 · repos 120 s |  | Buste penché à 45°, dos plat, tire la barre vers le bas du ventre coudes vers l'arrière, redescends bras tendus. |
 | 3 | **Développé militaire** | Poussée verticale | 3 × 5-8 · repos 120 s |  | Debout, barre sur le haut de la poitrine, fesses et ventre serrés, pousse la barre au-dessus de la tête en reculant légèrement le menton. |
 | 4 | **Traction assistée (machine ou élastique)** | Tirage vertical | 3 × 8-12 · repos 120 s |  | Choisis une assistance qui te laisse 8 à 12 répétitions propres, menton au-dessus de la barre, descente contrôlée. |
 | 5 | **Élévation latérale à la poulie** | Isolations (épaules latérales) | 3 × 12-15 / côté · repos 90 s |  | Poulie basse de l'autre côté du corps, monte le bras sur le côté jusqu'à l'horizontale, tension constante. |
 | 6 | **Face pull (poulie / élastique)** | Isolations (arrière d'épaule) | 3 × 12-15 · repos 90 s |  | Corde à hauteur des yeux, tire vers le visage en écartant les mains, coudes hauts, serre les omoplates en fin de course. |
-| 7 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s | sport | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
+| 7 | **Bird-dog** | Gainage | 3 × 8-12 / côté · repos 45 s |  | À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens. |
+| 8 | **Pallof press** | Gainage | 3 × 12-15 / côté · repos 45 s | sport | De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s. |
 
 ### Séance D — Bas du corps · 60 min
 

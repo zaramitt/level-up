@@ -71,10 +71,15 @@ traités. Ce qui reste :
 Générateur incohérent traité : le moteur (règles en code, banque étiquetée)
 est branché en v20.0, étape 3 passe 1. Ce qui reste :
 
+- **PRIORITÉ HAUTE — ÉTAPE 4, avant le champ « ajuster mon programme » : la
+  séance libre — voir cadrage à venir.**
 - **PRIORITÉ HAUTE — Champ permanent « Ajuster mon programme »** : renforcer
   X en ce moment, éviter Y (blessure), cycles de plusieurs semaines sur un
   focus. Passe par `/interpreter` → contraintes du moteur (exclusions,
   priorités, durée du cycle). Étape 4 du chantier.
+- **Vérification par photo : alternatives à étudier** (le duo se voit déjà à
+  la salle). Géolocalisation exclue. Piste : photo facultative en duo de
+  confiance, obligatoire hors cercle.
 
 - Passe 2 faite en v20.1 (ressenti, incrément, remplacement, adapter,
   récupération active). Reste : monter d'un cran dans l'échelle d'un exercice
@@ -109,6 +114,9 @@ est branché en v20.0, étape 3 passe 1. Ce qui reste :
 Hiérarchie, validation des mini-kifs et libellés des champs traités en v19.15
 (passe 3). Ce qui reste relève de la densité d'affichage et de l'économie des
 XP, pas de la structure de l'onglet.
+
+- **Récompenser l'atteinte d'objectifs** (mois complet, cycle terminé), pas
+  seulement les niveaux.
 
 - **PRIORITÉ MOYENNE — Rythme de déblocage en paquets** : creux de ~17 séances
   avant N4 et ~25 avant N5, puis 4 récompenses d'un coup (8 si deux styles
@@ -199,6 +207,17 @@ un aperçu. Reste à discuter :
   partenariat. Piste : le créateur comme coach pro de ses abonnés.
 - Sponsoring / réductions chez des partenaires comme récompenses. Risque de
   triche à traiter (validation coach, plafonds, preuve photo).
+
+## App Store (native)
+
+- **Détection par rythme cardiaque (Apple Watch / Santé)** : reconnaître une
+  séance ou une course, valider « j'ai bien bougé » par le podomètre. Réservé
+  à la version native.
+
+## Produit
+
+- **Apprentissage des comportements** : l'app doit déduire les habitudes
+  (heures, exercices préférés, machines disponibles) — à concevoir.
 
 ## Idées produit (non planifiées)
 

@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.6**
+Version actuelle : **v20.8**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.6"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.8"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -27,7 +27,8 @@ Déploiement : **Cloudflare Worker** (pas Pages).
 - `moteur-programmes.js` — le **moteur de génération de programmes**
   (fonction pure, règles 1-12 de `DECISIONS.md`, testé par
   `moteur-programmes.test.js`) ; `banque-exercices.json` — la banque
-  d'exercices (vue lisible : `EXERCICES.md`). Tous deux sont **embarqués dans
+  d'exercices (vue lisible : `EXERCICES.md`, à tenir à la main à chaque ajout —
+  118 exercices). Tous deux sont **embarqués dans
   `index.html`** (balises `<script id="moteur-programmes">` et
   `<script id="banque-exercices">`) : la génération se fait dans l'app,
   instantanément et hors ligne.
@@ -43,8 +44,9 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   dans l'ordre), et les suites numérotées — `01-securite-profils-existants.js`
   en premier (aucun profil existant ne change de programme sans action
   explicite), puis v20.0, la séance vivante, le graphique, les bulles, la
-  sécurité côté front (`06-securite-front.js`) et les non-régressions
-  v19.10 → v19.21.
+  sécurité côté front (`06-securite-front.js`), les retours terrain (`07`,
+  `09`), les évolutions v20.6 (`08`), v20.8 (`09b` : XP par difficulté, idées,
+  notifications de séance, clôture à 3 h) et les non-régressions v19.10 → v19.21.
 - `outils/worker.test.js` — le worker importé dans Node avec un faux KV et un
   faux `fetch` : secrets hors du code, en-têtes, validation, quotas, photos,
   limitation de débit. `node outils/worker.test.js`, à chaque modification
@@ -68,11 +70,16 @@ Configuration Cloudflare :
 | Variable `CONTACT` (facultative) | adresse de contact : sujet VAPID et page Confidentialité (`<meta name="contact">`) |
 | Cron rappel du soir | `0 18 * * *` |
 | Cron compléments du matin | `0 6 * * *` |
+| Cron notifications de séance (v20.8) | `* * * * *` — pousse les notifications planifiées par l'app (fin de repos, « Tu as fini ? ») |
 
-Routes `/idees` et `/interpreter` : appels à l'API Anthropic (modèle épinglé
-dans `worker.js`, `claude-haiku-4-5` à ce jour), réponses au format garanti
-par l'API (structured outputs). `/idees` accepte des **styles de récompenses
-combinés**. Depuis la v20.0, **l'IA ne génère plus de programme** : elle ne
+Routes `/idees` et `/interpreter` : appels à l'API Anthropic (modèles épinglés
+dans `worker.js` : `claude-sonnet-5` pour `/idees` depuis la v20.8,
+`claude-haiku-4-5` pour `/interpreter`), réponses au format garanti par l'API
+(structured outputs). `/idees` accepte des **styles de récompenses combinés**
+et renvoie pour chaque idée `niveau`, `label` et `concret` (la ligne
+« Concrètement : … ») ; le prompt porte trois bonnes et trois mauvaises idées,
+une vérification orthographique minimale écarte les libellés suspects (mot
+inventé, lettres triplées, mot sans voyelle) et redemande une fois. Depuis la v20.0, **l'IA ne génère plus de programme** : elle ne
 fait que lire un objectif en texte libre (`/interpreter`) ; la structure des
 séances vient du moteur, en code.
 
@@ -95,6 +102,8 @@ par le code duo (`<code>:etat`, `<code>:negos`…).
 | `/photo/<id>` | GET | lecture d'une preuve photo (texte, `nosniff`, cache privé 1 h) |
 | `/rappels` | GET, POST | préférences de rappels (drapeau `matin`) |
 | `/abonner` | POST | enregistrement d'un abonnement push (4 derniers conservés) — **services acceptés : Apple, Google/FCM, Mozilla** ; `503` sans clé VAPID |
+| `/planifier` | POST | notifications de séance (v20.8) : `{type: "repos"|"relance", quand: epoch ms | null}` — l'app planifie la fin du repos et la relance « Tu as fini ? » 18 min après le dernier exercice, `null` annule ; rangé dans la clé globale `planif:index`, poussé par le cron de la minute |
+| `/notif` | GET | le message du moment pour le service worker (`<code>:notif`, 5 min) : titre, corps, tag — `404` sinon (le service worker retombe sur le rappel du soir ou du matin) |
 | `/desabonner` | POST | retrait d'un abonnement push |
 | `/testpush` | POST | envoi d'une notification de test (`503` sans clé VAPID) |
 | `/profil` | POST | enregistrement du code (v20.4) : l'app l'appelle à la création d'un profil et au premier démarrage ; **un code jamais enregistré n'a droit à aucun appel IA** (`403 code_inconnu`) |
@@ -160,6 +169,25 @@ sport ne bloquent jamais un programme : placement souple
 (`moteur.placementSouple`, jamais de grosse séance jambes la veille ni le jour
 même), dit dans « À savoir ».
 
+Depuis la v20.7 : le **phare** d'un compartiment (règle 9 : développé couché,
+squat barre, soulevé de terre roumain, militaire, rowing barre, traction)
+ouvre toujours la première case de son compartiment dans la séance quand il
+est faisable et admissible (`phareDe` dans `choisir`) ; la variation joue sur
+la seconde case, jamais sur le phare. Sauf pour l'unilatéral, et sauf quand le
+sport pousse un favori du même compartiment. Le **modificateur foot** pèse à
+tous les niveaux (ischios obligatoires, hanches, mollets, unilatéral,
+anti-rotation, avec des options de difficulté 1) ; `adaptesSport(s, entrees)`
+liste ce que le sport a marqué dans une séance, `noteSport` en fait la phrase.
+Le **ressenti** se replie sur le choix retenu après le tap (« modifier » rouvre
+les trois). « dernier » n'est affiché qu'avec une vraie valeur (`derAffiche`).
+Les **sons** demandent une session audio `ambient` (`navigator.audioSession`,
+iOS 17+) pour se mêler à la musique au lieu de la couper ; sans l'API, volume
+baissé. La barre de clôture dit « Terminer la séance ». En duo, **cagnotte et
+paris sont toujours présents** : état « dès que ton coach a rejoint » tant que
+`st.coachLie` est faux, et « indisponible — réessayer » si le serveur ne répond
+pas (plus jamais masqués). Progrès : **un graphique par exercice dès la
+première charge notée** (un point au centre).
+
 Migration, option (b) : un profil d'avant la v20.0 **garde son programme tel
 quel**. Une carte dans l'onglet Séance (« Nouveau moteur de programmes —
 veux-tu régénérer le tien ? ») ouvre les questions pré-remplies puis un
@@ -168,6 +196,27 @@ conservés, identifiants d'exercices stables), « Garder l'ancien » masque la
 carte (`st.moteurRefuse`), qui reste accessible dans les réglages. Le même
 flux (`Regenerer`) sert à « Changer de programme » et à chaque réponse
 modifiée dans « Mon programme ».
+
+### Notifications de séance et XP (v20.8)
+
+Le service worker (`SW` dans `worker.js`) reçoit le code duo par `postMessage`
+(rangé dans le Cache API) et, à chaque push, demande `/api/<code>/notif` pour
+savoir quoi afficher. L'app ne planifie que si les rappels sont activés
+(`st.reglages.rappels`) : `planifier(type, quand)` dans `App`, annulation dès
+que le repos se termine à l'écran ; en arrière-plan sur Android, l'app notifie
+aussi elle-même (`showNotification`). Le cron ne passe qu'une fois par minute :
+une notification de fin de repos peut arriver jusqu'à une minute après la fin
+réelle, et une échéance en retard de plus de 15 min est abandonnée.
+`J.activite` horodate le dernier geste (validation, charge, repos, tour de
+gainage) ; après **3 h sans activité**, la séance entamée est enregistrée
+comme partielle (`autoInactivite`, historique `auto: true`), au chargement, au
+retour au premier plan ou à la minute — règle « venir compte ».
+
+**XP par difficulté** : `xpExo(ex)` = 10 / 15 / 20 selon `ex.difficulte` (1 / 2
+/ 3, posée par le moteur ; 15 sans difficulté connue, anciens programmes),
+sans photo 5 de moins (`xpExoSansPhoto`). Les points attribués sont mémorisés
+par exercice dans `J.xpExos` (annulation, récap) ; `xpSeance(S)` donne le
+« jusqu'à N XP » des cartes et `fourchetteXP(S)` la ligne d'en-tête.
 
 ## Structure de l'interface
 

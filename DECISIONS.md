@@ -210,6 +210,112 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.8 — septembre 2026
+
+Retour terrain de Léo sur la v20.6, second commit : rappels et idées.
+
+- **Notifications de séance, quand l'app est installée sur l'écran
+  d'accueil** : fin du repos en cours si l'app est en arrière-plan, « Tu as
+  fini ? Termine ta séance pour la compter » 18 min après le dernier exercice
+  validé tant que la séance n'est pas terminée. Mise en œuvre : sur iPhone,
+  l'app en arrière-plan est gelée, seul un push du serveur arrive. L'app
+  planifie donc côté serveur (`/planifier`) et un **cron chaque minute**
+  pousse ce qui est dû ; le message à afficher est déposé sous `<code>:notif`
+  et le service worker vient le lire (le push reste sans payload chiffré,
+  comme depuis la v19). Limites assumées : une minute d'imprécision au plus
+  sur la fin du repos (le cron), et un push qui peut arriver alors qu'on vient
+  de rouvrir l'app (l'annulation part dès que le repos s'achève à l'écran, le
+  cron peut déjà être passé). Écarté : Durable Objects avec alarme (exact à la
+  seconde, mais une migration de déploiement à faire par Léo) — à reprendre
+  si l'imprécision gêne en salle. Sur Android, l'app notifie aussi elle-même
+  en arrière-plan. Une échéance en retard de plus de 15 min n'est jamais
+  poussée. Compteur KV : une écriture par planification (≈ 25 par séance),
+  loin des 1 000 par jour du palier gratuit pour quelques personnes.
+- **Clôture automatique après 3 h sans activité, comme partielle** (règle
+  « venir compte » de la v19.18), en plus de la clôture au jour suivant. Le
+  dernier geste (`J.activite`) est horodaté à chaque validation, charge,
+  repos ou tour de gainage ; la vérification se fait au chargement, au retour
+  au premier plan et à la minute — jamais de processus serveur pour ça.
+- **Idées de récompenses sur Sonnet** (`claude-sonnet-5`, le quota journalier
+  borne le coût : 10 par code, 150 pour l'app), avec trois exigences dans le
+  prompt : chaque idée est concrète et expliquée (une ligne « Concrètement :
+  … », stockée avec la récompense et affichée sur sa carte), français
+  irréprochable, ton humain — et trois bonnes idées, trois mauvaises
+  (« défi farfelu avec gage hilarant », « défi photo ridicule », « blagues
+  marantesse ») en exemple. **Vérification orthographique minimale côté
+  worker** : pas d'analyse de la langue, mais ce qu'un mot inventé ou une
+  sortie hors format laisse derrière lui (lettres triplées, mot sans voyelle,
+  mot de plus de 20 lettres, caractère hors alphabet, texte trop court ou
+  trop long) ; hors format ou plus d'un tiers d'idées suspectes → une seule
+  nouvelle génération avec consigne de relecture, puis les suspectes sont
+  écartées. Jamais une idée suspecte à l'écran ; s'il ne reste rien, l'app dit
+  que l'IA n'a rien produit de propre.
+- **Barème d'XP selon la difficulté de l'exercice** (banque : 1 / 2 / 3) :
+  +10 / +15 / +20 au lieu de +15 uniforme, sans photo 5 de moins (5 / 10 / 15,
+  la photo garde son avantage). Transparence : le « jusqu'à N XP » des cartes
+  et la pastille par exercice suivent, l'en-tête de séance dit la fourchette
+  (« 10 à 20 XP par exercice »), le récap dit « N exercices validés = X XP ».
+  Les points attribués sont mémorisés par exercice (`J.xpExos`) : une
+  annulation retire exactement ce qui avait été donné. Les anciens programmes
+  (templates sans difficulté) restent à 15.
+
+## v20.7 — septembre 2026
+
+Retour terrain de Léo sur la v20.6, premier commit : les corrections.
+
+- **Ressenti : après le tap, seul le choix retenu reste**, modifiable d'un tap
+  (« modifier » rouvre les trois boutons). Trois boutons qui restent affichés
+  après le choix faisaient douter que le tap ait été pris.
+- **« dernier » n'est affiché qu'avec une vraie valeur.** La case « j'ai tenu
+  N reps » et le ressenti créent une entrée du jour sans charge ; elle
+  s'affichait en « dernier : » vide. L'app remonte à la dernière entrée qui
+  porte une valeur.
+- **En duo, cagnotte et paris existent toujours.** Diagnostic : en l'état, la
+  cagnotte disparaissait sans un mot dès que `/pot` ne répondait pas, et les
+  deux sections ne disaient rien du coach pas encore relié. Désormais : tant
+  que le coach n'a pas rejoint (`st.coachLie`), le pari affiche « Dès que ton
+  coach a rejoint, vous pourrez lancer un pari » (pas de bouton), la cagnotte
+  dit qu'elle se remplit déjà et que le coach la verra ; serveur injoignable →
+  « indisponible pour le moment — Réessayer », jamais masqué. Le rôle, lui,
+  est bien détecté (`profil.solo` seul décide).
+- **Sons : session audio « ambient »** (`navigator.audioSession`, iOS 17+) pour
+  que les bips se mêlent à la musique au lieu de la couper ; sans l'API, sons
+  courts et volume à 0,45. Revers assumé, à confirmer en salle : en
+  « ambient », le bouton silencieux coupe aussi les bips (la v19.21 s'appuyait
+  sur l'inverse). Si les bips manquent en silencieux, la piste est un réglage
+  « bips prioritaires » qui repasse en `playback`.
+- **Modificateur foot renforcé** : ischios obligatoires (nordic au niveau 3,
+  leg curl sinon), adducteurs, abducteurs, mollets et quadriceps prioritaires,
+  favoris à tous les niveaux (fentes, step-up, curtsy, clamshell, abduction,
+  mollets, RDL une jambe, Pallof, face pull, push press). Vérifié par test : au
+  moins deux exercices adaptés par séance bas et un par séance haut, à tous
+  les niveaux et fréquences. Limite connue : au niveau 1 (4-5 exercices par
+  séance), les cases d'isolation vont à l'unilatéral et aux ischios, pas la
+  place pour les hanches et les mollets en plus. Le bird-dog compte comme
+  anti-rotation de difficulté 1 (la planche sur les genoux n'en est pas).
+- **Le phare ouvre toujours sa case** (règle 9) : jour push = développé
+  couché, puis un second exercice pecs choisi par la variation ; de même
+  squat barre, RDL, militaire, rowing barre, traction. Au niveau 3, la
+  préférence pour les versions avancées le faisait sauter (dips et incliné à
+  la place). Exceptions : l'unilatéral (case de variété et de sport) et un
+  favori du sport dans le même compartiment (rugby : soulevé de terre).
+  Corollaire : l'Arnold press ne se place plus de lui-même (le militaire
+  ouvre la poussée verticale) ; il reste comme remplaçant.
+- **Banque : « Dips à la machine assise »** (machine, charge en kg,
+  difficulté 2, monte vers les dips) — remplaçant direct des dips quand les
+  barres manquent (règle 12 : un cran de difficulté au plus, d'où le 2). Les
+  autres exercices au poids du corps avaient déjà leur version machine ou
+  poulie (chest press, traction assistée, tirage horizontal, développé épaules
+  machine, presse, triceps poulie, mollets, leg curl, hip thrust machine,
+  abduction) — vérifié par test.
+- **Progrès : un graphique par exercice dès la première charge notée**, un
+  point au centre et « la courbe se dessine dès la prochaine » ; plus de liste
+  « une seule note » à part.
+- **« Fin de séance » → « Terminer la séance »** : un verbe, une action.
+- Au passage : le vérificateur signalait sept fois « grosse séance jambes
+  la veille d'un sport » en placement strict (un `else` rattaché au mauvais
+  `if`) — corrigé, la règle souple ne s'applique qu'en placement souple.
+
 ## v20.6 — septembre 2026
 
 Retour terrain complet de Léo, second commit : les évolutions.

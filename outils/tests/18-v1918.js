@@ -66,18 +66,18 @@ const { chromium } = require('playwright');
     console.log('\n=== POINT 3 — carte de clôture proéminente ===');
     await p.waitForTimeout(400);
     const carte = await p.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => (x.textContent || '').includes("Fin de séance"));
+      const b = [...document.querySelectorAll('button')].find(x => (x.textContent || '').includes("Terminer la séance"));
       if (!b) return null;
       const cs = getComputedStyle(b);
       return { texte: b.textContent.slice(0, 130), borderColor: cs.borderColor, aFond: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && !cs.backgroundColor.includes('0.055') };
     });
-    console.log('  barre « Fin de séance » visible dès 1 exo validé:', !!carte);
+    console.log('  barre « Terminer la séance » visible dès 1 exo validé:', !!carte);
     console.log('  compte affiché « 1/6 exercices gardés »:', carte && carte.texte.includes('1/6 exercices gardés'));
     console.log('  mention « la séance compte, sans le bonus »:', carte && carte.texte.includes('sans le bonus'));
     await p.screenshot({ path: 'v1918-carte.png' });
 
     // le tap clôture en partielle et compte au compteur
-    await p.locator('button', { hasText: "Fin de séance" }).tap();
+    await p.locator('button', { hasText: "Terminer la séance" }).tap();
     await p.waitForTimeout(800);
     await p.locator('button', { hasText: 'Continuer' }).tap(); await p.waitForTimeout(400); // popup de célébration
     const st3 = await lireSt(p);
