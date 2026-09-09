@@ -119,6 +119,7 @@ const CLE_MOCK = 'B' + 'A'.repeat(86);
     // un parcours qui touche les data: (icônes, sons) et les blob:
     await p.locator('.carte-seance').first().tap(); await p.waitForTimeout(600);
     await p.locator('button[aria-expanded]').first().tap(); await p.waitForTimeout(500);
+    await p.locator('.fermer-focus').tap(); await p.waitForTimeout(400); // v20.6 : la popup focus couvre la barre d'onglets
     await p.locator('button', { hasText: 'Progrès' }).first().tap(); await p.waitForTimeout(500);
     check('aucune violation de CSP sur le parcours (démarrage, séance, exercice déplié, progrès)', violations.length === 0, violations.join(' | '));
     check('aucune requête vers un tiers : ni Google Fonts, ni personne', tiers.length === 0, [...new Set(tiers)].join(', '));

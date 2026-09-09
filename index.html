@@ -180,27 +180,27 @@
   // repli : quand une case d'isolation n'a plus de muscle libre dans la séance (jamais deux
   // isolations du même muscle), elle devient un polyarticulaire du focus
   const FOCUS = {
-    fullA: { nom: "Full body A", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+    fullA: { muscles: "Tout le corps", nom: "Full body A", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
       cases: [{ c: "squat" }, { c: "poussee_h" }, { c: "tirage_h" }, { c: "hinge" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    fullB: { nom: "Full body B", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+    fullB: { muscles: "Tout le corps", nom: "Full body B", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
       cases: [{ c: "hinge" }, { c: "poussee_v" }, { c: "tirage_v" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    fullC: { nom: "Full body C", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
+    fullC: { muscles: "Tout le corps", nom: "Full body C", comp: FULL, iso: [...ISO_HAUT, ...ISO_BAS], bas: true,
       cases: [{ c: "unilateral" }, { c: "poussee_h" }, { c: "tirage_h" }, { c: "squat" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    haut: { nom: "Haut du corps", comp: ["poussee_h", "poussee_v", "tirage_h", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
+    haut: { muscles: "Pecs · dos · épaules · bras", nom: "Haut du corps", comp: ["poussee_h", "poussee_v", "tirage_h", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
       cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "poussee_v" }, { c: "tirage_v" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    bas: { nom: "Bas du corps", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+    bas: { muscles: "Jambes · fessiers", nom: "Bas du corps", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
       cases: [{ c: "squat" }, { c: "hinge" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    push: { nom: "Push (poussée)", comp: ["poussee_h", "poussee_v", "isolation", "gainage"], iso: ["triceps", "épaules latérales"], bas: false,
+    push: { muscles: "Pecs · épaules · triceps", nom: "Push (poussée)", comp: ["poussee_h", "poussee_v", "isolation", "gainage"], iso: ["triceps", "épaules latérales"], bas: false,
       cases: [{ c: "poussee_h" }, { c: "poussee_v" }, { c: "poussee_h" }, { c: "isolation", m: ["triceps"] }, { c: "isolation", m: ["épaules latérales"] }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
-    pull: { nom: "Pull (tirage)", comp: ["tirage_h", "tirage_v", "isolation", "gainage"], iso: ["biceps", "arrière d'épaule"], bas: false,
+    pull: { muscles: "Dos · biceps", nom: "Pull (tirage)", comp: ["tirage_h", "tirage_v", "isolation", "gainage"], iso: ["biceps", "arrière d'épaule"], bas: false,
       cases: [{ c: "tirage_v" }, { c: "tirage_h" }, { c: "tirage_h" }, { c: "isolation", m: ["arrière d'épaule"] }, { c: "isolation", m: ["biceps"] }, { c: "isolation", repli: "tirage_v" }, { c: "gainage" }] },
-    legs: { nom: "Legs (jambes)", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+    legs: { muscles: "Jambes · fessiers", nom: "Legs (jambes)", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
       cases: [{ c: "squat" }, { c: "hinge" }, { c: "unilateral" }, { c: "isolation", m: ["fessiers"] }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    focusBas: { nom: "Focus bas du corps", comp: ["hinge", "unilateral", "squat", "isolation", "gainage"], iso: ISO_BAS, bas: true,
+    focusBas: { muscles: "Fessiers · ischios · jambes", nom: "Focus bas du corps", comp: ["hinge", "unilateral", "squat", "isolation", "gainage"], iso: ISO_BAS, bas: true,
       cases: [{ c: "hinge" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "squat" }, { c: "gainage" }] },
-    focusHaut: { nom: "Focus haut du corps", comp: ["poussee_h", "tirage_h", "poussee_v", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
+    focusHaut: { muscles: "Pecs · dos · épaules", nom: "Focus haut du corps", comp: ["poussee_h", "tirage_h", "poussee_v", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
       cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
-    recup: { nom: "Récupération active", comp: ["cardio_mobilite"], iso: [], bas: false,
+    recup: { muscles: "Récupération active", nom: "Récupération active", comp: ["cardio_mobilite"], iso: [], bas: false,
       cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1200 }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }] }
   };
   const appartientAuFocus = (e, focus) => {
@@ -256,20 +256,20 @@
   // d'isolation du bas devient une seconde case unilatérale ; gainage anti-rotation en plus
   const SPORTS = {
     // obligatoires : une entrée = un exercice ou une liste d'alternatives (le premier admissible est pris)
-    course: { nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    cyclisme: { nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
-    natation: { nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
-    football: { nom: "Football", prioritaires: ["ischio-jambiers", "fessiers", "adducteurs", "quadriceps"], favoris: ["nordic", "bulgare", "fente_laterale", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    tennis: { nom: "Tennis & padel", prioritaires: ["arrière d'épaule", "épaules", "fessiers", "obliques"], favoris: ["pallof", "planche_laterale", "fente_laterale", "tirage_ela"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
-    rugby: { nom: "Rugby", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "quadriceps", "pectoraux"], favoris: ["souleve_terre", "squat", "rowing_barre"], unilateral: false, brasMin: false, antiRotation: false, cote: null },
-    basket: { nom: "Basket & handball", prioritaires: ["quadriceps", "fessiers", "mollets", "épaules"], favoris: ["bulgare", "stepup", "mollets", "squat_saut"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
-    escalade: { nom: "Escalade", prioritaires: ["dos (grand dorsal)", "biceps", "arrière d'épaule", "avant-bras"], favoris: ["traction", "traction_lestee", "rowing_inverse", "hollow"], unilateral: false, brasMin: false, antiRotation: false, cote: "haut" },
-    frappe: { nom: "Sports de frappe", prioritaires: ["obliques", "épaules", "chaîne postérieure", "mollets"], favoris: ["pallof", "planche_laterale", "push_press", "swing"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
-    prehension: { nom: "Sports de préhension", prioritaires: ["dos (grand dorsal)", "chaîne postérieure", "biceps", "obliques"], favoris: ["traction", "rowing_barre", "souleve_terre", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: null },
-    mma: { nom: "MMA", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "obliques", "épaules"], favoris: ["traction", "souleve_terre", "pallof", "push_press"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
-    equitation: { nom: "Équitation", prioritaires: ["adducteurs", "fessiers", "abducteurs", "dos (grand dorsal)"], favoris: ["fente_laterale", "abduction", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    danse: { nom: "Danse", prioritaires: ["fessiers", "abducteurs", "mollets", "obliques"], favoris: ["bulgare", "mollets", "planche_laterale", "abduction"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    yoga: { nom: "Yoga & pilates", prioritaires: ["dos (grand dorsal)", "pectoraux", "fessiers", "épaules"], favoris: ["traction", "developpe_couche", "hipthrust"], unilateral: false, brasMin: false, antiRotation: false, cote: null }
+    course: { libelle: "à la course à pied", nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    cyclisme: { libelle: "au vélo", nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    natation: { libelle: "à la natation", nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
+    football: { libelle: "au foot", nom: "Football", prioritaires: ["ischio-jambiers", "fessiers", "adducteurs", "quadriceps"], favoris: ["nordic", "bulgare", "fente_laterale", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    tennis: { libelle: "au tennis et au padel", nom: "Tennis & padel", prioritaires: ["arrière d'épaule", "épaules", "fessiers", "obliques"], favoris: ["pallof", "planche_laterale", "fente_laterale", "tirage_ela"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    rugby: { libelle: "au rugby", nom: "Rugby", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "quadriceps", "pectoraux"], favoris: ["souleve_terre", "squat", "rowing_barre"], unilateral: false, brasMin: false, antiRotation: false, cote: null },
+    basket: { libelle: "au basket et au hand", nom: "Basket & handball", prioritaires: ["quadriceps", "fessiers", "mollets", "épaules"], favoris: ["bulgare", "stepup", "mollets", "squat_saut"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    escalade: { libelle: "à l'escalade", nom: "Escalade", prioritaires: ["dos (grand dorsal)", "biceps", "arrière d'épaule", "avant-bras"], favoris: ["traction", "traction_lestee", "rowing_inverse", "hollow"], unilateral: false, brasMin: false, antiRotation: false, cote: "haut" },
+    frappe: { libelle: "aux sports de frappe", nom: "Sports de frappe", prioritaires: ["obliques", "épaules", "chaîne postérieure", "mollets"], favoris: ["pallof", "planche_laterale", "push_press", "swing"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    prehension: { libelle: "aux sports de préhension", nom: "Sports de préhension", prioritaires: ["dos (grand dorsal)", "chaîne postérieure", "biceps", "obliques"], favoris: ["traction", "rowing_barre", "souleve_terre", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: null },
+    mma: { libelle: "au MMA", nom: "MMA", prioritaires: ["chaîne postérieure", "dos (grand dorsal)", "obliques", "épaules"], favoris: ["traction", "souleve_terre", "pallof", "push_press"], unilateral: true, brasMin: false, antiRotation: true, cote: null },
+    equitation: { libelle: "à l'équitation", nom: "Équitation", prioritaires: ["adducteurs", "fessiers", "abducteurs", "dos (grand dorsal)"], favoris: ["fente_laterale", "abduction", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    danse: { libelle: "à la danse", nom: "Danse", prioritaires: ["fessiers", "abducteurs", "mollets", "obliques"], favoris: ["bulgare", "mollets", "planche_laterale", "abduction"], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    yoga: { libelle: "au yoga et au pilates", nom: "Yoga & pilates", prioritaires: ["dos (grand dorsal)", "pectoraux", "fessiers", "épaules"], favoris: ["traction", "developpe_couche", "hipthrust"], unilateral: false, brasMin: false, antiRotation: false, cote: null }
   };
 
   /* ------------------------------------------------------------------ */
@@ -466,17 +466,21 @@
   /* ------------------------------------------------------------------ */
   const combinaisons = (n, k) => { const out = []; const rec = (d, acc) => { if (acc.length === k) { out.push(acc.slice()); return; } for (let i = d; i <= n; i++) { acc.push(i); rec(i + 1, acc); acc.pop(); } }; rec(1, []); return out; };
   const suivant = d => d === 7 ? 1 : d + 1, precedent = d => d === 1 ? 7 : d - 1;
-  // jamais le même gros groupe deux jours de suite (dur) ; jamais de séance un jour de sport (dur) ;
-  // ensuite : le moins de jours collés, le bloc le plus court, la semaine plutôt que le week-end,
-  // les séances jambes loin des jours de sport
-  const placer = (seances, joursSport) => {
+  const JOURS_NOM = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+  // jamais le même gros groupe deux jours de suite (dur) ; jamais de séance un jour de sport (dur,
+  // tant que c'est possible) ; ensuite : le moins de jours collés, le bloc le plus court, la
+  // semaine plutôt que le week-end, les séances jambes loin des jours de sport.
+  // Mode souple (v20.6) : quand les jours de sport ne laissent pas la place, on s'entraîne aussi
+  // ces jours-là — la règle dure devient « pas de grosse séance jambes la veille ni le jour même »
+  const placer = (seances, joursSport, souple) => {
     const k = seances.length;
     const groupes = seances.map(s => new Set(s.exercices.map(grosGroupe).filter(Boolean)));
     const jambes = seances.map(s => FOCUS[s.focus] && FOCUS[s.focus].bas);
     const sport = new Set(joursSport);
     let meilleur = null, meilleurScore = -Infinity;
     for (const jours of combinaisons(7, k)) {
-      if (jours.some(d => sport.has(d))) continue;
+      if (!souple && jours.some(d => sport.has(d))) continue;
+      if (souple && jours.some((d, i) => jambes[i] && (sport.has(d) || sport.has(suivant(d))))) continue;
       let ok = true, colles = 0;
       for (let i = 0; i < k; i++) {
         const j = (i + 1) % k, ecart = j > i ? jours[j] - jours[i] : jours[j] + 7 - jours[i];
@@ -493,7 +497,8 @@
       jours.forEach((d, i) => { if (jambes[i] && (sport.has(suivant(d)) || sport.has(precedent(d)))) pres++; });
       let minEcart = 7;
       for (let i = 0; i < k; i++) { const j = (i + 1) % k; minEcart = Math.min(minEcart, j > i ? jours[j] - jours[i] : jours[j] + 7 - jours[i]); }
-      const score = -colles * 10 - bloc * 10 - weekend * 15 - pres * 25 + (k > 1 ? minEcart * 3 : 0) - jours[0];
+      const surSport = souple ? jours.filter(d => sport.has(d)).length : 0;
+      const score = -colles * 10 - bloc * 10 - weekend * 15 - pres * 25 - surSport * 20 + (k > 1 ? minEcart * 3 : 0) - jours[0];
       if (score > meilleurScore) { meilleurScore = score; meilleur = jours; }
     }
     return meilleur; // null si impossible
@@ -538,8 +543,6 @@
     if (intentionSport) prioritaires.push(...sport.prioritaires);
     const favoris = new Set(intentionSport ? sport.favoris : []);
     const difficulteMax = Math.min(niv.difficulteMax, obj.difficulteMax || 3);
-    if (joursSport.length + frequence > 7) avertissements.push(`${frequence} séances et ${joursSport.length} jours de sport ne tiennent pas dans 7 jours : les jours de sport sont ignorés pour le placement.`);
-    const joursSportPlacement = joursSport.length + frequence > 7 ? [] : joursSport;
 
     // squelette ; le jour focus du 5× suit le côté dominant (objectif, puis sport)
     const squelette = SQUELETTES[frequence];
@@ -689,8 +692,17 @@
       if (s.focus !== "recup" && c < nbExos[0]) avertissements.push(`Séance ${s.lettre} : ${c} exercices seulement (minimum ${nbExos[0]} au niveau ${niveau}${objCle === "force" ? " en force" : ""}) — ${s._sousMinimum ? `le temps (${tempsMin} min) l'a emporté sur le nombre d'exercices` : "matériel trop restreint pour ce focus"}.`);
     }
 
-    // règle 4 : placement dans la semaine
-    const jours = placer(seances, joursSportPlacement);
+    // règle 4 : placement dans la semaine — d'abord sans toucher aux jours de sport, sinon en mode
+    // souple (on s'entraîne aussi ces jours-là, jamais de grosse séance jambes la veille ni le jour
+    // même), et en tout dernier recours sans tenir compte du sport
+    let jours = placer(seances, joursSport, false), placementSouple = false;
+    if (!jours && joursSport.length) {
+      jours = placer(seances, joursSport, true);
+      placementSouple = true;
+      const nomSport = sport ? sport.nom.toLowerCase() : "sport";
+      if (jours) avertissements.push(`Avec ${frequence} séances et ${joursSport.length} jour${joursSport.length > 1 ? "s" : ""} de ${nomSport}, tu t'entraînes aussi certains jours de sport (${jours.filter(d => joursSport.includes(d)).map(d => JOURS_NOM[d - 1]).join(", ")}) : jamais de grosse séance jambes la veille ni le jour même.`);
+      else { jours = placer(seances, [], false); if (jours) avertissements.push(`${frequence} séances et ${joursSport.length} jours de ${nomSport} : impossible d'éviter une grosse séance jambes près d'un jour de sport, les séances sont placées sans en tenir compte — à toi d'ajuster.`); }
+    }
     if (!jours) avertissements.push("Aucun placement dans la semaine ne respecte la règle 4 (même gros groupe deux jours consécutifs).");
     const semaine = [];
     for (let d = 1; d <= 7; d++) {
@@ -701,7 +713,7 @@
     return {
       entrees: { frequence, objectif: objCle, objectifLibre: entrees.objectifLibre || "", sport: sport ? entrees.sport : null, intention: intentionSport ? "sport" : "soi", materiel, niveau, tempsMin, joursSport },
       squelette: { nom: squelette.nom, description: squelette.description },
-      semaine, seances, volume, avertissements, limites,
+      semaine, seances, volume, avertissements, limites, placementSouple,
       pointsExtension: [
         "interpreterObjectifLibre(texte) : l'IA choisira les muscles prioritaires depuis un objectif en texte libre (aujourd'hui : mots-clés).",
         "habillage : phrases d'accompagnement par séance et par exercice (nom du programme, mot d'encouragement) — non implémenté, le moteur ne produit que la structure.",
@@ -731,19 +743,39 @@
   // « charge » = il y a une charge à noter en kg : une alternative faisable avec le matériel de la
   // personne qui passe par des poids (haltères, barre, kettlebell, machine, poulie, trap bar)
   const TAGS_CHARGE = new Set(["haltères", "barre", "kettlebell", "machine", "poulie", "trap bar", "rack"]);
+  // « pdc » = l'exercice se fait au poids du corps (éventuellement avec une barre de traction, des
+  // barres de dips ou un banc) : l'app propose alors poids du corps / lesté (+kg) / assisté (−kg)
+  const TAGS_PDC = new Set(["poids du corps", "aucun", "barre de traction", "barres de dips", "banc"]);
+  const pdcPossible = x => (x.materiel || []).some(alt => tagsDe(alt).every(t => TAGS_PDC.has(t)));
+  const MUSCLE_COURT = { "ischio-jambiers": "ischios", "dos (grand dorsal)": "dos", "épaules latérales": "épaules", "arrière d'épaule": "arrière d'épaule", "chaîne postérieure": "chaîne postérieure" };
+  // ce que le sport a changé dans une séance, en une phrase (« Adapté au foot : ischios (Nordic curl), … »)
+  const noteSport = (s, entrees) => {
+    const sp = entrees.intention === "sport" && entrees.sport && SPORTS[entrees.sport] ? SPORTS[entrees.sport] : null;
+    if (!sp) return null;
+    const items = [];
+    for (const x of s.exercices) {
+      if (x.role === "sport" && x.compartiment === "unilateral") items.push(`unilatéral (${x.nom})`);
+      else if (x.role === "sport" && x.compartiment === "gainage") items.push(`gainage anti-rotation (${x.nom})`);
+      else if (sp.favoris.includes(x.id) || (x.compartiment === "isolation" && sp.prioritaires.includes(x.muscle))) items.push(`${MUSCLE_COURT[x.muscle] || x.muscle} (${x.nom})`);
+    }
+    return items.length ? `Adapté ${sp.libelle} : ${[...new Set(items)].join(", ")}` : null;
+  };
   const chargeDe = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.some(u => TAGS_CHARGE.has(u)); }); };
   const presenterPourApp = prog => {
     const seances = {};
     prog.seances.forEach((s, i) => {
       const exos = s.exercices.filter(x => x.compartiment !== "gainage").map(x => ({
         id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
+        pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
         series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
         consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
         id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
       }));
-      seances[s.lettre] = { nom: s.nom, couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
+      // v20.6 : les muscles en grand (nom), le geste en petit (geste), la phrase du sport (sport)
+      const f = FOCUS[s.focus];
+      seances[s.lettre] = { nom: f && f.muscles ? f.muscles : s.nom, geste: s.nom, sport: noteSport(s, prog.entrees), couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
     });
     const obj = OBJECTIFS[prog.entrees.objectif] || OBJECTIFS.mieux;
     const f = prog.entrees.frequence;
@@ -772,16 +804,27 @@
   const HAUT = new Set(["poussee_h", "poussee_v", "tirage_h", "tirage_v"]), ISO_HAUT_M = new Set(ISO_HAUT);
   const surMachine = (x, materiel) => { const ok = okDe(materiel); return (x.materiel || []).some(alt => { const t = tagsDe(alt); return (ok === null || t.every(u => ok.has(u))) && t.includes("machine"); }); };
   const incrementDe = (x, materiel) => (x.compartiment === "isolation" ? ISO_HAUT_M.has(x.muscle) : HAUT.has(x.compartiment)) && !surMachine(x, materiel) ? 2.5 : 5;
-  const chargeDeSerie = e => e == null ? 0 : e.kg != null ? Number(e.kg) : Math.max(0, ...(e.series || []).filter(v => v != null && v !== "").map(Number));
+  // charge de travail d'une entrée : la meilleure série ; en assisté (valeurs négatives = kg
+  // d'assistance), la « meilleure » est la moins assistée, donc la plus proche de zéro
+  const chargeDeSerie = e => {
+    if (e == null) return 0;
+    if (e.kg != null) return Number(e.kg);
+    const l = (e.series || []).filter(v => v != null && v !== "").map(Number).filter(v => !isNaN(v));
+    const pos = l.filter(v => v > 0);
+    if (pos.length) return Math.max(...pos);
+    const neg = l.filter(v => v < 0);
+    return neg.length ? Math.max(...neg) : 0;
+  };
   const suggererCharge = (x, histo, materiel) => {
-    if (!x || !x.charge || !x.reps || !histo || !histo.length) return null;
+    if (!x || !(x.charge || x.pdc) || !x.reps || !histo || !histo.length) return null;
     const der = histo[histo.length - 1];
     if (!der || !der.hautFourchette) return null;
     if (der.ressenti === "dur" || der.ressenti == null) return null;
     const base = chargeDeSerie(der);
-    if (!(base > 0)) return null;
     const plus = incrementDe(x, materiel);
-    return { kg: base + plus, plus, base, reps: x.reps[1], raison: `+${String(plus).replace(".", ",")} kg, tu as tenu ${x.reps[1]} reps partout` };
+    if (der.type === "assiste" && base < 0) return { kg: Math.min(0, base + plus), plus, base, reps: x.reps[1], type: "assiste", raison: `−${String(plus).replace(".", ",")} kg d'assistance, tu as tenu ${x.reps[1]} reps partout` };
+    if (!(base > 0)) return null;
+    return { kg: base + plus, plus, base, reps: x.reps[1], type: der.type || null, raison: `+${String(plus).replace(".", ",")} kg, tu as tenu ${x.reps[1]} reps partout` };
   };
   // règle 7, niveau observé qui bouge : ressentis sur les GROS exercices (polyarticulaires), du plus ancien au
   // plus récent. Quatre « facile » d'affilée → proposer +1 ; trois « trop dur » sur les six derniers → proposer −1.
@@ -799,7 +842,7 @@
     const reps = iso ? null : cand.reps && cand.reps[1] <= 6 ? cand.reps : orig.reps || cand.reps || [8, 12];
     const x = { compartiment: cand.compartiment, series: orig.series || 3, reps, duree_s: iso ? cand.duree_s : null, unilateral: !!cand.unilateral };
     return {
-      id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel),
+      id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel), pdc: pdcPossible(cand),
       series: x.series, reps, duree: x.duree_s, unilateral: x.unilateral, consigne: cand.consigne || "", erreur: cand.erreur || "",
       compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id
     };
@@ -834,16 +877,50 @@
     const interne = (x, gainage) => { const d = x.reps || x.duree ? { reps: x.reps || null, duree_s: x.duree || null } : lireDose(x); return { ...x, compartiment: gainage ? "gainage" : x.compartiment || "inconnu", series: x.series || parseInt(x.dose) || 3, reps: d.reps, duree_s: d.duree_s, repos_s: x.repos || 0, role: x.role || null, _app: x }; };
     const s = { exercices: [...S.exos.map(x => interne(x, false)), ...(Array.isArray(S.gainage) ? S.gainage : []).map(g => interne(g, true))] };
     if (energie === "petite") for (const x of s.exercices) if (estForce(x) && x.compartiment !== "cardio_mobilite") x.series = Math.max(2, x.series - 1);
+    // à fond (v20.6) : une série de plus sur les gros exercices (5 au plus) ; l'app suggère aussi +un cran de charge
+    if (energie === "fond") for (const x of s.exercices) if (COMPOSES.includes(x.compartiment) && x.series < 5) x.series++;
     const avant = dureeSeance(s);
     const nbMin = Math.min(3, s.exercices.filter(estForce).length);
     const tient = comprimer(s, tempsMin, nbMin);
+    // temps en plus (v20.6) : des compléments tant qu'il reste au moins 8 min — le gainage s'il manque,
+    // une isolation d'un muscle du focus pas encore travaillé, puis un finisher (cardio, ou mobilité
+    // en reprise douce). Jamais plus de trois ajouts, jamais au-delà du temps demandé.
+    const ajouts = [];
+    const banque = opts.banque, entrees = opts.entrees || {};
+    const f = S.focus && FOCUS[S.focus];
+    if (opts.complements !== false && banque && f && f.comp && S.focus !== "recup" && dureeSeance(s) + 8 <= tempsMin) {
+      const niveau = Math.max(1, Math.min(3, parseInt(entrees.niveau) || 2)), niv = NIVEAU[niveau];
+      const obj = OBJECTIFS[entrees.objectif] || OBJECTIFS.mieux, materiel = entrees.materiel || "salle";
+      const ctx = { niveau, niv, materiel, difficulteMax: Math.min(niv.difficulteMax, obj.difficulteMax || 3), obj, prioritaires: [], favoris: new Set(), phares: new Set(), distancePhare: () => 0,
+        unilateral: false, dejaSemaine: new Set(), compteSemaine: {}, musclesSemaine: new Set(), dejaSeance: new Set(s.exercices.map(x => x.id)), musclesSeance: new Set(s.exercices.filter(x => x.compartiment === "isolation").map(x => x.muscle)) };
+      const versApp = x => ({ id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, materiel), pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement" });
+      const ajouter = (e, pourquoi, dureeCardio) => {
+        if (!e || ajouts.length >= 3) return false;
+        const x = exerciceProgramme(e, doser(e, { ...ctx, dureeCardio }), "complement");
+        if (dureeSeance({ exercices: [...s.exercices, x] }) > tempsMin) return false;
+        x._app = versApp(x); s.exercices.push(x); ctx.dejaSeance.add(e.id); if (e.compartiment === "isolation") ctx.musclesSeance.add(e.muscle);
+        ajouts.push({ id: e.id, nom: e.nom, pourquoi }); return true;
+      };
+      if (!s.exercices.some(x => x.compartiment === "gainage")) ajouter(choisir(banque, { c: "gainage" }, S.focus, ctx), "gainage");
+      for (const mu of f.iso) { if (dureeSeance(s) + 5 > tempsMin || ajouts.length >= 2) break; if (ctx.musclesSeance.has(mu)) continue; ajouter(choisir(banque, { c: "isolation", m: [mu] }, S.focus, ctx), `isolation ${MUSCLE_COURT[mu] || mu}`); }
+      if (!s.exercices.some(x => x.compartiment === "cardio_mobilite")) {
+        const type = entrees.objectif === "douce" ? "mobilite" : "cardio";
+        const cands = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === type && faisable(e, materiel) && !ctx.dejaSeance.has(e.id));
+        const reste = Math.max(0, (tempsMin - dureeSeance(s)) * 60 - 60);
+        if (cands.length && reste >= 300) ajouter(cands[0], type === "cardio" ? "finisher cardio" : "mobilité", Math.min(900, Math.max(300, Math.floor(reste / 60) * 60)));
+      }
+      s.exercices.forEach((x, k) => { x._k = k; });
+      s.exercices.sort((a, b) => rangOrdre(a) - rangOrdre(b) || a._k - b._k);
+      s.exercices.forEach(x => { delete x._k; });
+    }
     const retour = x => ({ ...x._app, series: x.series, repos: x.repos_s, dose: doseDe({ ...x, reps: x.reps, duree_s: x.duree_s }) });
     return {
       ...S,
       exos: s.exercices.filter(x => x.compartiment !== "gainage").map(retour),
       gainage: s.exercices.filter(x => x.compartiment === "gainage").map(retour),
       dureeMin: dureeSeance(s),
-      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, avantMin: avant, tient, retires: S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - s.exercices.length }
+      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, intensifie: energie === "fond", ajouts, avantMin: avant, tient, retires: Math.max(0, S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - (s.exercices.length - ajouts.length)) }
     };
   };
 
@@ -947,11 +1024,12 @@
     const parJour = {};
     for (const j of prog.semaine) if (j.seance) parJour[j.jour] = new Set(j.seance.exercices.map(grosGroupe).filter(Boolean));
     for (let d = 1; d <= 7; d++) { const a = parJour[d], b = parJour[suivant(d)]; if (!a || !b) continue; for (const g of a) if (b.has(g)) v.push({ regle: 4, message: `${g} les jours ${d} et ${suivant(d)}` }); }
-    if (prog.entrees.joursSport.length + f <= 7) for (const j of prog.semaine) if (j.seance && j.sport) v.push({ regle: "sport", message: `séance ${j.seance.lettre} un jour de sport (${j.jour})` });
+    if (!prog.placementSouple) for (const j of prog.semaine) if (j.seance && j.sport) v.push({ regle: "sport", message: `séance ${j.seance.lettre} un jour de sport (${j.jour})` });
+    else for (const j of prog.semaine) if (j.seance && FOCUS[j.seance.focus] && FOCUS[j.seance.focus].bas && (j.sport || prog.semaine.find(x => x.jour === suivant(j.jour)).sport) && !prog.avertissements.some(a => /sans en tenir compte/.test(a))) v.push({ regle: "sport", message: `grosse séance jambes ${j.seance.lettre} le jour ${j.jour}, la veille ou le jour d'un sport` });
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
 });
 </script>
 <script id="banque-exercices">
@@ -1771,8 +1849,25 @@ const GAINAGE = [{
 // gainage d'une séance : liste propre (programmes du moteur, v20.0) ou la liste globale (anciens programmes)
 const gainageDe = S => Array.isArray(S.gainage) ? S.gainage : S.gainage ? GAINAGE : [];
 const nbSeries = ex => parseInt(ex.dose) || 3;
-const fmtCharge = e => e == null ? "" : e.kg != null ? `${e.kg} kg` : (e.series || []).filter(v => v != null && v !== "").join(" / ") + " kg";
-const maxCharge = e => e == null ? 0 : e.kg != null ? e.kg : Math.max(0, ...(e.series || []).filter(v => v != null && v !== "").map(Number));
+// v20.6 : une entrée de charge porte un type — rien (charge classique), « leste » (+kg au poids du
+// corps), « assiste » (kg d'assistance, stockés en négatif : moins d'assistance = mieux), « pdc »
+const valeursCharge = e => e == null ? [] : e.kg != null ? [Number(e.kg)] : (e.series || []).filter(v => v != null && v !== "").map(Number).filter(v => !isNaN(v));
+const fmtCharge = e => {
+  if (e == null) return "";
+  if (e.type === "pdc") return "poids du corps";
+  const l = valeursCharge(e);
+  if (!l.length) return "";
+  if (e.type === "assiste" || (l.every(v => v <= 0) && l.some(v => v < 0))) return l.map(v => String(Math.abs(v)).replace(".", ",")).join(" / ") + " kg d'assistance";
+  return (e.type === "leste" ? "+" : "") + l.map(v => String(v).replace(".", ",")).join(" / ") + " kg" + (e.type === "leste" ? " de lest" : "");
+};
+// la charge de travail d'une entrée : la meilleure série ; en assisté, la moins assistée (la plus proche de 0)
+const maxCharge = e => {
+  const l = valeursCharge(e);
+  const pos = l.filter(v => v > 0);
+  if (pos.length) return Math.max(...pos);
+  const neg = l.filter(v => v < 0);
+  return neg.length ? Math.max(...neg) : 0;
+};
 const CARDIO = ["Marche inclinée", "Escaliers / stairmaster", "Rameur", "Vélo", "Corde à sauter"];
 const HABITUDES = [{
   id: "repas",
@@ -3106,7 +3201,7 @@ function App() {
   const [burst, setBurst] = useState(null);
   const [victoireOuverte, setVictoireOuverte] = useState(false);
   const partagerInvite = async () => {
-    const url = window.location.origin + "/?code=" + encodeURIComponent(code);
+    const url = window.location.origin + "/?code=" + encodeURIComponent(code) + (profil && profil.nom ? "&de=" + encodeURIComponent(profil.nom) : "");
     try {
       if (navigator.share) await navigator.share({
         title: "Level Up !",
@@ -3129,6 +3224,7 @@ function App() {
     setReglagesOuvert(false);
   };
   const urlCode = (new URLSearchParams(window.location.search).get("code") || "").toLowerCase();
+  const urlDe = (new URLSearchParams(window.location.search).get("de") || "").slice(0, 30);
   const solo = !!(profil && profil.solo);
   const creerProfil = (nom, role_, code_, importer, extra) => {
     extra = extra || {};
@@ -3169,6 +3265,12 @@ function App() {
     }
     const l = [...profils, p];
     ecrireProfils(l);
+    // v20.6 : le coach qui veut aussi s'entraîner crée son profil coach sans recharger, puis
+    // enchaîne sur l'onboarding coaché — les deux profils cohabitent sur le téléphone
+    if (extra.sansRecharger) {
+      setProfils(l);
+      return;
+    }
     localStorage.setItem("lvlup-actif", p.id);
     window.location.reload();
   };
@@ -3203,6 +3305,7 @@ function App() {
   const [remplacer, setRemplacer] = useState(null); // exercice en cours de remplacement (v20.1)
   const [adapter, setAdapter] = useState(false); // panneau « Adapter ma séance » (v20.1)
   const [pushRenouveler, setPushRenouveler] = useState(false); // abonnement push signé avec une ancienne clé (v20.4)
+  const [explicCoach, setExplicCoach] = useState(false); // « Ton coach t'attend » déplié : ce que ça implique (v20.6)
 
   /* ---- chargement + migration + décroissance ---- */
   useEffect(() => {
@@ -3539,7 +3642,8 @@ function App() {
     profils: profils,
     onCreer: creerProfil,
     onChoisir: changerProfil,
-    urlCode: urlCode
+    urlCode: urlCode,
+    urlDe: urlDe
   });
   if (!st) return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3969,10 +4073,11 @@ function App() {
     setConfetti(true);
     setTimeout(() => setConfetti(false), 2600);
   };
-  const noterChargeSerie = (exId, idx, kg) => {
+  const noterChargeSerie = (exId, idx, kg, type) => {
     const v = parseFloat(String(kg).replace(",", "."));
-    // 0 est une valeur : revenir à 0 avec les boutons efface la charge de la série
-    if (isNaN(v) || v < 0) return;
+    // 0 est une valeur : revenir à 0 avec les boutons efface la charge de la série ;
+    // en assisté la valeur arrive négative (kg d'assistance)
+    if (isNaN(v) || (v < 0 && type !== "assiste")) return;
     maj(s => {
       const l = s.charges[exId] || [];
       let e = l[l.length - 1];
@@ -3983,11 +4088,17 @@ function App() {
         };
         l.push(e);
       }
+      if (type) e.type = type;else delete e.type;
       e.series[idx] = v;
       s.charges[exId] = l.slice(-30);
       return s;
     });
   };
+  // v20.6 : type de charge choisi pour un exercice au poids du corps (pdc / leste / assiste), mémorisé
+  const choisirTypeCharge = (exId, type) => maj(s => {
+    s.typesCharge = { ...(s.typesCharge || {}), [exId]: type };
+    return s;
+  });
   const perdre = (pts, label) => {
     maj(s => {
       s.xp = Math.max(0, s.xp - pts);
@@ -4066,7 +4177,7 @@ function App() {
       ...base,
       exos: base.exos.map(e => rempl[e.id] || e)
     };
-    const S1 = window.Moteur.adapterSeance(S0, opts);
+    const S1 = window.Moteur.adapterSeance(S0, { ...opts, banque: window.BANQUE, entrees: PROG && PROG.moteur ? PROG.moteur.entrees : null });
     setJour(j => ({
       ...j,
       adaptee: {
@@ -4517,6 +4628,7 @@ function App() {
   }), adapter && SJ && /*#__PURE__*/React.createElement(AdapterPanneau, {
     S: SJ,
     defautMin: (st.derniereAdaptation || {}).tempsMin,
+    entrees: PROG && PROG.moteur ? PROG.moteur.entrees : null,
     onAdapter: adapterSeanceJour,
     onFermer: () => setAdapter(false)
   }), regen && /*#__PURE__*/React.createElement(Regenerer, {
@@ -4967,7 +5079,9 @@ function App() {
       return s;
     })
   }), !solo && !st.coachLie && /*#__PURE__*/React.createElement("button", {
-    onClick: partagerInvite,
+    onClick: () => setExplicCoach(v => !v),
+    className: "carte-coach",
+    "aria-expanded": explicCoach,
     style: {
       display: "flex",
       alignItems: "center",
@@ -4992,7 +5106,32 @@ function App() {
       fontWeight: profil.coachEnTete ? 700 : 600,
       color: profil.coachEnTete ? INK : SUB
     }
-  }, profil.coachEnTete ? "Ton futur coach t'attend — invite-le quand tu veux" : "Invite ton coach quand tu veux — le duo rend l'aventure plus fun")), enPause && /*#__PURE__*/React.createElement("div", {
+  }, profil.coachEnTete ? "Ton futur coach t'attend — invite-le quand tu veux" : "Invite ton coach quand tu veux — le duo rend l'aventure plus fun")), !solo && !st.coachLie && explicCoach && /*#__PURE__*/React.createElement("div", {
+    className: "explic-coach",
+    style: {
+      ...GLASS,
+      borderRadius: 14,
+      padding: "11px 14px",
+      marginTop: -6,
+      marginBottom: 12,
+      fontSize: 12.5,
+      lineHeight: 1.5
+    }
+  }, "Ton coach voit tes séances et tes photos de preuve, valide, et peut t'offrir une récompense à chaque niveau. Ça ne lui coûte rien s'il ne veut pas offrir : suivre et encourager, c'est déjà coacher.", /*#__PURE__*/React.createElement("button", {
+    onClick: partagerInvite,
+    style: {
+      width: "100%",
+      marginTop: 10,
+      background: "linear-gradient(90deg,#3D5AFE,#7C5CFF)",
+      color: "#fff",
+      border: "none",
+      borderRadius: 12,
+      padding: "11px",
+      fontWeight: 800,
+      fontSize: 13,
+      touchAction: "manipulation"
+    }
+  }, "Envoyer l'invitation")), enPause && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(61,90,254,.14)",
       border: `1.5px solid ${COL.B}`,
@@ -5101,7 +5240,15 @@ function App() {
         lineHeight: 1.1,
         position: "relative"
       }
-    }, S.nom), /*#__PURE__*/React.createElement("div", {
+    }, S.nom), S.geste && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: .4,
+        opacity: .8,
+        marginTop: 2
+      }
+    }, S.geste), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11.5,
         opacity: .9,
@@ -5224,7 +5371,50 @@ function App() {
     n: "undo",
     s: 13,
     w: 2.4
-  }), "Changer de séance"), Object.keys(st.activeDays || {}).length > 0 && /*#__PURE__*/React.createElement("div", {
+  }), "Changer de séance"), SJ && recupJ && /*#__PURE__*/React.createElement(RecupView, {
+    S: SJ,
+    J: J,
+    onFait: faireRecup,
+    onAnnuler: annulerRecup,
+    onValider: validerSeance
+  }), SJ && !recupJ && /*#__PURE__*/React.createElement(SeanceView, {
+    S: SJ,
+    J: J,
+    onRessenti: noterRessenti,
+    onHautFourchette: noterHautFourchette,
+    onRemplacer: setRemplacer,
+    onAdapter: () => setAdapter(true),
+    onAnnulerAdaptation: () => setJour(j => ({
+      ...j,
+      adaptee: null
+    })),
+    materiel: st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle",
+    typesCharge: st.typesCharge || {},
+    onTypeCharge: choisirTypeCharge,
+    st: st,
+    photos: photos,
+    chargeur: chargeur,
+    onCamera: ouvrirCamera,
+    onGainSerie: lancerSerieGain,
+    onValider: validerSeance,
+    onValiderGain: validerGainage,
+    onCharge: noterChargeSerie,
+    onRepos: lancerRepos,
+    onZoom: setZoom,
+    onPartager: partagerPreuves,
+    onAnnulerExo: annulerExo,
+    onAnnulerGain: annulerGain,
+    validerSansPhoto: exId => {
+      setJour(j => ({
+        ...j,
+        faits: [...j.faits, exId]
+      }));
+      gagne(10, "· sans photo");
+    },
+    onPartiel: finirPartiel,
+    timer: timer,
+    burst: burst
+  }), Object.keys(st.activeDays || {}).length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14
     }
@@ -5310,48 +5500,7 @@ function App() {
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "shuffle",
     s: 13
-  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), SJ && recupJ && /*#__PURE__*/React.createElement(RecupView, {
-    S: SJ,
-    J: J,
-    onFait: faireRecup,
-    onAnnuler: annulerRecup,
-    onValider: validerSeance
-  }), SJ && !recupJ && /*#__PURE__*/React.createElement(SeanceView, {
-    S: SJ,
-    J: J,
-    onRessenti: noterRessenti,
-    onHautFourchette: noterHautFourchette,
-    onRemplacer: setRemplacer,
-    onAdapter: () => setAdapter(true),
-    onAnnulerAdaptation: () => setJour(j => ({
-      ...j,
-      adaptee: null
-    })),
-    materiel: st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle",
-    st: st,
-    photos: photos,
-    chargeur: chargeur,
-    onCamera: ouvrirCamera,
-    onGainSerie: lancerSerieGain,
-    onValider: validerSeance,
-    onValiderGain: validerGainage,
-    onCharge: noterChargeSerie,
-    onRepos: lancerRepos,
-    onZoom: setZoom,
-    onPartager: partagerPreuves,
-    onAnnulerExo: annulerExo,
-    onAnnulerGain: annulerGain,
-    validerSansPhoto: exId => {
-      setJour(j => ({
-        ...j,
-        faits: [...j.faits, exId]
-      }));
-      gagne(10, "· sans photo");
-    },
-    onPartiel: finirPartiel,
-    timer: timer,
-    burst: burst
-  }), J.seance === "K" && /*#__PURE__*/React.createElement("div", {
+  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), J.seance === "K" && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14
     }
@@ -5796,7 +5945,8 @@ function App() {
     role: role,
     code: code,
     gagne: gagne,
-    solo: solo
+    solo: solo,
+    onInviter: partagerInvite
   })), barreFin && /*#__PURE__*/React.createElement("button", {
     onClick: tousFaitsJ ? validerSeance : finirPartiel,
     style: {
@@ -6040,7 +6190,7 @@ function App() {
       right: 12,
       margin: "0 auto",
       maxWidth: 496,
-      zIndex: 55,
+      zIndex: 87,
       background: timer.mode === "depasse" ? COL.C : timer.mode === "fini" ? COL.G : timer.mode === "travail" ? COL.G : timer.mode === "prep" ? COL.D : COL.B,
       color: "#fff",
       borderRadius: 16,
@@ -6272,7 +6422,9 @@ function SeanceView({
   onRemplacer,
   onAdapter,
   onAnnulerAdaptation,
-  materiel
+  materiel,
+  typesCharge,
+  onTypeCharge
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
   const tousFaits = J.faits.length >= S.exos.length;
@@ -6315,7 +6467,15 @@ function SeanceView({
       opacity: .9,
       fontWeight: 500
     }
-  }, S.nom, " · ", XP.exo, " XP/exercice · +", XP.bonusSeance, " si complète")), /*#__PURE__*/React.createElement("div", {
+  }, S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", XP.exo, " XP/exercice · +", XP.bonusSeance, " si complète"), S.sport && /*#__PURE__*/React.createElement("div", {
+    className: "note-sport",
+    style: {
+      fontSize: 11,
+      opacity: .9,
+      marginTop: 3,
+      lineHeight: 1.35
+    }
+  }, S.sport)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: DISPLAY,
       fontSize: 15
@@ -6338,7 +6498,7 @@ function SeanceView({
     style: {
       flex: 1
     }
-  }, "Séance ajustée · ", S.dureeMin, " min", S.adaptee.energie === "petite" ? " · petite forme" : S.adaptee.energie === "fond" ? " · à fond" : ""), !J.valide && (J.faits || []).length === 0 && /*#__PURE__*/React.createElement("button", {
+  }, "Séance ajustée · ", S.dureeMin, " min", (S.adaptee.ajouts || []).length ? ` · +${S.adaptee.ajouts.length} complément${S.adaptee.ajouts.length > 1 ? "s" : ""}` : "", S.adaptee.energie === "petite" ? " · petite forme" : S.adaptee.energie === "fond" ? " · à fond" : ""), !J.valide && (J.faits || []).length === 0 && /*#__PURE__*/React.createElement("button", {
     onClick: onAnnulerAdaptation,
     style: {
       background: "none",
@@ -6376,14 +6536,17 @@ function SeanceView({
       fontSize: 12.5,
       fontWeight: 600
     }
-  }, "Pas assez de temps ou d'énergie aujourd'hui ? On ajuste.")), S.exos.map((ex, i) => {
+  }, "Ajuster ma séance du jour — temps, énergie")), S.exos.map((ex, i) => {
     const fait = J.faits.includes(ex.id);
     const hist = st.charges[ex.id];
     const der = hist && hist[hist.length - 1];
     // règle 8 : incrément proposé, jamais imposé ; petite forme : charges suggérées −10 %
     const facteur = S.adaptee ? S.adaptee.chargeFacteur || 1 : 1;
     // pas d'incrément un jour de petite forme : les charges baissent, elles ne montent pas
-    const sugg = !fait && ex.charge && facteur === 1 && window.Moteur ? window.Moteur.suggererCharge(ex, hist, materiel) : null;
+    // v20.6 : type de charge d'un exercice faisable au poids du corps — mémorisé, sinon lesté s'il a une charge, sinon poids du corps
+    const typeCharge = ex.pdc ? (typesCharge || {})[ex.id] || (ex.charge ? "leste" : "pdc") : null;
+    const sugg = !fait && (ex.charge || (ex.pdc && typeCharge !== "pdc")) && facteur === 1 && window.Moteur ? window.Moteur.suggererCharge(ex, hist, materiel) : null;
+    const increment = window.Moteur && window.Moteur.incrementDe ? window.Moteur.incrementDe(ex, materiel) : 2.5;
     const photoId = (J.photos || {})[ex.id];
     const photoSrc = photoId && photos[photoId];
     const ouvert = deploye === ex.id;
@@ -6599,22 +6762,18 @@ function SeanceView({
       s: 14,
       w: 2.4
     }))),
-    /* ---- corps déployé : monté en permanence (comme avant l'accordéon), la
-       hauteur seule est animée, ce qui préserve les saisies de charge ---- */
-    /*#__PURE__*/React.createElement("div", {
-      style: {
-        maxHeight: ouvert ? 900 : 0,
-        opacity: ouvert ? 1 : 0,
-        overflow: "hidden",
-        transition: "max-height .26s ease, opacity .18s ease",
-        pointerEvents: ouvert ? "auto" : "none"
-      }
+    /* ---- mode focus (v20.6, alternative (b) de la v19.16) : le corps s'ouvre en popup quasi
+       plein écran, fond flouté, fermeture par la croix ou un tap à l'extérieur ; la liste
+       compacte reste derrière. Les charges sont enregistrées à chaque saisie, donc rien ne se
+       perd à la fermeture. ---- */
+    ouvert && /*#__PURE__*/React.createElement(FocusExercice, {
+      titre: i + 1 + ". " + ex.nom,
+      sous: ex.dose + " · repos " + fmtSec(ex.repos) + (der ? " · dernier : " + fmtCharge(der) : ""),
+      couleur: S.couleur,
+      onFermer: () => basculer(ex.id)
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        paddingTop: 15,
-        marginTop: 15,
-        borderTop: `1px solid ${LINE}`,
-        animation: ouvert ? "deploie .24s ease-out" : "none"
+        animation: "deploie .24s ease-out"
       }
     }, ex.consigne && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -6689,13 +6848,17 @@ function SeanceView({
         cursor: "pointer",
         marginLeft: "auto"
       }
-    })), !fait && ex.charge && /*#__PURE__*/React.createElement("div", {
+    })), !fait && (ex.charge || ex.pdc) && /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 14
       }
-    }, /*#__PURE__*/React.createElement(SerieInputs, {
-      // remonté quand la suggestion ou le facteur change (séance ajustée après l'ouverture)
-      key: ex.id + ":" + facteur + ":" + (sugg ? sugg.kg : ""),
+    }, ex.pdc && /*#__PURE__*/React.createElement(TypeCharge, {
+      valeur: typeCharge,
+      couleur: S.couleur,
+      onChoisir: t => onTypeCharge(ex.id, t)
+    }), /*#__PURE__*/React.createElement(SerieInputs, {
+      // remonté quand la suggestion, le facteur ou le type change (séance ajustée après l'ouverture)
+      key: ex.id + ":" + facteur + ":" + (sugg ? sugg.kg : "") + ":" + (typeCharge || "") + ":" + (S.adaptee && S.adaptee.intensifie ? "fond" : ""),
       nb: nbSeries(ex),
       exId: ex.id,
       dernier: der,
@@ -6704,6 +6867,9 @@ function SeanceView({
       suggestion: sugg,
       facteur: facteur,
       reps: ex.reps,
+      type: typeCharge,
+      intensifie: !!(S.adaptee && S.adaptee.intensifie),
+      increment: increment,
       hautFourchette: der && der.date === auj() ? !!der.hautFourchette : false,
       onHautFourchette: v => onHautFourchette(ex.id, v)
     })), !fait && ex.repos > 0 && (() => {
@@ -7153,25 +7319,78 @@ function SerieInputs({
   facteur,
   reps,
   hautFourchette,
-  onHautFourchette
+  onHautFourchette,
+  type,
+  intensifie,
+  increment
 }) {
   // nbLoc : séries affichées — nb au départ, + une à chaque « + une série »
   const [nbLoc, setNbLoc] = useState(nb);
   const [vals, setVals] = useState(Array(nb).fill(""));
   const [saved, setSaved] = useState(Array(nb).fill(false));
   // pré-remplissage : la suggestion d'incrément si elle existe, sinon la dernière fois
-  // (× 0,9 arrondi à 2,5 kg en petite forme)
+  // (× 0,9 arrondi à 2,5 kg en petite forme ; +un cran « à fond ») — jamais d'un autre type de charge
   const f = facteur && facteur < 1 ? facteur : 1;
-  const [derniers] = useState(() => suggestion ? Array(nb).fill(suggestion.kg) : dernier ? (dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || []).map(v => v > 0 && f < 1 ? arrondir25(v * f) : v) : []);
+  const assiste = type === "assiste";
+  const memeType = dernier && ((dernier.type || null) === (type === "leste" || type === "assiste" ? type : null) || (!dernier.type && type === "leste"));
+  const abs = v => typeof v === "number" ? Math.abs(v) : v;
+  const [derniers] = useState(() => suggestion ? Array(nb).fill(abs(suggestion.kg)) : dernier && memeType ? (dernier.kg != null ? Array(nb).fill(dernier.kg) : dernier.series || []).map(v => v > 0 && f < 1 ? arrondir25(v * f) : intensifie && increment && typeof v === "number" && v > 0 ? v + increment : abs(v)) : []);
+  const signe = v => assiste ? -Math.abs(v) : v;
   const sauver = i => {
     if (!vals[i]) return;
-    onSave(exId, i, vals[i]);
+    onSave(exId, i, signe(vals[i]), type);
     setSaved(s => {
       const n = [...s];
       n[i] = true;
       return n;
     });
   };
+  // au poids du corps : rien à noter, la progression se fait en reps puis en passant au lesté
+  if (type === "pdc") return /*#__PURE__*/React.createElement("div", {
+    className: "charge-pdc"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: SUB,
+      lineHeight: 1.45
+    }
+  }, "Au poids du corps : vise le haut de la fourchette, puis passe en lesté quand tout est tenu."), reps && /*#__PURE__*/React.createElement("button", {
+    onClick: () => onHautFourchette && onHautFourchette(!hautFourchette),
+    "aria-pressed": !!hautFourchette,
+    className: "haut-fourchette",
+    style: {
+      marginTop: 8,
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      background: hautFourchette ? tintCss(couleur) : "rgba(255,255,255,.04)",
+      border: `1px solid ${hautFourchette ? couleur : LINE}`,
+      borderRadius: 10,
+      padding: "8px 11px",
+      color: hautFourchette ? couleur : SUB,
+      fontSize: 11.5,
+      fontWeight: 700,
+      textAlign: "left",
+      touchAction: "manipulation"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 16,
+      height: 16,
+      borderRadius: 5,
+      border: `2px solid ${hautFourchette ? couleur : "rgba(255,255,255,.3)"}`,
+      background: hautFourchette ? couleur : "transparent",
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0
+    }
+  }, hautFourchette && /*#__PURE__*/React.createElement(Ic, {
+    n: "check",
+    s: 10,
+    c: "#fff",
+    w: 3
+  })), "J'ai tenu ", reps[1], " reps sur toutes les séries"));
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10.5,
@@ -7179,7 +7398,7 @@ function SerieInputs({
       fontWeight: 600,
       marginBottom: 4
     }
-  }, "CHARGE PAR SÉRIE (KG) · facultatif"), /*#__PURE__*/React.createElement("div", {
+  }, assiste ? "ASSISTANCE PAR SÉRIE (KG) · moins, c'est mieux" : type === "leste" ? "LEST PAR SÉRIE (KG) · facultatif" : "CHARGE PAR SÉRIE (KG) · facultatif"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: nbLoc > 2 ? "1fr 1fr" : `repeat(${nbLoc},1fr)`,
@@ -7197,7 +7416,7 @@ function SerieInputs({
         n[i] = v;
         return n;
       });
-      onSave(exId, i, v);
+      onSave(exId, i, signe(v), type);
       setSaved(sv => {
         const n = [...sv];
         n[i] = true;
@@ -7293,7 +7512,14 @@ function SerieInputs({
       background: tintCss(couleur),
       borderRadius: 8
     }
-  }, /*#__PURE__*/React.createElement("b", null, "Suggestion : ", fmtKg(suggestion.kg), " kg"), " — ", suggestion.raison, ". Pré-rempli, tu changes si tu veux."), !suggestion && f < 1 && dernier && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, "Suggestion : ", fmtKg(Math.abs(suggestion.kg)), suggestion.type === "assiste" ? " kg d'assistance" : " kg"), " — ", suggestion.raison, ". Pré-rempli, tu changes si tu veux."), !suggestion && intensifie && increment && derniers.some(v => v > 0) && /*#__PURE__*/React.createElement("div", {
+    className: "suggestion-fond",
+    style: {
+      marginTop: 8,
+      fontSize: 11.5,
+      color: SUB
+    }
+  }, "À fond : +", fmtKg(increment), " kg suggéré sur la dernière fois, pré-rempli."), !suggestion && f < 1 && dernier && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8,
       fontSize: 11.5,
@@ -7524,7 +7750,8 @@ function Recompenses({
   role,
   code,
   gagne,
-  solo
+  solo,
+  onInviter
 }) {
   const [label, setLabel] = useState("");
   const [lvl, setLvl] = useState("");
@@ -7912,7 +8139,8 @@ function Recompenses({
     maj: maj,
     toast: toast,
     role: role,
-    code: code
+    code: code,
+    onInviter: onInviter
   }), !solo && /*#__PURE__*/React.createElement(Paris, {
     st: st,
     maj: maj,
@@ -8055,9 +8283,11 @@ function Negos({
   maj,
   toast,
   role,
-  code
+  code,
+  onInviter
 }) {
   const [mode, setMode] = useState("boot"); // boot | sync | local
+  const [inviter, setInviter] = useState(false); // après une proposition sans coach relié (v20.6)
   const [remote, setRemote] = useState([]);
   const [ouvert, setOuvert] = useState(false);
   const [label, setLabel] = useState("");
@@ -8152,7 +8382,7 @@ function Negos({
     setLabel("");
     setNiv("");
     setMot("");
-    toast("🤝 Proposition envoyée au coach");
+    if (!st.coachLie && onInviter) setInviter(true);else toast("🤝 Proposition envoyée au coach");
   };
   const accepter = (g, final) => {
     const kif = g.type === "kiff";
@@ -8257,7 +8487,102 @@ function Negos({
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "users",
     s: 14
-  }), "La table des négos")), mode === "local" && chip("○ Hors ligne — ton coach ne voit pas ces propositions", SUB, "rgba(255,255,255,.10)"), /*#__PURE__*/React.createElement("div", {
+  }), "La table des négos")), mode === "local" && chip("○ Hors ligne — ton coach ne voit pas ces propositions", SUB, "rgba(255,255,255,.10)"), !st.coachLie && role !== "coach" && onInviter && /*#__PURE__*/React.createElement("div", {
+    className: "sans-coach",
+    style: {
+      ...GLASS,
+      borderRadius: 14,
+      padding: "10px 12px",
+      marginBottom: 10,
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      borderColor: COL.G + "66"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      fontSize: 12,
+      lineHeight: 1.45
+    }
+  }, "Ton coach n'a pas encore rejoint : tes propositions l'attendent, il les verra dès qu'il sera là."), /*#__PURE__*/React.createElement("button", {
+    onClick: onInviter,
+    style: {
+      background: COL.G,
+      color: "#fff",
+      border: "none",
+      borderRadius: 10,
+      padding: "8px 11px",
+      fontWeight: 800,
+      fontSize: 11.5,
+      flexShrink: 0,
+      touchAction: "manipulation"
+    }
+  }, "Inviter")), inviter && /*#__PURE__*/React.createElement("div", {
+    className: "modale-inviter",
+    onClick: () => setInviter(false),
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 96,
+      background: "rgba(4,6,10,.72)",
+      display: "grid",
+      placeItems: "center",
+      padding: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: PAPER,
+      borderRadius: 20,
+      padding: "20px 18px",
+      maxWidth: 380,
+      width: "100%",
+      border: `1.5px solid ${COL.G}66`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: DISPLAY,
+      fontWeight: 800,
+      fontSize: 17
+    }
+  }, "Ta proposition est prête"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: SUB,
+      lineHeight: 1.5,
+      margin: "8px 0 16px"
+    }
+  }, "Ton coach la verra dès qu'il aura rejoint — tu veux l'inviter maintenant ? Le lien contient ton code duo, il crée son profil en 30 secondes."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setInviter(false);
+      onInviter();
+    },
+    style: {
+      width: "100%",
+      background: "linear-gradient(90deg,#3D5AFE,#7C5CFF)",
+      color: "#fff",
+      border: "none",
+      borderRadius: 12,
+      padding: "13px",
+      fontWeight: 800,
+      fontSize: 14,
+      touchAction: "manipulation"
+    }
+  }, "Inviter mon coach"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setInviter(false),
+    style: {
+      width: "100%",
+      marginTop: 8,
+      ...GLASS,
+      color: INK,
+      borderRadius: 12,
+      padding: "11px",
+      fontWeight: 700,
+      fontSize: 13,
+      touchAction: "manipulation"
+    }
+  }, "Plus tard"))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginLeft: "auto",
       display: "flex",
@@ -9578,7 +9903,8 @@ function ApercuProgramme({ prog, onAdopter, onGarder, libAdopter, libGarder, tit
         h("button", { onClick: () => setOuverte(ouv ? null : l), "aria-expanded": ouv, style: { display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", background: "none", border: "none", padding: "12px 14px", color: INK } },
           h("span", { style: { fontFamily: DISPLAY, fontWeight: 800, fontSize: 18, color: "#fff", background: S.couleur, borderRadius: 10, width: 34, height: 34, display: "grid", placeItems: "center", flexShrink: 0 } }, l),
           h("span", { style: { flex: 1, minWidth: 0 } },
-            h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, S.nom),
+            h("span", { style: { display: "block", fontWeight: 700, fontSize: 14 } }, S.nom, S.geste ? h("span", { style: { fontWeight: 600, fontSize: 11, color: SUB } }, " · ", S.geste) : null),
+            S.sport && h("span", { className: "note-sport", style: { display: "block", fontSize: 11, color: COL.K, marginTop: 2, lineHeight: 1.35 } }, S.sport),
             h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, S.exos.length, " exercice", S.exos.length > 1 ? "s" : "", gain.length ? " + gainage" : "", S.dureeMin ? ` · ${S.dureeMin} min` : "")),
           h("span", { style: { color: SUB, transform: ouv ? "rotate(90deg)" : "rotate(-90deg)", transition: "transform .2s", display: "grid" } }, h(Ic, { n: "chevron", s: 14, w: 2.4 }))),
         ouv && h("div", { style: { padding: "0 14px 12px" } },
@@ -9702,28 +10028,39 @@ function RemplacerPanneau({ ex, st, S, onRemplacer, onFermer }) {
 }
 
 /* « Adapter ma séance » : temps (saisie exacte) et énergie, avant de commencer */
-function AdapterPanneau({ S, defautMin, onAdapter, onFermer }) {
+function AdapterPanneau({ S, defautMin, entrees, onAdapter, onFermer }) {
   const [temps, setTemps] = useState(defautMin || S.dureeMin || 45);
   const [energie, setEnergie] = useState("normal");
+  const [complements, setComplements] = useState(true);
   const fixer = v => { const n = Math.round(Number(v)); if (!isNaN(n)) setTemps(Math.max(10, Math.min(180, n))); };
-  const apercu = window.Moteur.adapterSeance(S, { tempsMin: temps, energie });
+  const opts = { tempsMin: temps, energie, complements, banque: window.BANQUE, entrees };
+  const apercu = window.Moteur.adapterSeance(S, opts);
+  const enPlus = temps >= (S.dureeMin || 0) + 8;
+  const ajouts = apercu.adaptee.ajouts || [];
   return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
-    h("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", fontFamily: FONT, color: INK } },
-      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "On ajuste la séance"),
-      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 14px" } }, "Les gros exercices restent. Les isolations, les séries puis les repos s'ajustent, dans cet ordre."),
+    h("div", { className: "panneau-ajuster", onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", fontFamily: FONT, maxHeight: "88vh", overflowY: "auto" } },
+      h("div", { style: { fontFamily: DISPLAY, fontSize: 17, fontWeight: 700 } }, "Ajuster ma séance du jour"),
+      h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 14px" } }, "Temps et énergie, dans les deux sens : moins de temps, la séance se compresse ; plus de temps, on ajoute. Les gros exercices restent."),
       h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: SUB, marginBottom: 6 } }, "TEMPS DISPONIBLE"),
       h("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
         h("input", { type: "range", min: 10, max: 120, step: 1, value: Math.min(120, temps), onChange: e => fixer(e.target.value), style: { flex: 1, accentColor: COL.G } }),
-        h("input", { type: "number", inputMode: "numeric", min: 10, max: 180, value: temps, onChange: e => fixer(e.target.value), "aria-label": "Minutes disponibles", style: { width: 64, fontFamily: DISPLAY, fontSize: 18, fontWeight: 800, textAlign: "center", background: FIELD, color: INK, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "6px 4px", outline: "none" } }),
+        h("input", { type: "number", inputMode: "numeric", min: 10, max: 180, value: temps, onChange: e => fixer(e.target.value), "aria-label": "Minutes disponibles", style: { width: 64, fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, textAlign: "center", background: FIELD, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "6px 4px", outline: "none" } }),
         h("span", { style: { fontSize: 12, color: SUB } }, "min")),
       h("div", { style: { fontSize: 10.5, fontWeight: 800, letterSpacing: .8, color: SUB, margin: "14px 0 6px" } }, "ÉNERGIE"),
       h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7 } },
-        [["fond", "À fond"], ["normal", "Normal"], ["petite", "Petite forme"]].map(([v, l]) => h("button", { key: v, onClick: () => setEnergie(v), style: { ...GLASS, border: `1.5px solid ${energie === v ? COL.G : LINE}`, background: energie === v ? tintCss(COL.G) : GLASSBG, color: energie === v ? COL.G : INK, borderRadius: 12, padding: "10px 6px", fontWeight: 800, fontSize: 12, touchAction: "manipulation" } }, l))),
+        [["fond", "À fond"], ["normal", "Normal"], ["petite", "Petite forme"]].map(([v, l]) => h("button", { key: v, onClick: () => setEnergie(v), "aria-pressed": energie === v, style: { ...GLASS, border: `1.5px solid ${energie === v ? COL.G : LINE}`, background: energie === v ? tintCss(COL.G) : GLASSBG, color: energie === v ? COL.G : INK, borderRadius: 12, padding: "10px 4px", fontWeight: 800, fontSize: 12.5, touchAction: "manipulation" } }, l))),
+      energie === "fond" && h("div", { className: "note-fond", style: { fontSize: 11.5, color: SUB, marginTop: 8, lineHeight: 1.45 } }, "À fond : une série de plus sur les gros exercices, et un cran de charge suggéré sur tes dernières fois."),
+      enPlus && h("div", { className: "temps-en-plus", style: { ...GLASS, borderRadius: 14, padding: "10px 12px", marginTop: 14 } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+          h("div", { style: { flex: 1, fontSize: 13, fontWeight: 700 } }, "Tu as du temps en plus, on ajoute ?"),
+          h("button", { onClick: () => setComplements(c => !c), "aria-pressed": complements, className: "bascule-complements", style: { ...GLASS, border: `1.5px solid ${complements ? COL.G : LINE}`, background: complements ? tintCss(COL.G) : GLASSBG, color: complements ? COL.G : SUB, borderRadius: 999, padding: "6px 12px", fontWeight: 800, fontSize: 11.5, touchAction: "manipulation" } }, complements ? "Oui" : "Non")),
+        complements && (ajouts.length ? h("div", { style: { marginTop: 8, display: "grid", gap: 4 } }, ajouts.map(a => h("div", { key: a.id, className: "ajout", style: { fontSize: 12, display: "flex", gap: 8, alignItems: "baseline" } }, h("span", { style: { color: COL.G, fontWeight: 800 } }, "+"), h("span", { style: { flex: 1 } }, a.nom), h("span", { style: { fontSize: 10.5, color: SUB } }, a.pourquoi))))
+          : h("div", { style: { fontSize: 11.5, color: SUB, marginTop: 6 } }, "Rien à ajouter : la séance est déjà complète pour ce temps."))),
       h("div", { style: { fontSize: 12, color: SUB, marginTop: 12, lineHeight: 1.5 } },
         "Résultat : ", h("b", { style: { color: INK } }, apercu.exos.length, " exercice", apercu.exos.length > 1 ? "s" : "", apercu.gainage.length ? " + gainage" : "", " · ", apercu.dureeMin, " min"),
         energie === "petite" ? " · une série de moins, charges suggérées −10 %, repos gardés." : "",
         !apercu.adaptee.tient ? " · même compressée, la séance dépasse un peu : à toi de voir." : ""),
-      h("button", { onClick: () => onAdapter({ tempsMin: temps, energie }), style: { width: "100%", marginTop: 14, background: COL.G, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Ajuster ma séance"),
+      h("button", { onClick: () => onAdapter({ tempsMin: temps, energie, complements }), style: { width: "100%", marginTop: 14, background: COL.G, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Ajuster ma séance"),
       h("button", { onClick: onFermer, style: { width: "100%", marginTop: 8, ...GLASS, color: INK, borderRadius: 12, padding: "11px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Laisser comme ça")));
 }
 
@@ -9772,6 +10109,28 @@ function Confidentialite({ onFermer }) {
       h(B, { t: "Tes droits", x: h("span", null, "Accès, rectification, effacement : tout est dans l'app, sans intermédiaire. Pour une question, une demande, ou signaler un problème de sécurité : ", contact, ".") }),
       h(B, { t: "Mentions légales", x: "Éditeur : la personne joignable à l'adresse ci-dessus, à titre personnel et sans but lucratif. Hébergeur : Cloudflare, Inc., 101 Townsend Street, San Francisco, CA 94107, États-Unis. Le code source de l'app est public. Police Space Grotesk (licence OFL), React (licence MIT)." }),
       h("button", { onClick: onFermer, style: { width: "100%", marginTop: 6, background: "#F2F5F9", color: "#0B0E14", border: "none", borderRadius: 12, padding: "12px", fontWeight: 800 } }, "Fermer")));
+}
+/* ============================ MODE FOCUS (v20.6) ============================ */
+/* La carte d'exercice s'ouvre en popup quasi plein écran, fond flouté comme le spotlight des
+   récompenses ; fermeture par la croix ou un tap à l'extérieur. Les bandes haut et bas font
+   24 px : en dessous, le doigt est « attiré » vers la carte par le navigateur (ajustement
+   tactile) et le tap à l'extérieur ne ferme jamais. Alternative (b) de la v19.16,
+   choisie après test terrain : remplace l'accordéon. */
+function FocusExercice({ titre, sous, couleur, onFermer, children }) {
+  useEffect(() => { const avant = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = avant; }; }, []);
+  return h("div", { className: "focus-exercice-fond", onClick: onFermer, style: { position: "fixed", inset: 0, zIndex: 86, background: "rgba(4,6,10,.55)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", display: "flex", padding: "max(24px, env(safe-area-inset-top)) 10px max(24px, env(safe-area-inset-bottom))", touchAction: "manipulation" } },
+    h("div", { className: "focus-exercice", onClick: e => e.stopPropagation(), style: { flex: 1, minHeight: 0, background: "#10141D", border: `1.5px solid ${couleur}`, borderRadius: 20, display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,.5)", animation: "pop .22s" } },
+      h("div", { style: { display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 10px", borderBottom: `1px solid ${LINE}` } },
+        h("div", { style: { flex: 1, minWidth: 0 } },
+          h("div", { style: { fontWeight: 800, fontSize: 16, lineHeight: 1.25 } }, titre),
+          sous && h("div", { style: { fontSize: 12, color: SUB, marginTop: 2 } }, sous)),
+        h("button", { onClick: onFermer, "aria-label": "Fermer", className: "fermer-focus", style: { width: 34, height: 34, borderRadius: 999, border: `1px solid ${LINE}`, background: GLASSBG, color: INK, fontSize: 18, lineHeight: 1, display: "grid", placeItems: "center", padding: 0, flexShrink: 0, touchAction: "manipulation" } }, "✕")),
+      h("div", { style: { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "12px 16px 20px" } }, children)));
+}
+/* Type de charge d'un exercice faisable au poids du corps (v20.6) : poids du corps, lesté, assisté */
+function TypeCharge({ valeur, couleur, onChoisir }) {
+  return h("div", { className: "type-charge", style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 10 } },
+    [["pdc", "Poids du corps", ""], ["leste", "Lesté", "+ kg"], ["assiste", "Assisté", "− kg"]].map(([v, l, d]) => h("button", { key: v, onClick: () => onChoisir(v), "aria-pressed": valeur === v, style: { ...GLASS, border: `1.5px solid ${valeur === v ? couleur : LINE}`, background: valeur === v ? tintCss(couleur) : GLASSBG, color: valeur === v ? couleur : SUB, borderRadius: 10, padding: "7px 4px", fontWeight: 800, fontSize: 11, lineHeight: 1.2, touchAction: "manipulation" } }, l, d && h("span", { style: { display: "block", fontSize: 9.5, fontWeight: 700, opacity: .8 } }, d))));
 }
 /* Rappels à réactiver (v20.4) : après un changement de clé push côté serveur, l'abonnement en
    place ne vaut plus rien. Une seule carte, un seul tap, pas de vocabulaire technique. */
@@ -9828,12 +10187,20 @@ function GrapheCharge({ id, nom, l, estDur }) {
       h("text", { x: pL - 6, y: H - pB + 3, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtKg(minV)),
       h("text", { x: pL, y: H - 6, fontSize: 9, fill: SUB, fontFamily: FONT }, fmtDateCourte(l[0].date)),
       h("text", { x: W - pR, y: H - 6, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtDateCourte(der.date))),
+    vals.every(v => v < 0) && h("div", { style: { fontSize: 10, color: SUB, marginTop: 2 } }, "kg d'assistance : moins, c'est mieux"),
     durs.length > 0 && h("div", { style: { fontSize: 10, color: SUB, marginTop: 2, display: "flex", alignItems: "center", gap: 5 } },
       h("span", { style: { width: 10, height: 10, borderRadius: "50%", border: `1.5px dashed ${COL.A}`, display: "inline-block" } }), "séance ressentie « trop dur »"));
 }
 function CarnetCharges({ st }) {
-  const entrees = Object.entries(st.charges || {}).map(([id, l]) => ({ id, l: (l || []).filter(e => maxCharge(e) > 0) })).filter(x => x.l.length);
-  if (!entrees.length) return h(Carte, null, h("div", { style: { fontSize: 13, color: SUB } }, "Rien encore ! Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais, et ta courbe se dessinera ici."));
+  const entrees = Object.entries(st.charges || {}).map(([id, l]) => ({ id, l: (l || []).filter(e => maxCharge(e) !== 0) })).filter(x => x.l.length);
+  if (!entrees.length) {
+    // v20.6 : un exemple grisé, pour voir ce qui attend
+    const ilya = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+    const exemple = [{ date: ilya(21), series: [30, 30, 30] }, { date: ilya(14), series: [32.5, 32.5, 32.5] }, { date: ilya(7), series: [32.5, 35, 35] }, { date: ilya(0), series: [35, 35, 37.5] }];
+    return h("div", null,
+      h("div", { className: "graphe-exemple", style: { opacity: .45, filter: "grayscale(1)", pointerEvents: "none" } }, h(GrapheCharge, { id: "exemple", nom: "Exemple · développé couché", l: exemple, estDur: () => false })),
+      h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.5, margin: "-2px 2px 10px" } }, "Ta courbe apparaîtra ici dès ta deuxième séance. Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais."));
+  }
   // triés par récence : le dernier exercice pratiqué en premier
   entrees.sort((a, b) => b.l[b.l.length - 1].date.localeCompare(a.l[a.l.length - 1].date));
   const estDur = id => e => e.ressenti === "dur" || ((st.ressentis || {})[id] || []).some(r => r.date === e.date && r.r === "dur");
@@ -9852,8 +10219,11 @@ function Onboarding({
   profils,
   onCreer,
   onChoisir,
-  urlCode
+  urlCode,
+  urlDe
 }) {
+  const [coachEtape, setCoachEtape] = useState(0); // 0 prénom · 1 « tu veux aussi t'entraîner ? »
+  const [coachFait, setCoachFait] = useState(null); // profil coach créé, on enchaîne : "duo" (avec la personne) ou "autre"
   const [etape, setEtape] = useState(urlCode ? "coach" : "promesse");
   const [mode, setMode] = useState(null); // solo | duo | coach
   const [nom, setNom] = useState("");
@@ -10087,7 +10457,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.5"));
+  }, "v20.6"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -10182,80 +10552,163 @@ function Onboarding({
   }))))));
 
   /* ---- écran coach : nom + code ---- */
-  if (etape === "coach") return /*#__PURE__*/React.createElement(Cadre, {
-    onRetour: retour,
-    centre: true,
-    pied: "Tu pourras aussi t'entraîner, plus tard, depuis les Réglages."
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: DISPLAY,
-      fontSize: 20,
-      textAlign: "center",
-      margin: "10px 0 16px"
-    }
-  }, "MODE COACH"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: GLASSBG,
-      border: `1px solid ${LINE}`,
-      borderRadius: 16,
-      padding: 16
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    value: nom,
-    onChange: e => setNom(e.target.value),
-    placeholder: "Ton prénom / pseudo",
-    style: {
-      width: "100%",
-      border: `1.5px solid ${LINE}`,
-      borderRadius: 10,
-      padding: "11px 12px",
-      fontSize: 14,
-      background: FIELD,
-      outline: "none",
-      marginBottom: 10
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10.5,
-      color: SUB,
-      fontWeight: 700,
-      marginBottom: 4
-    }
-  }, "CODE DUO — celui de la personne que tu coaches"), /*#__PURE__*/React.createElement("input", {
-    value: code,
-    onChange: e => setCode(e.target.value),
-    style: {
-      width: "100%",
-      border: `1.5px solid ${urlCode ? COL.C : LINE}`,
-      borderRadius: 10,
-      padding: "11px 12px",
-      fontSize: 14,
-      background: FIELD,
-      outline: "none",
-      fontFamily: "monospace",
-      marginBottom: 4
-    }
-  }), urlCode && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: COL.C,
-      fontWeight: 700,
-      marginBottom: 6
-    }
-  }, "✓ Rempli automatiquement par le lien d'invitation"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => onCreer(nom, "coach", code, false, {}),
-    style: {
-      width: "100%",
-      marginTop: 8,
-      background: "#F2F5F9",
-      color: "#0B0E14",
-      border: "none",
-      borderRadius: 12,
-      padding: "14px",
-      fontWeight: 800,
-      fontSize: 15
-    }
-  }, "C'est parti !")));
+  if (etape === "coach") {
+    const de = urlDe || "";
+    const coachPuisCoachee = quoi => {
+      onCreer(nom, "coach", code, false, { sansRecharger: true });
+      setCoachFait(quoi);
+      setMode("duo");
+      setCode(codeAlea());
+      setEtape("questions");
+    };
+    return /*#__PURE__*/React.createElement(Cadre, {
+      onRetour: coachEtape ? () => setCoachEtape(0) : retour,
+      centre: true,
+      pied: "Coacher ne coûte rien : tu suis, tu valides, tu encourages — offrir une récompense reste ton choix."
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontFamily: DISPLAY,
+        fontSize: 20,
+        textAlign: "center",
+        margin: "10px 0 6px"
+      }
+    }, de ? "TU DEVIENS LE COACH DE " + de.toUpperCase() : "MODE COACH"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        color: SUB,
+        textAlign: "center",
+        margin: "0 0 16px",
+        lineHeight: 1.45
+      }
+    }, urlCode ? (de ? de + " t'a envoyé ce lien : son code duo est déjà rempli, tu n'as rien à taper." : "Le lien d'invitation a rempli le code duo pour toi.") : "Entre le code duo de la personne que tu coaches."), coachEtape === 0 ? /*#__PURE__*/React.createElement("div", {
+      className: "coach-prenom",
+      style: {
+        background: GLASSBG,
+        border: `1px solid ${LINE}`,
+        borderRadius: 16,
+        padding: 16
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      value: nom,
+      onChange: e => setNom(e.target.value),
+      placeholder: "Ton prénom / pseudo",
+      autoFocus: !urlCode,
+      style: {
+        width: "100%",
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 10,
+        padding: "11px 12px",
+        fontSize: 14,
+        background: FIELD,
+        outline: "none",
+        marginBottom: 10
+      }
+    }), !urlCode && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10.5,
+        color: SUB,
+        fontWeight: 700,
+        marginBottom: 4
+      }
+    }, "CODE DUO — celui de la personne que tu coaches"), !urlCode && /*#__PURE__*/React.createElement("input", {
+      value: code,
+      onChange: e => setCode(e.target.value),
+      style: {
+        width: "100%",
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 10,
+        padding: "11px 12px",
+        fontSize: 14,
+        background: FIELD,
+        outline: "none",
+        fontFamily: "monospace",
+        marginBottom: 4
+      }
+    }), urlCode && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: COL.C,
+        fontWeight: 700,
+        marginBottom: 6
+      }
+    }, "✓ Code duo rempli par le lien d'invitation"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => nom.trim() && setCoachEtape(1),
+      disabled: !nom.trim(),
+      style: {
+        width: "100%",
+        marginTop: 8,
+        background: nom.trim() ? "#F2F5F9" : "rgba(255,255,255,.08)",
+        color: nom.trim() ? "#0B0E14" : "#5A6274",
+        border: "none",
+        borderRadius: 12,
+        padding: "14px",
+        fontWeight: 800,
+        fontSize: 15
+      }
+    }, "Continuer")) : /*#__PURE__*/React.createElement("div", {
+      className: "coach-choix",
+      style: {
+        display: "grid",
+        gap: 9
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontFamily: DISPLAY,
+        fontWeight: 700,
+        fontSize: 20,
+        lineHeight: 1.2,
+        margin: "4px 0 6px"
+      }
+    }, "Tu veux aussi t'entraîner, ", nom.trim(), " ?"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        color: SUB,
+        lineHeight: 1.45,
+        marginBottom: 4
+      }
+    }, "Un coach peut aussi être coaché : tu aurais ton propre programme, tes XP, et quelqu'un qui te suit."), [["non", "Non, je coache seulement", "Tu arrives directement sur le Suivi de " + (de || "la personne que tu coaches") + "."], ["duo", "Oui, en duo avec " + (de || "la personne qui m'invite"), "Vous vous coachez l'un l'autre : tu réponds à quelques questions, puis tu " + (de ? "invites " + de : "l'invites") + " à devenir ton coach."], ["autre", "Oui, avec quelqu'un d'autre", "Tu choisis ton propre coach ensuite, depuis les Réglages."]].map(([v, t, d]) => /*#__PURE__*/React.createElement("button", {
+      key: v,
+      className: "carte-mode",
+      onClick: () => v === "non" ? onCreer(nom, "coach", code, false, {}) : coachPuisCoachee(v),
+      style: {
+        display: "flex",
+        width: "100%",
+        alignItems: "center",
+        gap: 12,
+        textAlign: "left",
+        color: INK,
+        background: GLASSBG,
+        border: `1.5px solid ${LINE}`,
+        borderRadius: 16,
+        padding: "13px 13px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontWeight: 800,
+        fontSize: 15
+      }
+    }, t), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11.5,
+        color: SUB,
+        marginTop: 3,
+        lineHeight: 1.4
+      }
+    }, d)), /*#__PURE__*/React.createElement(Ic, {
+      n: "chevron",
+      s: 16,
+      c: SUB,
+      style: {
+        transform: "rotate(180deg)",
+        flexShrink: 0
+      }
+    })))));
+  }
 
   /* ---- écran 3 : les questions du programme (fréquence, objectif, expérience, sport, matériel, temps) ---- */
   if (etape === "questions") return /*#__PURE__*/React.createElement(QuestionsProgramme, {
@@ -10325,7 +10778,7 @@ function Onboarding({
       lineHeight: 1.55,
       margin: "10px 0 24px"
     }
-  }, "Un coach rend l'aventure bien plus fun. Rien à envoyer maintenant — tu l'inviteras quand tu voudras."), /*#__PURE__*/React.createElement("button", {
+  }, coachFait === "duo" && urlDe ? "Tu coaches " + urlDe + " ; maintenant, c'est " + urlDe + " qui peut te coacher. Rien à envoyer tout de suite — l'invitation part quand tu veux." : "Un coach rend l'aventure bien plus fun. Rien à envoyer maintenant — tu l'inviteras quand tu voudras."), /*#__PURE__*/React.createElement("button", {
     onClick: () => creer(true),
     style: {
       width: "100%",

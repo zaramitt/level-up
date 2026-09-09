@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.4**
+Version actuelle : **v20.6**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.4"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.6"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -140,6 +140,26 @@ moteur), recalage du niveau observé proposé et jamais imposé
 récupération active rendu par `RecupView` (XP réduits). La séance du jour
 telle qu'elle se joue est `SJ` dans `App`.
 
+Depuis la v20.6 : la carte d'exercice s'ouvre en **mode focus** (`FocusExercice`,
+popup quasi plein écran, fond flouté, fermeture par la croix ou un tap à
+l'extérieur — alternative (b) de la v19.16, l'accordéon est abandonné ; le bouton
+de ligne garde `aria-expanded`, le corps n'est monté qu'ouvert). Les noms de
+séances sont les **muscles** (`S.nom`, « Pecs · épaules · triceps ») et le geste
+reste en petit (`S.geste`, « Push (poussée) ») ; `S.sport` porte la phrase
+« Adapté au foot : … » quand l'intention est de progresser dans un sport.
+**Types de charge** pour les exercices faisables au poids du corps (`ex.pdc`,
+posé par le moteur) : poids du corps / lesté (+kg) / assisté (kg d'assistance
+stockés en **négatif**), choix mémorisé dans `st.typesCharge[exId]`, type sur
+l'entrée de charge (`e.type`), `fmtCharge` / `maxCharge` en tiennent compte
+(en assisté, la meilleure série est la moins assistée). « Ajuster ma séance du
+jour — temps, énergie » marche dans les **deux sens** : temps en plus →
+compléments proposés par le moteur (`adaptee.ajouts`, gainage manquant,
+isolation du focus, finisher), « à fond » → une série de plus sur les gros
+exercices et un cran de charge suggéré (`adaptee.intensifie`). Les jours de
+sport ne bloquent jamais un programme : placement souple
+(`moteur.placementSouple`, jamais de grosse séance jambes la veille ni le jour
+même), dit dans « À savoir ».
+
 Migration, option (b) : un profil d'avant la v20.0 **garde son programme tel
 quel**. Une carte dans l'onglet Séance (« Nouveau moteur de programmes —
 veux-tu régénérer le tien ? ») ouvre les questions pré-remplies puis un
@@ -159,7 +179,7 @@ code, mais jamais les 5 à l'écran en même temps. Le coach en voit 2, le coach
 
 | Clé | Libellé | Icône | Rôle |
 |---|---|---|---|
-| `jour` | Séance | `barbell` | coaché — séance du jour : carrousel de séances, cardio / repos, validation des exercices et preuve photo |
+| `jour` | Séance | `barbell` | coaché — séance du jour : carrousel de séances, cardio / repos, validation des exercices et preuve photo (mode focus par exercice depuis la v20.6 ; la séance choisie passe au-dessus de la grille du mois) |
 | `hab` | Habitudes | `leaf` | coaché — habitudes quotidiennes à cocher |
 | `prog` | Progrès | `chart` | coaché — progression, graphique de charge par exercice (v20.2), historique et photos |
 | `rec` | Récomp. (coaché) / Négos (coach) | `gift` | récompenses, négociations, paris et pot |
@@ -174,7 +194,13 @@ préférence elle/il/neutre via `bulleTexte` ; `rec` a une variante solo.
 
 L'onboarding propose **trois modes** : `duo` (quelqu'un me coache), `solo` (je
 me coache moi-même) et `coach` (je supervise quelqu'un). Le choix est figé dans
-le profil sous `profil.solo`.
+le profil sous `profil.solo`. Un coach qui arrive par le lien d'invitation
+(`/?code=…&de=<prénom>`) n'a **pas** l'onboarding complet : le rôle est
+pré-rempli, on lui demande son prénom, puis « Tu veux aussi t'entraîner ? »
+(non → il arrive sur Suivi ; oui → son profil coach est créé sans recharger,
+`creerProfil(…, { sansRecharger })`, et l'onboarding coaché enchaîne avec un
+nouveau code duo). Chaque écran d'onboarding tient sans défiler et remplit au
+moins 85 % du viewport réel (`Cadre`, `100dvh`, vérifié par la suite 07).
 
 Ce que `solo` coupe, c'est la **synchronisation duo**, pas le réseau en entier :
 `pousserEtat` et `pousserPhoto` sortent immédiatement, `/pause` n'est plus

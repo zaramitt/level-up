@@ -176,7 +176,8 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     await tap(p, "C'est parti"); await p.locator('.carte-mode').nth(2).tap(); await p.waitForTimeout(500);
     await p.locator('input[placeholder="Ton prénom / pseudo"]').fill('Léo');
     await p.locator('input[style*="monospace"]').fill('duo-skiabcd');
-    await tap(p, "C'est parti !"); await p.waitForTimeout(1800); await fermerAide(p);
+    await tap(p, 'Continuer'); // v20.6 : prénom, puis « Tu veux aussi t'entraîner ? »
+    await tap(p, 'Non, je coache seulement'); await p.waitForTimeout(1800); await fermerAide(p);
     const t = await texte(p);
     check('le coach arrive sur Suivi, sans questions de programme ni carte de migration', /SUIVI|Suivi/.test(t) && !/Nouveau moteur/.test(t) && !/Combien de séances/.test(t), t.slice(0, 160));
     await ctx.close(); }

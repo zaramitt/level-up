@@ -19,6 +19,15 @@ node outils/sync.test.js             # les copies embarquées sont-elles à jour
   ne change de programme sans action explicite (option (b), v20.0).
 - `02-v2000-onboarding-moteur-migration.js` — onboarding solo, duo et coach,
   moteur branché, lecture IA et repli, réglages, 7 séances, sans matériel.
+- `07-v2005-terrain.js` — retours terrain v20.5 : chaque écran d'onboarding
+  tient sans défiler et remplit ≥ 85 % sur 390×664 (Safari avec ses barres)
+  et 390×844, toasts (4 s, tap, erreurs persistantes), « dernier » à 0,
+  cagnotte sur les jours prévus, « À savoir » fermable, bulle en puces,
+  chrono et bouton de repos, charges facultatives.
+- `08-v2006-evolutions.js` — v20.6 : noms de séances par muscles, mode
+  focus, séance choisie en avant, types de charge, ajustement dans les deux
+  sens, jours de sport et note sport, proposition sans coach → inviter,
+  parcours coach par lien, « Ton coach t'attend », Progrès vide.
 - `10` à `21` — non-régressions v19.10 → v19.21, portées sur les nouvelles
   questions d'onboarding quand elles passaient par les anciennes.
 

@@ -37,17 +37,29 @@ Les fondations sur lesquelles reposent plusieurs chantiers à la fois.
   contre une fuite du stockage ou un regard sur le dashboard, pas contre qui a
   le code. À décider quand l'app s'ouvre.
 
+## Solo
+
+- **Cagnotte personnelle en solo — mise que l'on récupère en tenant ses
+  séances. Cœur du mode contrat.**
+
+## UI / UX
+
+- **Onboarding « la photo fait foi » → « tes récompenses » : design à revoir.
+  Onglet Récompenses : refonte. → chantier UI/UX.**
+
 ## Écran Séance
 
 Accordéon, aération, gainage, « Ta base » (v19.16), puis ressenti, incrément
 proposé, remplacement d'exercice, « Adapter ma séance » et récupération
-active (v20.1), textes des bulles d'aide (v20.3) : traités. Ce qui reste :
+active (v20.1), textes des bulles d'aide (v20.3), corrections terrain (v20.5)
+et mode focus, types de charge, ajustement dans les deux sens (v20.6) :
+traités. Ce qui reste :
 
-- Vérifier en salle réelle le ressenti et « Remplacer » sur iOS Safari (tap
-  franc) — le harnais le vérifie en Chromium seulement.
-- « Temps en plus → proposer un complément » (DECISIONS, « Adapter ma
-  séance ») : non fait, seule la compression existe.
+- Vérifier en salle réelle le mode focus, le ressenti et « Remplacer » sur
+  iOS Safari (tap franc) — le harnais le vérifie en Chromium seulement.
 - Supersets, dernier cran de la compression : non fait.
+- Ajustement : les compléments sont choisis par le moteur ; laisser choisir
+  parmi plusieurs candidats (« plutôt du cardio ») reste à faire.
 - **PRIORITÉ BASSE — En-tête global trop serré à 390 px** : sur l'écran
   coachée, « LEVEL UP ! » et la ligne d'XP passent sur plusieurs lignes, coincés
   entre l'orbe de niveau et le bloc « 7 DERNIERS JOURS ». Antérieur à la v19.16
@@ -58,6 +70,11 @@ active (v20.1), textes des bulles d'aide (v20.3) : traités. Ce qui reste :
 
 Générateur incohérent traité : le moteur (règles en code, banque étiquetée)
 est branché en v20.0, étape 3 passe 1. Ce qui reste :
+
+- **PRIORITÉ HAUTE — Champ permanent « Ajuster mon programme »** : renforcer
+  X en ce moment, éviter Y (blessure), cycles de plusieurs semaines sur un
+  focus. Passe par `/interpreter` → contraintes du moteur (exclusions,
+  priorités, durée du cycle). Étape 4 du chantier.
 
 - Passe 2 faite en v20.1 (ressenti, incrément, remplacement, adapter,
   récupération active). Reste : monter d'un cran dans l'échelle d'un exercice
@@ -132,9 +149,8 @@ XP, pas de la structure de l'onglet.
 
 ## Coach
 
-- Plusieurs coachs pour une même personne (partager sa séance avec plusieurs
-  amis). Décision produit à prendre : un coach principal + spectateurs, ou
-  plusieurs coachs égaux ?
+- **Plusieurs personnes autour d'une coachée : un seul finance, les autres
+  regardent et encouragent (spectateurs). Décision de positionnement.**
 - **PRIORITÉ MOYENNE — Page d'accueil du coach à repenser comme un vrai tableau
   de bord** : aujourd'hui elle paraît vide à l'ouverture. Enjeu lié à la
   rétention du coach passif (cf. `DECISIONS.md`).
@@ -147,6 +163,10 @@ Sport, intention, matériel et temps demandés depuis la v20.0. Ce qui reste :
   profils connus migrés, retirer les templates `PROGRAMMES` du code (v20.x).
 - Prénom demandé après les questions du programme : vérifier avec les
   testeuses que l'ordre ne fait pas décrocher (neuf écrans avant le prénom).
+- Parcours coach par lien (v20.6) : « en duo avec [prénom] » crée un second
+  duo (un code = une personne coachée) ; la personne qui a invité doit encore
+  accepter l'invitation en retour. Un duo symétrique natif (chacun coache
+  l'autre sous un seul lien) reste à décider.
 
 ## Écran Choix de programme
 
