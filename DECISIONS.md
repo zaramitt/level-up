@@ -147,4 +147,6 @@ Autres chantiers identifiés, non planifiés :
 
 À chaque fois qu'une décision est prise en conversation, l'ajouter ici **avec sa
 raison** avant de fermer la conversation. Le code est dans l'historique Git ; le
-*pourquoi*, lui, n'est nulle part ailleurs.
+*pourquoi*, lui, n'est nulle part ailleurs. Une ligne par décision en vigueur,
+sans plafond. Quand une décision est remplacée, la déplacer dans `CHANGELOG.md`
+avec sa date.

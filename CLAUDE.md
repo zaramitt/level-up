@@ -10,7 +10,7 @@
 - Design dark glass = temporaire, migration Vite + refactor modulaire prévus.
 
 ## Avant toute tâche
-1. Lire `DECISIONS.md`. Dans `BACKLOG.md`, lire seulement la section concernée par la tâche. Lire `ARCHITECTURE.md` seulement si la tâche touche `worker.js`, le moteur, les routes ou la livraison. Ne jamais lire `CHANGELOG.md` sauf demande. Ne jamais relire l'ensemble du code : ouvrir uniquement les fichiers cités ou trouvés par grep.
+1. Lire `DECISIONS.md`. Dans `BACKLOG.md`, lire seulement la section concernée par la tâche. Lire `ARCHITECTURE.md` seulement si la tâche touche `worker.js`, le moteur, les routes ou la livraison. Ne pas lire `CHANGELOG.md` en entier. Avant de proposer une piste qui n'est pas dans `DECISIONS.md`, faire un grep du mot-clé dans `CHANGELOG.md` : si elle a déjà été écartée, ne pas la reproposer. Ne jamais relire l'ensemble du code : ouvrir uniquement les fichiers cités ou trouvés par grep.
 2. Si la tâche contredit une décision de `DECISIONS.md`, le dire en une phrase et s'arrêter.
 3. Une seule question de clarification, uniquement si elle change l'implémentation. Sinon avancer avec l'hypothèse la plus probable et la noter.
 
