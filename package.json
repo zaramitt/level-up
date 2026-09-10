@@ -1,0 +1,14 @@
+{
+  "name": "level-up",
+  "version": "20.11.0",
+  "private": true,
+  "description": "Level Up! — outils et harnais de test (l'app elle-même n'a aucune dépendance npm : React vient de cdnjs avec SRI)",
+  "scripts": {
+    "test": "node outils/sync.test.js && node outils/worker.test.js && node moteur-programmes.test.js && node outils/tests/lancer.js",
+    "audit": "npm audit --omit=dev; npm audit"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  },
+  "engines": { "node": ">=22" }
+}

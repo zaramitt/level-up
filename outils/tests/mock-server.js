@@ -71,6 +71,9 @@ chargerWorker.then(() => http.createServer((req, res) => {
     return;
   }
   if (/^\/api\/[^/]+\/notif$/.test(u.pathname)) { res.writeHead(404, { 'content-type': 'application/json' }); res.end(''); return; }
+  // v20.12 : journal des actions critiques déclarées par l'app (adoption de programme)
+  if (/^\/api\/[^/]+\/journal$/.test(u.pathname) && req.method === 'POST') { lire(req, body => { global.__journal = [...(global.__journal || []), JSON.parse(body || '{}')]; json(res, 200, { ok: true }); }); return; }
+  if (u.pathname === '/__journal') { json(res, 200, global.__journal || []); return; }
   if (u.pathname === '/__planifs') { json(res, 200, global.__planifs || []); return; }
   // v20.4 : rappels push — 503 non_configure sans clé, comme le worker
   if (/^\/api\/[^/]+\/(abonner|testpush)$/.test(u.pathname) && req.method === 'POST') {

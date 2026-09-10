@@ -8,7 +8,15 @@
       "id": "b01ca4e9f02549828073664575d5eaf8"
     }
   ],
+  // sauvegarde quotidienne du KV (v20.12) : bucket R2 créé dans le dashboard (R2 → Create bucket), 30 jours
+  "r2_buckets": [
+    {
+      "binding": "SAUVEGARDES",
+      "bucket_name": "level-up-sauvegardes"
+    }
+  ],
   "triggers": {
-    "crons": ["0 18 * * *", "0 6 * * *", "* * * * *"]
+    // 18 h rappel du soir · 6 h compléments du matin · chaque minute notifications de séance · 3 h sauvegarde
+    "crons": ["0 18 * * *", "0 6 * * *", "* * * * *", "0 3 * * *"]
   }
 }

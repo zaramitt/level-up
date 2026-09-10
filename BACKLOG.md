@@ -30,10 +30,17 @@ Les fondations sur lesquelles reposent plusieurs chantiers à la fois.
   coachée, `plafond`, `vider`, `resoudre`, `valider` qu'à la clé coach, le
   reste aux deux. Migration : les duos existants gardent le code seul jusqu'à
   ce que les deux téléphones aient présenté leur clé. Voir `SECURITE.md`,
-  point 2.
+  point 2, et « Tentative d'intrusion » pour l'estimation : 3 à 4 jours
+  (worker ~120 lignes, app ~150 lignes, migration, tests). Y joindre : n'indexer
+  dans `idx:codes` (rappels du soir) qu'un code dont l'état est publié depuis
+  plus de 24 h, pour qu'on ne puisse pas en évincer les vrais duos.
 - **Turnstile sur les routes IA et `/profil`** (mode géré, invisible la plupart
   du temps) : en réserve, si le budget journalier et la limitation de débit ne
   suffisent pas.
+- **Restauration d'essai sur Cloudflare** : une fois la liaison R2 en place, restaurer un
+  duo de test depuis une sauvegarde réelle (`outils/restaurer.js --compte … --namespace …`)
+  et vérifier dans le dashboard. Le cycle complet est testé localement (workerd), pas encore
+  sur le compte.
 - **Chiffrement des photos côté client** (clé dérivée du code) : protège
   contre une fuite du stockage ou un regard sur le dashboard, pas contre qui a
   le code. À décider quand l'app s'ouvre.

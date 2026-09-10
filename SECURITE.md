@@ -573,3 +573,258 @@ worker) :
 - **Edge sur Windows** : `/abonner` refuse les services hors Apple / Google /
   Mozilla ; l'app le dit. Si une utilisatrice le demande, ajouter
   `*.notify.windows.com` à `HOTES_PUSH` (avec une vérification de suffixe).
+
+
+---
+
+# Passage 2 (v20.12) — sauvegardes et traçabilité
+
+## Sauvegarde du KV
+
+Chaque nuit à 3 h (cron `0 3 * * *`), le worker lit **tout** le namespace
+`LEVELUP` (profils, états, historiques, négos, paris, cagnottes, pauses,
+abonnements, index, photos, journal) et dépose un fichier
+`sauvegarde-AAAA-MM-JJ.json` dans le bucket R2 **`level-up-sauvegardes`**
+(liaison `SAUVEGARDES` dans `wrangler.jsonc`). Format : `{ version: 1,
+date, cles, donnees: { "<clé KV>": "<valeur telle quelle>" } }` — les valeurs
+sont des chaînes copiées octet pour octet, une photo de 240 Ko reste une
+photo de 240 Ko. Le même cron supprime les fichiers de plus de **30 jours**.
+Le journal note chaque sauvegarde (nombre de clés, taille, fichiers purgés).
+
+Repli si R2 n'est pas utilisable (plan, région, refus du bucket) : lier un
+**second namespace KV** sous le nom `SAUVEGARDES_KV` ; le cron y écrit une
+entrée par duo (`sauvegarde:<date>:<code>`, plus `sauvegarde:<date>:_index`)
+avec un TTL de 30 jours qui fait la purge tout seul (une valeur KV est bornée
+à 25 Mo, d'où le découpage par duo). Sans aucune des deux liaisons, rien
+n'est écrit et le journal dit `sauvegarde_non_configuree`.
+
+**À vérifier dans le dashboard après déploiement** (Workers & Pages →
+level-up) :
+
+1. **Settings → Bindings** : une ligne **R2 bucket**, variable `SAUVEGARDES`,
+   bucket `level-up-sauvegardes`. Si elle manque, Workers Builds a refusé
+   `wrangler.jsonc` : ouvre **Deployments** → le dernier build → le log dit
+   « bucket not found » (nom différent de `level-up-sauvegardes` : renomme le
+   bucket ou corrige `wrangler.jsonc`) ou « R2 not enabled » (active R2 dans
+   le menu **R2 Object Storage**, plan gratuit : 10 Go).
+2. **Settings → Triggers → Cron Triggers** : quatre expressions, dont
+   `0 3 * * *`.
+3. **Settings → Variables and Secrets** : `ADMIN_TOKEN` (type Secret, une
+   chaîne longue et aléatoire : `openssl rand -base64 32`).
+4. Le lendemain matin : **R2 Object Storage → level-up-sauvegardes** →
+   un objet `sauvegarde-<date>.json`. Sa taille doit correspondre à peu
+   près aux photos stockées (compte 250 Ko par photo).
+5. `curl -H "x-admin-token: <ADMIN_TOKEN>" https://<ton-worker>/admin/journal`
+   → une entrée `"ev":"sauvegarde"` avec `cles` et `octets`. Si tu vois
+   `sauvegarde_non_configuree`, la liaison n'est pas prise : redéploie.
+
+Limites connues : un cron a le même budget CPU qu'une requête ; l'export est
+surtout de l'attente réseau (une lecture KV par clé), ce qui tient largement
+pour quelques duos. Au-delà de quelques centaines de photos, le fichier
+dépasse le Mo par dizaines : R2 s'en moque, mais surveille le temps du cron
+dans **Observability** le jour où l'app s'ouvre.
+
+## Restauration
+
+Le script est `outils/restaurer.js`. Il ne supprime jamais rien : il ajoute
+et écrase les clés qu'il restaure, une clé absente de la sauvegarde reste en
+l'état.
+
+**1. Récupérer la sauvegarde.** Sur ton ordinateur, dans le dépôt, avec
+`wrangler` connecté (`npx wrangler login`) :
+
+```
+npx wrangler r2 object get level-up-sauvegardes/sauvegarde-2026-09-10.json --file sauvegarde.json
+```
+
+ou depuis le dashboard : **R2 → level-up-sauvegardes → l'objet → Download**.
+Avec le repli KV : `npx wrangler kv key list --namespace-id=<ID_SAUVEGARDES_KV>
+--prefix "sauvegarde:2026-09-10:"` puis `kv key get` sur chaque groupe ;
+`assemblerDepuisKV` du script recompose un fichier version 1 (voir les tests).
+
+**2. Restaurer un profil précis** (le duo `duo-xxxxxxxxxx`) :
+
+```
+node outils/restaurer.js sauvegarde.json --code duo-xxxxxxxxxx --bulk restauration.json
+npx wrangler kv bulk put --namespace-id=b01ca4e9f02549828073664575d5eaf8 restauration.json
+```
+
+(l'identifiant du namespace est celui de `wrangler.jsonc`). Le script dit
+combien de clés il a préparées ; `wrangler` confirme l'écriture.
+
+**3. Restaurer tout le namespace** : même commande sans `--code`. À faire
+sur un namespace vide ou après un incident ; sur un namespace vivant, les
+clés plus récentes que la sauvegarde sont écrasées par leur version de la
+sauvegarde (c'est le but), les clés créées depuis restent.
+
+**4. Sans `wrangler`, par l'API Cloudflare** (jeton créé dans **My Profile →
+API Tokens → Create Token → Edit Cloudflare Workers** ou un jeton
+personnalisé avec `Workers KV Storage: Edit`) :
+
+```
+node outils/restaurer.js sauvegarde.json [--code duo-xxxxxxxxxx] \
+  --compte <ACCOUNT_ID> --namespace b01ca4e9f02549828073664575d5eaf8 --jeton <CF_API_TOKEN>
+```
+
+Le script écrit par paquets de 5 000 clés (`PUT …/storage/kv/namespaces/<id>/bulk`).
+
+**5. Vérifier** : ouvrir l'app avec le code restauré (Suivi côté coach, ou
+`curl https://<ton-worker>/api/<code>/etat`) ; les photos se rouvrent depuis
+l'onglet Progrès. Pour comparer octet pour octet : `npx wrangler kv key get
+--namespace-id=… "<code>:etat"` et la valeur `donnees["<code>:etat"]` du fichier
+doivent être identiques (`diff <(…) <(…)`).
+
+**6. Le test réel.** La procédure a été jouée de bout en bout le
+10 septembre 2026 dans le vrai runtime Workers (workerd, via Miniflare, KV et
+R2 réels en local) par `outils/sauvegarde.e2e.js` : six clés dont une photo
+de 240 023 octets, accents et emoji dans une négo → cron `0 3 * * *` → objet
+`sauvegarde-2026-09-10.json` (240 989 octets) → suppression de toutes les clés
+→ restauration d'un seul duo (ses 5 clés, rien d'autre) → restauration
+complète → **identique octet pour octet** à l'état d'avant. Le même
+enchaînement tourne sur faux KV et faux R2 dans `outils/worker.test.js`
+(purge à 31 jours, conservation à 29, repli KV, format bulk). Pour rejouer le
+test réel : `npm i --no-save miniflare@4 && node outils/sauvegarde.e2e.js`.
+Ce qui n'a pas pu être testé d'ici : le compte Cloudflare lui-même
+(liaison, quota R2) — d'où la liste de vérifications ci-dessus, et une
+restauration d'essai à faire une fois sur un code de test dès la première
+sauvegarde en place.
+
+## Journal des actions critiques
+
+Clé KV `journal:AAAA-MM` (2 000 entrées au plus par mois), écrite par le
+worker au moment de l'action, sans donnée sensible : `{ t: horodatage ISO,
+ev, duo: "duo-…" (quatre caractères), montant: <plafond seulement> }`.
+Événements : `suppression` (`/supprimer`), `plafond` et `cagnotte_videe`
+(`/pot`), `nego_acceptee` / `nego_refusee` (`/negos`), `pari_accepte` /
+`pari_refuse` / `pari_resolu` (`/paris`), `pause_validee` / `pause_refusee`
+(`/pause`), `programme` (déclaré par l'app via `POST /api/<code>/journal`, le
+seul événement qu'elle a le droit de déclarer : l'adoption ou le changement de
+programme se décide dans le téléphone), `sauvegarde`,
+`sauvegarde_non_configuree`. Jamais un libellé, un motif, un montant de
+cagnotte, un code complet. La suppression d'un duo ne touche pas au journal.
+
+Lecture : `GET /admin/journal?mois=AAAA-MM` avec l'en-tête `x-admin-token:
+<ADMIN_TOKEN>` (comparaison en temps constant ; le jeton dans l'URL ne compte
+pas ; 10 essais par minute et par IP ; `404` tant que le secret n'est pas
+posé, `401` sinon ; `no-store`, `nosniff`, lecture seule).
+
+```
+curl -s -H "x-admin-token: $ADMIN_TOKEN" "https://<ton-worker>/admin/journal?mois=2026-09" | jq .
+```
+
+## CORS — la configuration exacte
+
+Dans `worker.js`, pour `/api/…` et `/admin/…` :
+
+```
+origine autorisée   = url.origin (l'origine du worker lui-même : https://level-up.<compte>.workers.dev,
+                       ou ton domaine le jour venu) — aucune autre, aucun joker, aucune liste
+requête avec Origin ≠ url.origin       → 403 {"erreur":"origine"}, rien n'est lu ni écrit
+OPTIONS (pré-vol) depuis url.origin    → 204
+    access-control-allow-origin: <url.origin>
+    access-control-allow-methods: GET, POST, OPTIONS
+    access-control-allow-headers: content-type, x-admin-token
+    access-control-max-age: 600
+    vary: origin
+OPTIONS depuis une autre origine       → 403, sans en-tête allow-origin
+réponses de l'API                      → access-control-allow-origin: <url.origin> ; vary: origin
+jamais                                 → access-control-allow-credentials, « * »
+```
+
+Une requête sans en-tête `Origin` (navigation, `curl`, le service worker en
+même origine) passe : c'est le comportement des navigateurs pour la même
+origine. Vérifié par `outils/worker.test.js` (pré-vol, écriture et lecture
+depuis `https://evil.example` → 403 ; même origine → 200 avec l'origine
+exacte) et par le test de bout en bout.
+
+## Dépendances : `npm audit`
+
+`package.json` et `package-lock.json` sont désormais dans le dépôt. L'app
+elle-même n'a **aucune** dépendance npm (React vient de cdnjs avec SRI, le
+worker et le moteur sont sans import). La seule entrée est celle du
+harnais : `playwright` **1.56.1**, figée (pas de `^`), soit trois paquets
+résolus dans le lockfile (`playwright`, `playwright-core`, `fsevents`
+optionnel).
+
+Rapport du 10 septembre 2026, `npm audit` (registre npm, Node 22.22.2) :
+**0 vulnérabilité** (info, low, moderate, high, critical : 0). `miniflare`,
+utilisé pour le test de bout en bout, est installé à la demande
+(`--no-save`) et reste hors du lockfile. À refaire à chaque changement de
+version de Playwright et à chaque rotation (calendrier ci-dessous) : `npm
+audit` dans le dépôt.
+
+## Rotation des secrets — calendrier et procédures
+
+Tous les 90 jours, ensemble. Premier tour : **9 septembre 2026** (pose des
+secrets). **Prochaine échéance : 8 décembre 2026**, puis 8 mars 2027,
+6 juin 2027, 4 septembre 2027 — note-les dans ton agenda, l'app ne le
+rappellera pas.
+
+| Secret | Où | Procédure | Effet visible |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | console Anthropic + dashboard Workers | 1. Console Anthropic → **API keys** → **Create key** (dans le workspace level-up). 2. Dashboard → level-up → **Settings → Variables and Secrets** → `ANTHROPIC_API_KEY` → **Edit** → coller → **Deploy**. 3. Vérifier : **Générer des idées** dans l'app → des idées, pas « non configurée ». 4. Console → l'ancienne clé → **Disable**, puis **Delete** au tour suivant. | aucun pendant la bascule (le worker relit le secret à chaque requête) |
+| Paire VAPID (`VAPID_PRIV`, `VAPID_PUB`) | `node outils/vapid.js` + dashboard | 1. `node outils/vapid.js` → deux valeurs. 2. Dashboard → `VAPID_PRIV` (Secret) et `VAPID_PUB` (Text) → **Edit** → **Deploy**. 3. Fermer le terminal. | les abonnements pris avec l'ancienne clé ne valent plus rien : chaque téléphone voit la carte « On a renforcé la sécurité de l'app. Réactive tes rappels en un tap » — c'est prévu (v20.4), un tap |
+| `ADMIN_TOKEN` | dashboard | 1. `openssl rand -base64 32`. 2. Dashboard → `ADMIN_TOKEN` (Secret) → **Edit** → **Deploy**. 3. Mettre à jour la valeur là où tu la gardes (gestionnaire de mots de passe), jamais dans le dépôt. 4. Vérifier avec le `curl` de la section Journal. | aucun pour les utilisatrices |
+
+Hors calendrier, tourner **immédiatement** : une clé aperçue dans un log, un
+écran partagé, un dépôt ou un terminal ; un appareil perdu qui avait accès au
+dashboard ; le jeton API Cloudflare utilisé pour une restauration, à
+**supprimer** dès la restauration finie (**My Profile → API Tokens**).
+
+## Tentative d'intrusion (v20.12)
+
+Point de départ : l'URL de l'app et le code source (dépôt public), aucun code duo. Les essais
+ont été rejoués contre le worker réel dans Node (KV factice, mêmes routes, même logique — ce
+sont les vérifications « v20.12 — tentative d'intrusion » de `outils/worker.test.js`, qui
+resteront rouges si l'un des correctifs saute) puis, pour les plantages, dans workerd via
+Miniflare. Rien n'a été tenté contre le compte Cloudflare de production.
+
+### Tableau récapitulatif
+
+| # | Tentative | Résultat | Comment | Correctif |
+|---|---|---|---|---|
+| 1a | Lire les données d'un autre duo sans son code | **Échec** | Chaque clé KV est préfixée par le code ; l'URL n'atteint que `code:*` ; `idx:codes`, `journal:*`, `quota:*` contiennent « : » ou ne passent pas `CODE_RE` → 400. Un code inconnu répond `null`, sans indice. | — |
+| 1b | Balayer des codes (`GET /api/<code>/etat` en boucle) | **Réussi partiellement** — puis corrigé | Les GET n'avaient aucune limite de débit : un balayage illimité était possible. Reste hors de portée en pratique : 36⁸ ≈ 2,8 × 10¹² codes de 8 caractères après `duo-`. | Limite de 600 lectures par adresse et par minute (`DEBIT.lecture`) ; l'app en fait quelques dizaines par écran. |
+| 1c | Code malformé dans l'URL (`/api/%E0%A4%A/etat`) | **Réussi** — corrigé | `decodeURIComponent` levait `URIError` : exception non rattrapée, erreur 1101 côté Cloudflare (pas de fuite, mais un plantage à la demande). | `try/catch` → 400. |
+| 2 | S'attribuer des XP, un niveau, une récompense sans séance | **Réussi** (par construction) | Avec le code, `POST /etat` accepte n'importe quel XP (borné à 1 000 000) et n'importe quel historique ; `accepter` une négociation aussi. C'est la décision « XP en confiance, la photo est la preuve » : le serveur ne calcule pas, il publie. Sans le code : impossible. | Backlog — séparation des rôles (voir estimation). Ce qui existe : bornes, liste blanche des champs, photos JPEG seules. |
+| 3 | Faire une action de coach en tant que coachée (plafond, validation, refus) | **Réussi** (par construction) | Rien ne distingue les deux membres côté serveur : `plafond`, `vider`, `valider`, `resoudre` passent avec le seul code. Le journal enregistre désormais chacune de ces actions (horodatée, code tronqué) : on ne l'empêche pas, on le voit. | Backlog — séparation des rôles. |
+| 4a | Vider le quota IA d'un duo | **Échec** | 10 appels par code et par jour ; il faut le code. | — |
+| 4b | Vider le budget journalier de toute l'app | **Réussi** — corrigé | `POST /profil` enregistre n'importe quel code ; 6 par minute et par adresse → 360 codes neufs par heure, chacun avec 10 appels : le budget global (150 idées, 100 lectures) tombait en 25 minutes depuis une seule adresse, et l'IA était coupée pour tout le monde jusqu'au lendemain. | Quota par adresse : 25 appels IA par jour, tous codes confondus (`QUOTA_IP_JOUR`). L'adresse n'est pas stockée : empreinte SHA-256 salée par la date, clé `quota:ip:<hex>`, TTL un jour. Il faut maintenant six adresses par jour pour vider le budget des idées — et le budget reste le plafond de la facture. |
+| 5a | Corps JSON `null` (ou nombre, chaîne, tableau) | **Réussi** — corrigé | `null` passait `JSON.parse` puis `b.action` levait `TypeError` : dix routes plantaient (`negos`, `pot`, `paris`, `planifier`, `photo`, `pause`, `rappels`, `journal`, `abonner`, `etat`). | `lireJson` refuse tout corps qui n'est pas un objet → 400. |
+| 5b | Corps énorme, `content-length` menteur | **Échec** | 413 avant lecture si l'annonce dépasse la borne, 413 après lecture sinon ; Cloudflare coupe à 100 Mo en amont. | — |
+| 5c | Pollution de prototype (`__proto__` dans le corps) | **Échec** | `JSON.parse` crée une propriété ordinaire ; les champs sont recopiés un à un dans une liste blanche. | — |
+| 5d | Valeurs absurdes (`niveau: "abc"`, `jours: 1e9`, `quand: {}`) | **Échec** (une scorie) | Tout est borné ; `niveau` non numérique donnait `null` en base (pas de plantage). | `\|\| 1`. |
+| 5e | Remplir le stockage avec des photos | **Réussi** — corrigé | Avec le code : 400 Ko par photo, 120 par minute, identifiants libres → 48 Mo/min, 1 Go (quota gratuit KV) en 20 minutes. | 400 photos vivantes au plus par code (`PHOTOS_MAX`, un `list` préfixé par envoi) ; réécrire une photo existante reste libre. L'app en garde 30 séances. |
+| 6a | Contourner la limite de débit avec `x-forwarded-for` | **Échec** | Seul `cf-connecting-ip` est lu, posé par Cloudflare, non forgeable. Sans lui (impossible en production), tout le monde partage le seau « inconnue ». | — |
+| 6b | Contourner par plusieurs points de présence | **Réussi** (connu) | Le compteur est en mémoire, par isolat : autant de seaux que de colos qui servent l'attaquant. C'est un frein, pas un mur ; les quotas KV (par code, par adresse, global) sont le vrai plafond. | Backlog existant : Turnstile ou règle WAF (exige un domaine à soi). |
+| 6c | Spam de notifications via `/testpush` | **Réussi** — corrigé | Avec le code, 120 appels par minute réveillaient les téléphones du duo. | 3 par adresse et par minute (`DEBIT.push`). |
+| 7a | Injection HTML/JS via prénom, récompense, objectif | **Échec** | Le prénom ne quitte jamais le téléphone (liste blanche de `/etat`). Récompenses, contre-mots, motifs : tronqués, servis en JSON `nosniff`/`no-store`, rendus par React qui échappe ; aucun `dangerouslySetInnerHTML` ; CSP à nonce. | — |
+| 7b | Injection dans le prompt IA (contexte des idées, objectif libre) | **Échec** | Texte utilisateur dans le message `user` seulement, jamais dans `system` ; sortie contrainte par schéma (enum pour `/interpreter`, filtre orthographique et de voix pour `/idees`) ; le pire résultat est une mauvaise classification ou une idée écartée. La clé API n'est jamais dans le contexte du modèle. | — |
+| 8a | `/abonner` vers une URL à moi (exfiltration, relais) | **Échec** | Hôtes Apple / Google / Mozilla seulement, `https` obligatoire, 4 abonnements par code, seuls `endpoint` et `keys` gardés. | — |
+| 8b | `/abonner` pour évincer les vrais duos de l'index des rappels | **Réussi** (faible) | `idx:codes` garde les 200 derniers codes : 200 codes bidons avec un vrai endpoint FCM feraient tomber les duos réels de l'index du soir (ils ne recevraient plus le rappel, rien d'autre). Il faut fabriquer 200 abonnements push valides. | Backlog (avec les rôles) : n'indexer qu'un code dont l'état est publié depuis plus de 24 h. |
+| 8c | `/admin/journal` : jeton en query, POST, force brute, autre origine | **Échec** | 404 si le secret n'est pas posé, 401 sans en-tête `x-admin-token` (la query est ignorée), 405 hors GET, 10 essais par adresse et par minute, comparaison en temps constant, 403 depuis une autre origine. Le journal ne contient ni prénom, ni libellé, ni code complet. | — |
+
+### Ce qui a été corrigé dans ce commit
+
+- `worker.js` : `decodeURIComponent` protégé ; `lireJson` exige un objet ; limite de débit sur
+  les GET (600/min) et sur `/testpush` (3/min) ; 400 photos par code ; quota IA par adresse
+  (25/jour, empreinte hachée) ; `niveau` non numérique → 1.
+- Vérifications correspondantes dans `outils/worker.test.js` (section « tentative
+  d'intrusion »), rejouables à chaque commit.
+
+### Ce qui reste au backlog : la séparation des rôles côté serveur
+
+Les lignes 2, 3 et 8b ont la même racine : le code duo est l'unique capacité, partagée par les
+deux membres. Le schéma est décrit dans `BACKLOG.md` (un secret par rôle, empreintes
+mémorisées à la première écriture, migration douce). Estimation du travail :
+
+| Étape | Contenu | Taille |
+|---|---|---|
+| Worker | dérivation et mémorisation des deux empreintes (`code:roles`), en-tête `x-role-key`, contrôle par route (`/etat`, `/photo` → coachée ; `plafond`, `vider`, `valider`, `resoudre`, `refuser` → coach ; le reste → les deux), mode « code seul » tant que les deux empreintes ne sont pas posées | ~120 lignes, 1 jour |
+| App | tirage des deux clés à la création du duo, clé coach dans le lien d'invitation (fragment `#`, jamais dans l'URL envoyée au serveur), envoi de l'en-tête sur chaque `fetch(api(...))`, écran « ce téléphone est le coach / la coachée » et récupération si un téléphone change | ~150 lignes, 1 à 2 jours |
+| Migration | les duos existants restent en « code seul » jusqu'à ce que les deux téléphones aient présenté leur clé ; verrouillage ensuite ; procédure de déblocage manuelle (via `/admin`) si un téléphone est perdu | ½ jour |
+| Tests | worker (rôles, migration, refus), mock-server, suite Playwright coach/coachée | 1 jour |
+
+Soit **3 à 4 jours** au total, sans nouvelle dépendance. Prérequis avant toute ouverture hors
+du cercle proche (déjà en priorité haute). En attendant, le journal rend ces actions visibles
+et les sauvegardes quotidiennes les rendent réversibles.

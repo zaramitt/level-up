@@ -2,10 +2,10 @@
 
 Déplacée de `CLAUDE.md` (règles de travail) vers ce fichier : architecture, routes, configuration Cloudflare, moteur, tests, règles de livraison, conventions de design. À tenir à jour à chaque livraison (version comprise).
 
-Version actuelle : **v20.11** (à mettre à jour ici et dans `index.html` à chaque livraison)
+Version actuelle : **v20.12** (à mettre à jour ici et dans `index.html` à chaque livraison)
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.11"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.12"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -49,10 +49,17 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   (`09e` : le cardio — notation, chrono, XP par durée, jour Cardio, Progrès,
   cardio dans le programme, option d'« Ajuster ») et les non-régressions
   v19.10 → v19.21.
-- `outils/worker.test.js` — le worker importé dans Node avec un faux KV et un
-  faux `fetch` : secrets hors du code, en-têtes, validation, quotas, photos,
-  limitation de débit. `node outils/worker.test.js`, à chaque modification
-  de `worker.js`.
+- `outils/worker.test.js` — le worker importé dans Node avec un faux KV, un
+  faux R2 et un faux `fetch` : secrets hors du code, en-têtes, validation,
+  quotas, photos, limitation de débit, sauvegarde et restauration octet pour
+  octet, journal, `/admin/journal`, CORS. `node outils/worker.test.js`, à
+  chaque modification de `worker.js`.
+- `outils/restaurer.js` — restauration d'une sauvegarde datée (tout le
+  namespace ou un seul duo), en fichier « bulk » pour `wrangler kv bulk put`
+  ou directement par l'API Cloudflare ; procédure dans `SECURITE.md`.
+- `package.json` / `package-lock.json` — la seule dépendance est celle du
+  harnais (`playwright` 1.56.1, figée) ; `npm audit` fait partie du chantier
+  sécurité (rapport dans `SECURITE.md`).
 - `SECURITE.md` — l'audit de sécurité (temps 1) et ce qui a été fait (temps 2),
   avec les actions qui restent côté dashboard. `CONFIDENTIALITE.md` — le texte
   de la page « Confidentialité et mentions légales » des Réglages.
@@ -73,6 +80,9 @@ Configuration Cloudflare :
 | Cron rappel du soir | `0 18 * * *` |
 | Cron compléments du matin | `0 6 * * *` |
 | Cron notifications de séance (v20.8) | `* * * * *` — pousse les notifications planifiées par l'app (fin de repos, « Tu as fini ? ») |
+| Cron sauvegarde (v20.12) | `0 3 * * *` — export de tout le namespace KV vers R2 (`sauvegarde-AAAA-MM-JJ.json`), purge au-delà de 30 jours |
+| Liaison R2 `SAUVEGARDES` (v20.12) | bucket `level-up-sauvegardes` (créé dans le dashboard, déclaré dans `wrangler.jsonc`) ; repli sans R2 : liaison KV `SAUVEGARDES_KV` (second namespace, entrées datées à TTL 30 jours) |
+| Secret `ADMIN_TOKEN` (v20.12) | lecture du journal des actions critiques par `/admin/journal` (en-tête `x-admin-token`) ; sans lui, la route n'existe pas (404) |
 
 Routes `/idees` et `/interpreter` : appels à l'API Anthropic (modèles épinglés
 dans `worker.js` : `claude-sonnet-5` pour `/idees` depuis la v20.8,
@@ -100,7 +110,7 @@ par le code duo (`<code>:etat`, `<code>:negos`…).
 | `/paris` | GET, POST | paris coach / coaché |
 | `/pot` | GET, POST | pot commun (cumul du mois en euros + historique), alimenté par les pertes d'XP |
 | `/pause` | GET, POST | demande de pause et pause active |
-| `/photo` | POST | dépôt d'une preuve photo : data URL **JPEG base64 seulement**, 300 000 caractères max, TTL 90 jours |
+| `/photo` | POST | dépôt d'une preuve photo : data URL **JPEG base64 seulement**, 300 000 caractères max, TTL 90 jours, 400 photos vivantes par code au plus (`429 {"erreur":"photos_max"}`) |
 | `/photo/<id>` | GET | lecture d'une preuve photo (texte, `nosniff`, cache privé 1 h) |
 | `/rappels` | GET, POST | préférences de rappels (drapeau `matin`) |
 | `/abonner` | POST | enregistrement d'un abonnement push (4 derniers conservés) — **services acceptés : Apple, Google/FCM, Mozilla** ; `503` sans clé VAPID |
@@ -112,6 +122,11 @@ par le code duo (`<code>:etat`, `<code>:negos`…).
 | `/idees` | POST | idées de récompenses via l'API Anthropic — 10/jour par code, puis **150/jour pour toute l'app** (`429 {"erreur":"quota"|"budget"}`) |
 | `/interpreter` | POST | lecture IA d'un objectif en texte libre → `{base, prioritaires}` pour le moteur — 10/jour par code, puis 100/jour pour toute l'app. Remplace `/generer` (v20.0) |
 | `/supprimer` | POST | purge de **toutes** les clés KV du code duo, photos comprises |
+| `/journal` | POST | (v20.12) l'app déclare une action critique qu'elle seule connaît — uniquement `{ev: "programme"}` (adoption ou changement de programme) ; les autres événements sont journalisés par le worker lui-même |
+
+Hors préfixe duo (v20.12) : **`GET /admin/journal?mois=AAAA-MM`** renvoie le journal des actions critiques du mois (`journal:AAAA-MM` en KV, 2 000 entrées au plus : horodatage, événement, code duo tronqué à 4 caractères, montant du plafond seulement) — en-tête `x-admin-token` égal au secret `ADMIN_TOKEN`, comparaison en temps constant, 10 essais par minute et par IP, 404 si le secret n'est pas configuré, 401 sinon. Événements : `suppression`, `plafond`, `cagnotte_videe`, `programme`, `nego_acceptee`, `nego_refusee`, `pari_accepte`, `pari_refuse`, `pari_resolu`, `pause_validee`, `pause_refusee`, `sauvegarde`, `sauvegarde_non_configuree`.
+
+**CORS (v20.12)** : la seule origine autorisée est celle du worker lui-même (`url.origin`, sans joker ni liste). Une requête `/api/…` ou `/admin/…` dont l'en-tête `Origin` diffère reçoit `403 {"erreur":"origine"}` ; le pré-vol `OPTIONS` répond `204` avec `access-control-allow-origin: <origine exacte>`, `allow-methods: GET, POST, OPTIONS`, `allow-headers: content-type, x-admin-token`, `max-age: 600`, `vary: origin` ; jamais de `allow-credentials`.
 
 `/idees` et `/interpreter` renvoient `503 {"erreur":"non_configure"}` quand
 `ANTHROPIC_API_KEY` n'est pas défini ; l'app se replie alors sur un programme
@@ -120,9 +135,12 @@ par le code duo (`<code>:etat`, `<code>:negos`…).
 Garde-fous communs (v20.4, voir `SECURITE.md`) : corps des requêtes plafonné
 par route (`lireJson` : 64 Ko pour `/etat`, 400 Ko pour `/photo`, 2 Ko
 ailleurs, `413` au-delà), liste blanche des champs de `/etat`, identifiants
-`[\w-]{1,40}`, limitation de débit par IP en mémoire (120 écritures/min, 6/min
-sur l'IA et `/profil`, `429 {"erreur":"trop_vite"}`), `cache-control:
-no-store` et `nosniff` sur le JSON. La page est servie avec une CSP à nonce et
+`[\w-]{1,40}`, corps JSON obligatoirement un objet (`400` sinon), limitation
+de débit par IP en mémoire (120 écritures/min, 600 lectures/min, 6/min sur
+l'IA et `/profil`, 3/min sur `/testpush`, `429 {"erreur":"trop_vite"}`), quota
+IA par adresse dans le KV (25/jour tous codes confondus, clé
+`quota:ip:<empreinte SHA-256 salée par la date>`, TTL un jour, l'adresse
+n'est jamais stockée), `cache-control: no-store` et `nosniff` sur le JSON. La page est servie avec une CSP à nonce et
 le jeu d'en-têtes de sécurité (`preparerPage`, exportée par `worker.js` et
 réutilisée par le mock du harnais). Le worker sert aussi
 `/polices/space-grotesk.woff2` (plus de Google Fonts).
