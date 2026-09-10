@@ -1939,8 +1939,12 @@ const seanceDuJour = (j, seances) => {
   const retires = new Set(j.retires || []);
   const retiresExos = S.exos.map(e => rempl[e.id] || e).filter(e => retires.has(e.id)).map(e => ({ id: e.id, nom: e.nom }));
   let exos = S.exos.map(e => rempl[e.id] || e).filter(e => !retires.has(e.id));
+  // v20.10 : le gainage se remplace et s'augmente aussi (un gainage ajouté « après » un gainage rejoint le bloc gainage)
+  const gainage = gainageDe(S).map(g => rempl[g.id] || g);
   for (const a of j.ajouts || []) {
-    if (exos.some(e => e.id === a.id)) continue;
+    if (exos.some(e => e.id === a.id) || gainage.some(g => g.id === a.id)) continue;
+    const kg = a.apres ? gainage.findIndex(g => g.id === a.apres) : -1;
+    if (kg >= 0 && a.compartiment === "gainage") { gainage.splice(kg + 1, 0, a); continue; }
     const k = a.apres ? exos.findIndex(e => e.id === a.apres) : -1;
     if (k >= 0) exos.splice(k + 1, 0, a); else exos.push(a);
   }
@@ -1948,7 +1952,7 @@ const seanceDuJour = (j, seances) => {
     const pos = new Map(j.ordre.map((id, i) => [id, i]));
     exos = exos.map((e, i) => [e, pos.has(e.id) ? pos.get(e.id) : 1000 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
   }
-  return { ...S, exos, libre, retiresExos };
+  return { ...S, exos, gainage, libre, retiresExos };
 };
 // le journal d'une séance (v20.9) : ce qui a été FAIT — prévus validés, ajoutés, retirés, remplacés, séries,
 // reps réelles, charges, type de charge, ressenti. Progrès et « dernier » lisent les charges, pas le programme.
@@ -4466,6 +4470,7 @@ function App() {
       if (s.programme === "perso" && s.programmePerso) for (const L of Object.keys(s.programmePerso.seances)) {
         const sc = s.programmePerso.seances[L];
         sc.exos = sc.exos.map(e => e.id === exId ? cand.exo : e);
+        if (Array.isArray(sc.gainage)) sc.gainage = sc.gainage.map(g => g.id === exId ? cand.exo : g);
       }
       return s;
     });
@@ -5728,6 +5733,7 @@ function App() {
     onAjouter: setAjouter,
     onRetirer: setRetrait,
     onDeplacer: deplacerExo,
+    onOrdre: ids => setJour(j => ({ ...j, ordre: ids })),
     onReps: noterReps,
     onAdapter: () => setAdapter(true),
     onAnnulerAdaptation: () => setJour(j => ({
@@ -5945,16 +5951,23 @@ function App() {
       padding: "10px 18px",
       fontWeight: 700
     }
-  }, "Voir mes habitudes")), st.xp === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Voir mes habitudes")), st.xp === 0 && !st.carteXPFermee && /*#__PURE__*/React.createElement("div", {
+    className: "carte-premiers-xp",
     style: {
       background: "rgba(44,229,167,.12)",
       border: `1.5px solid ${COL.C}`,
       borderRadius: 14,
       padding: "12px 14px",
       marginTop: 14,
-      marginBottom: 10
+      marginBottom: 10,
+      position: "relative"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "fermer-premiers-xp",
+    "aria-label": "Fermer",
+    onClick: () => maj(s => { s.carteXPFermee = true; return s; }),
+    style: { position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 999, border: `1px solid ${LINE}`, background: GLASSBG, color: SUB, fontSize: 14, lineHeight: 1, display: "grid", placeItems: "center", padding: 0, touchAction: "manipulation" }
+  }, "✕"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 800,
       fontSize: 13.5,
@@ -6780,6 +6793,7 @@ function SeanceView({
   onAjouter,
   onRetirer,
   onDeplacer,
+  onOrdre,
   onReps
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
@@ -6797,6 +6811,72 @@ function SeanceView({
   // même logique pour le gainage : un cadre déployé à la fois, détails et
   // bouton de lancement dans le corps
   const [gainOuvert, setGainOuvert] = useState(null);
+  // v20.10 : « Déplacer » ouvre un petit menu Monter / Descendre dans la carte focus ; et, dans la liste,
+  // un appui long (450 ms, sans bouger) soulève l'exercice pour le glisser à la place voulue. Le geste ne
+  // se dispute pas le défilement : tant que l'appui long n'a pas abouti, un doigt qui bouge fait défiler
+  // (et annule l'appui) ; une fois l'exercice soulevé, le touchmove natif est bloqué (écouteur non
+  // passif sur le document, React rend les siens passifs) pour qu'iOS ne fasse plus défiler.
+  const [menuDeplacer, setMenuDeplacer] = useState(null);
+  const [drag, setDrag] = useState(null); // { id, depuis, vers, dy, h }
+  const dragRef = useRef(null), pressRef = useRef(null), rectsRef = useRef([]), clicAvale = useRef(false);
+  useEffect(() => {
+    const bloquer = e => { if (dragRef.current) e.preventDefault(); };
+    document.addEventListener("touchmove", bloquer, { passive: false });
+    return () => document.removeEventListener("touchmove", bloquer);
+  }, []);
+  const finirDrag = () => {
+    const d = dragRef.current;
+    dragRef.current = null; setDrag(null);
+    if (!d) return;
+    if (d.vers !== d.depuis && onOrdre) {
+      const ids = S.exos.map(e => e.id);
+      ids.splice(d.depuis, 1); ids.splice(d.vers, 0, d.id);
+      onOrdre(ids);
+    }
+    clicAvale.current = true; setTimeout(() => { clicAvale.current = false; }, 350);
+  };
+  const annulerAppui = () => { if (pressRef.current) { clearTimeout(pressRef.current.timer); pressRef.current = null; } };
+  const gestesLigne = (ex, i) => {
+    if (J.faits.includes(ex.id) || S.exos.length < 2) return {};
+    return {
+      onPointerDown: e => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const cible = e.currentTarget, pid = e.pointerId, y0 = e.clientY;
+        annulerAppui();
+        pressRef.current = { id: ex.id, x: e.clientX, y: e.clientY, timer: setTimeout(() => {
+          pressRef.current = null;
+          rectsRef.current = [...document.querySelectorAll("button[data-exo]")].map(b => { const r = b.getBoundingClientRect(); return { id: b.dataset.exo, top: r.top, bottom: r.bottom }; });
+          const r = rectsRef.current.find(x => x.id === ex.id);
+          const d = { id: ex.id, depuis: i, vers: i, y0, dy: 0, h: r ? r.bottom - r.top + 34 : 70 };
+          dragRef.current = d; setDrag({ ...d });
+          try { cible.setPointerCapture(pid); } catch {}
+          if (navigator.vibrate) navigator.vibrate(12);
+        }, 450) };
+      },
+      onPointerMove: e => {
+        const pr = pressRef.current;
+        if (pr && !dragRef.current && (Math.abs(e.clientX - pr.x) > 8 || Math.abs(e.clientY - pr.y) > 8)) { annulerAppui(); return; }
+        const d = dragRef.current;
+        if (!d) return;
+        const y = e.clientY, autres = rectsRef.current.filter(x => x.id !== d.id);
+        let vers = autres.findIndex(x => y < (x.top + x.bottom) / 2);
+        if (vers < 0) vers = autres.length;
+        d.dy = y - d.y0; d.vers = vers;
+        setDrag({ ...d });
+      },
+      onPointerUp: () => { annulerAppui(); finirDrag(); },
+      onPointerCancel: () => { annulerAppui(); finirDrag(); },
+      onContextMenu: e => { if (dragRef.current || pressRef.current) e.preventDefault(); }
+    };
+  };
+  // décalage visuel pendant un glisser : la ligne soulevée suit le doigt, les autres s'écartent
+  const styleDrag = (ex, i) => {
+    if (!drag) return {};
+    if (drag.id === ex.id) return { transform: `translateY(${drag.dy}px)`, zIndex: 5, boxShadow: "0 12px 30px rgba(0,0,0,.45)", transition: "none", borderColor: S.couleur };
+    const k = i > drag.depuis ? i - 1 : i; // rang de cette ligne parmi les autres
+    const d = k >= drag.vers ? (i > drag.depuis ? 0 : drag.h) : (i > drag.depuis ? -drag.h : 0);
+    return { transform: `translateY(${d}px)`, transition: "transform .15s ease" };
+  };
   useEffect(() => setGainOuvert(null), [cle]);
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7002,6 +7082,7 @@ function SeanceView({
       onChoisir: r => onRessenti(ex, r)
     })) : /*#__PURE__*/React.createElement("div", {
       key: ex.id,
+      className: "ligne-exercice" + (drag && drag.id === ex.id ? " en-vol" : ""),
       style: {
         position: "relative",
         overflow: "hidden",
@@ -7011,7 +7092,8 @@ function SeanceView({
         padding: ouvert ? "15px 16px 16px" : "13px 16px",
         marginTop: 8,
         transition: "border-color .2s, padding .22s ease",
-        animation: burst === ex.id ? "flashOk 1.5s ease-out" : "none"
+        animation: burst === ex.id ? "flashOk 1.5s ease-out" : "none",
+        ...styleDrag(ex, i)
       }
     }, burst === ex.id && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -7042,9 +7124,10 @@ function SeanceView({
        touch-action:manipulation global — sans quoi iOS attend un éventuel
        double-tap et avale le premier appui, comme sur le stepper (v19.6). */
     /*#__PURE__*/React.createElement("button", {
-      onClick: () => basculer(ex.id),
+      onClick: () => { if (clicAvale.current) return; basculer(ex.id); },
       "aria-expanded": ouvert,
       "data-exo": ex.id,
+      ...gestesLigne(ex, i),
       style: {
         display: "flex",
         alignItems: "center",
@@ -7056,7 +7139,8 @@ function SeanceView({
         padding: 0,
         color: INK,
         userSelect: "none",
-        WebkitUserSelect: "none"
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -7209,16 +7293,10 @@ function SeanceView({
       className: "ajouter-apres",
       onClick: () => onAjouter(ex.id),
       style: { display: "inline-flex", alignItems: "center", gap: 6, color: INK, background: "rgba(255,255,255,.08)", border: `1px solid ${LINE}`, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, fontWeight: 700, touchAction: "manipulation" }
-    }, "+ Ajouter après"), !fait && S.exos.length > 1 && /*#__PURE__*/React.createElement("span", {
-      className: "deplacer-exercice",
-      style: { display: "inline-flex", gap: 4 }
-    }, /*#__PURE__*/React.createElement("button", {
-      className: "monter", "aria-label": "Monter", disabled: i === 0, onClick: () => onDeplacer(ex.id, -1),
-      style: { width: 34, height: 30, borderRadius: 999, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === 0 ? "#5A6274" : INK, fontSize: 12, padding: 0, touchAction: "manipulation" }
-    }, "▲"), /*#__PURE__*/React.createElement("button", {
-      className: "descendre", "aria-label": "Descendre", disabled: i === S.exos.length - 1, onClick: () => onDeplacer(ex.id, 1),
-      style: { width: 34, height: 30, borderRadius: 999, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === S.exos.length - 1 ? "#5A6274" : INK, fontSize: 12, padding: 0, touchAction: "manipulation" }
-    }, "▼")), photoSrc && /*#__PURE__*/React.createElement("img", {
+    }, "+ Ajouter un exercice après celui-ci"), !fait && S.exos.length > 1 && /*#__PURE__*/React.createElement("button", {
+      className: "deplacer-exercice", "aria-expanded": menuDeplacer === ex.id, onClick: () => setMenuDeplacer(m => m === ex.id ? null : ex.id),
+      style: { display: "inline-flex", alignItems: "center", gap: 6, color: menuDeplacer === ex.id ? S.couleur : INK, background: "rgba(255,255,255,.08)", border: `1px solid ${menuDeplacer === ex.id ? S.couleur : LINE}`, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, fontWeight: 700, touchAction: "manipulation" }
+    }, "Déplacer"), photoSrc && /*#__PURE__*/React.createElement("img", {
       src: photoSrc,
       onClick: () => onZoom({
         src: photoSrc,
@@ -7234,7 +7312,16 @@ function SeanceView({
         cursor: "pointer",
         marginLeft: "auto"
       }
-    })), !fait && (ex.charge || ex.pdc) && /*#__PURE__*/React.createElement("div", {
+    })), !fait && menuDeplacer === ex.id && /*#__PURE__*/React.createElement("div", {
+      className: "menu-deplacer",
+      style: { ...GLASS, borderRadius: 12, padding: "10px 12px", marginBottom: 14, borderColor: S.couleur + "66" }
+    }, /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8 } }, /*#__PURE__*/React.createElement("button", {
+      className: "monter", disabled: i === 0, onClick: () => onDeplacer(ex.id, -1),
+      style: { flex: 1, borderRadius: 10, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === 0 ? "#5A6274" : INK, fontSize: 12.5, fontWeight: 700, padding: "9px 10px", touchAction: "manipulation" }
+    }, "▲ Monter d'une place"), /*#__PURE__*/React.createElement("button", {
+      className: "descendre", disabled: i === S.exos.length - 1, onClick: () => onDeplacer(ex.id, 1),
+      style: { flex: 1, borderRadius: 10, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === S.exos.length - 1 ? "#5A6274" : INK, fontSize: 12.5, fontWeight: 700, padding: "9px 10px", touchAction: "manipulation" }
+    }, "▼ Descendre d'une place")), /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, color: SUB, marginTop: 7, lineHeight: 1.4 } }, "Ou, dans la liste : appuie longtemps sur un exercice et glisse-le à la place voulue.")), !fait && (ex.charge || ex.pdc) && /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 14
       }
@@ -7479,6 +7566,7 @@ function SeanceView({
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGainOuvert(o => o === g.id ? null : g.id),
       "aria-expanded": ouvertG,
+      "data-gain": g.id,
       style: {
         display: "flex",
         width: "100%",
@@ -7663,7 +7751,10 @@ function SeanceView({
       n: "play",
       s: 11,
       w: 2.4
-    }), "démo"), (ok || tours > 0) && !J.gainValide && /*#__PURE__*/React.createElement("button", {
+    }), "démo"), !ok && /*#__PURE__*/React.createElement("button", {
+      className: "remplacer-gainage", onClick: () => onRemplacer(g),
+      style: { display: "inline-flex", alignItems: "center", gap: 6, color: INK, background: "rgba(255,255,255,.08)", border: `1px solid ${LINE}`, borderRadius: 999, padding: "9px 12px", fontSize: 11.5, fontWeight: 700, flexShrink: 0, touchAction: "manipulation" }
+    }, /*#__PURE__*/React.createElement(Ic, { n: "shuffle", s: 11, w: 2.4 }), "Remplacer"), (ok || tours > 0) && !J.gainValide && /*#__PURE__*/React.createElement("button", {
       onClick: () => onAnnulerGain(g),
       title: ok ? "Annuler" : "Remettre à zéro",
       style: {
@@ -7680,7 +7771,7 @@ function SeanceView({
         padding: 0,
         flexShrink: 0
       }
-    }, "↩")))));
+    }, "↩")), !ok && /*#__PURE__*/React.createElement("button", { className: "ajouter-apres-gainage", onClick: () => onAjouter(g.id), style: { width: "100%", marginTop: 8, background: "none", border: `1px dashed ${LINE}`, borderRadius: 10, color: SUB, fontSize: 11.5, fontWeight: 700, padding: "8px 10px", touchAction: "manipulation" } }, "+ Ajouter un exercice après celui-ci"))));
   }), !J.gainValide && gainFait && /*#__PURE__*/React.createElement("button", {
     onClick: onValiderGain,
     style: {
@@ -7743,7 +7834,7 @@ function SerieInputs({
     if (onReps) onReps(exId, a, true);
   };
   const tousTenus = repsMax != null && repsVals.length > 0 && repsVals.every(r => Number(r) >= repsMax);
-  const repsStepper = i => repsMax != null && /*#__PURE__*/React.createElement("div", { className: "reps-serie", style: { flex: "0 0 104px", minWidth: 0 } }, /*#__PURE__*/React.createElement(Stepper, { compact: true, unite: "reps", pas: 1, min: 0, max: 60, accent: couleur, valeur: repsVals[i] != null && repsVals[i] !== "" ? repsVals[i] : repsMax, onChange: v => fixerReps(i, v) }));
+  const repsStepper = i => repsMax != null && /*#__PURE__*/React.createElement("div", { className: "reps-serie", style: { flex: "0 0 auto" } }, /*#__PURE__*/React.createElement(Stepper, { compact: true, unite: "reps", pas: 1, min: 0, max: 60, accent: couleur, valeur: repsVals[i] != null && repsVals[i] !== "" ? repsVals[i] : repsMax, onChange: v => fixerReps(i, v) }));
   const aideTenu = /*#__PURE__*/React.createElement("div", { className: "haut-fourchette-aide", style: { fontSize: 11, color: SUB, lineHeight: 1.45, marginTop: 6 } }, "Tout tenu ? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures.");
   const aideReps = /*#__PURE__*/React.createElement("div", { className: "reps-aide", style: { fontSize: 10.5, color: "#5A6274", marginTop: 6 } }, "Reps pré-remplies au haut de la fourchette (", repsMax, ") : corrige celles que tu n'as pas tenues.");
   // pré-remplissage : la suggestion d'incrément si elle existe, sinon la dernière fois
@@ -8416,7 +8507,7 @@ function Recompenses({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 8
@@ -8442,7 +8533,7 @@ function Recompenses({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -8473,6 +8564,7 @@ function Recompenses({
   }, "Le niveau max est ", MAX_NIVEAU, " (Icône)")), /*#__PURE__*/React.createElement(Idees, {
     code: code,
     style: st.styles || [st.style || "soins"],
+    solo: solo,
     contexte: "grandes récompenses par paliers de niveau",
     toast: toast,
     onAjout: it => maj(s => {
@@ -8564,7 +8656,7 @@ function Recompenses({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -8818,29 +8910,17 @@ function Negos({
       letterSpacing: .3
     }
   }, txt);
-  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      margin: "6px 4px 8px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      fontSize: 13.5,
-      color: SUB
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 6
-    }
-  }, /*#__PURE__*/React.createElement(Ic, {
-    n: "users",
-    s: 14
-  }), "La table des négos")), mode === "local" && chip("○ Hors ligne — ton coach ne voit pas ces propositions", SUB, "rgba(255,255,255,.10)"), !st.coachLie && role !== "coach" && onInviter && /*#__PURE__*/React.createElement("div", {
+  // v20.10 : même en-tête que « Le Pari » et « La cagnotte » (titre + sous-titre), puis une ligne de
+  // puces (duo, actualiser, hors ligne) — plus de ligne serrée titre / bouton / code
+  return h("div", { className: "table-negos", style: { marginTop: 4 } },
+    h("div", { style: { fontWeight: 700, fontSize: 13.5, margin: "6px 4px 6px", color: SUB } },
+      h("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 } }, h(Ic, { n: "users", s: 14 }), "La table des négos"), " ",
+      h("span", { style: { fontWeight: 500, fontSize: 11 } }, "— un aller-retour, réponse sous 48 h")),
+    h("div", { className: "negos-puces", style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", margin: "0 4px 10px" } },
+      chip((role === "coach" ? "🧢 " : "💪 ") + "duo « " + code + " »", SUB, "rgba(255,255,255,.06)"),
+      mode === "sync" && h("button", { onClick: () => rafraichir(false), style: { ...GLASS, borderRadius: 999, padding: "3px 10px", fontSize: 9.5, fontWeight: 800, letterSpacing: .3, color: SUB, touchAction: "manipulation" } }, "ACTUALISER"),
+      mode === "local" && chip("HORS LIGNE — TON COACH NE VOIT PAS CES PROPOSITIONS", SUB, "rgba(255,255,255,.10)"),
+      mode === "local" && h("span", { style: { fontSize: 10.5, color: SUB } }, "mode local : passez-vous le téléphone")), !st.coachLie && role !== "coach" && onInviter && /*#__PURE__*/React.createElement("div", {
     className: "sans-coach",
     style: {
       ...GLASS,
@@ -8935,36 +9015,7 @@ function Negos({
       fontSize: 13,
       touchAction: "manipulation"
     }
-  }, "Plus tard"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginLeft: "auto",
-      display: "flex",
-      gap: 6,
-      alignItems: "center"
-    }
-  }, mode === "sync" && /*#__PURE__*/React.createElement("button", {
-    onClick: () => rafraichir(false),
-    style: {
-      background: GLASSBG,
-      border: `1px solid ${LINE}`,
-      borderRadius: 999,
-      padding: "4px 10px",
-      fontSize: 11,
-      fontWeight: 700,
-      color: SUB
-    }
-  }, "🔄"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10.5,
-      color: SUB
-    }
-  }, role === "coach" ? "🧢" : "💪", " duo « ", code, " »"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: SUB,
-      margin: "0 4px 8px"
-    }
-  }, "Un aller-retour max · réponse sous 48 h", mode === "local" && " · (mode local : passez-vous le téléphone — la synchro arrive avec le Worker)"), /*#__PURE__*/React.createElement("button", {
+  }, "Plus tard"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setOuvert(o => !o),
     style: {
       width: "100%",
@@ -9031,12 +9082,12 @@ function Negos({
       fontWeight: 600,
       marginBottom: 6
     }
-  }, "DES IDÉES POUR NE PAS SE GRATTER LA TÊTE — touche pour pré-remplir"), /*#__PURE__*/React.createElement("div", {
+  }, "DES IDÉES POUR NE PAS SE GRATTER LA TÊTE · touche pour pré-remplir"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
       gap: 6,
-      marginBottom: 10
+      marginBottom: 12
     }
   }, (st.styles || [st.style || "soins"]).flatMap(sid => PRESETS_STYLE[sid] || []).filter((p, i, a) => a.findIndex(x => x.label === p.label) === i).map((p, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
@@ -9058,7 +9109,7 @@ function Negos({
     style: {
       color: SUB
     }
-  }, "· N", p.niveau)))), /*#__PURE__*/React.createElement("input", {
+  }, "· Niveau ", p.niveau)))), /*#__PURE__*/React.createElement("input", {
     value: label,
     onChange: e => setLabel(e.target.value),
     placeholder: "… ou ta propre idée, champ libre",
@@ -9067,7 +9118,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 8
@@ -9094,7 +9145,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9120,7 +9171,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9236,7 +9287,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9262,7 +9313,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9288,7 +9339,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -10164,7 +10215,7 @@ function QuestionsProgramme({ reponses, setReponses, qIdx, setQIdx, onFin, onRet
           onChange: e => poser("objectifLibre", e.target.value),
           rows: 3,
           placeholder: "Ex : me remettre au sport après une blessure au genou, plutôt du renfo doux…",
-          style: { width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "10px 12px", fontSize: 13.5, background: FIELD, outline: "none", resize: "none", fontFamily: "inherit", color: INK }
+          style: { width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, background: FIELD, outline: "none", resize: "none", fontFamily: "inherit", color: INK }
         }),
         h("div", { style: { fontSize: 10.5, color: SUB, margin: "6px 0 8px" } }, "L'app lit ta description pour choisir les muscles à privilégier ; la structure des séances, elle, suit des règles fixes."),
         h(BoutonContinuer, { onTap: suivant, disabled: (reponses.objectifLibre || "").trim().length < 8 }, (reponses.objectifLibre || "").trim().length >= 8 ? "Continuer" : "Décris un peu plus (8 caractères min)")));
@@ -10378,10 +10429,14 @@ function PanneauExercices({ mode, ex, apres, st, S, onChoisir, onFermer }) {
   const materiel = st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle";
   const niveau = st.programmePerso && st.programmePerso.moteur ? st.programmePerso.moteur.entrees.niveau : 2;
   const moteur = !!(st.programmePerso && st.programmePerso.moteur && st.programme === "perso");
-  const exclure = S.exos.map(e => e.id).filter(id => !remplacer || id !== ex.id);
+  // v20.10 : le gainage compte aussi (jamais proposer ce qui est déjà dans la séance) ; « ajouter après » un
+  // gainage ouvre sur les gainages
+  const ancreGainage = !remplacer && apres && gainageDe(S).some(g => g.id === apres);
+  const exclure = [...S.exos, ...gainageDe(S)].map(e => e.id).filter(id => !remplacer || id !== ex.id);
   const cat = useMemo(() => window.Moteur.catalogue(window.BANQUE, { focus: S.focus, materiel, exclure }), [S.focus, materiel, exclure.join(",")]);
   const directs = useMemo(() => remplacer ? window.Moteur.remplacantsPour(window.BANQUE, ex, { materiel, niveau, exclure }) : null, [remplacer, ex && ex.id, materiel, niveau, exclure.join(",")]);
   const idsDirects = new Set(directs ? directs.candidats.map(c => c.exo.id) : []);
+  if (ancreGainage) cat.similaires = cat.tous.filter(x => x.compartiment === "gainage");
   const [onglet, setOnglet] = useState(cat.similaires.length || (directs && directs.candidats.length) ? "similaires" : "banque");
   const norm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const q = norm(recherche.trim());
@@ -10403,7 +10458,7 @@ function PanneauExercices({ mode, ex, apres, st, S, onChoisir, onFermer }) {
       h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, x.muscle, " · ", x.materiel, " · ", x.dose, x.faisable === false ? " · pas ton matériel" : "")),
     h("span", { style: { fontSize: 18, color: SUB, flexShrink: 0 } }, "＋"));
   const ongletBtn = (id, l, n) => h("button", { key: id, className: "onglet-panneau", "aria-pressed": onglet === id, onClick: () => setOnglet(id), style: { flex: 1, background: onglet === id ? tintCss(COL.G) : "rgba(255,255,255,.04)", border: `1.5px solid ${onglet === id ? COL.G : LINE}`, color: onglet === id ? COL.G : SUB, borderRadius: 999, padding: "8px 6px", fontSize: 11.5, fontWeight: 800, touchAction: "manipulation" } }, l, n != null ? ` (${n})` : "");
-  const select = (val, set, opts, lib, nom) => h("select", { value: val, onChange: e => set(e.target.value), "aria-label": lib, style: { flex: 1, minWidth: 0, background: FIELD, color: val ? INK : SUB, border: `1px solid ${LINE}`, borderRadius: 10, padding: "8px 6px", fontSize: 12, fontFamily: FONT } },
+  const select = (val, set, opts, lib, nom) => h("select", { value: val, onChange: e => set(e.target.value), "aria-label": lib, style: { flex: 1, minWidth: 0, background: FIELD, color: val ? INK : SUB, border: `1px solid ${LINE}`, borderRadius: 10, padding: "8px 6px", fontSize: 16, fontFamily: FONT } },
     h("option", { value: "" }, lib), opts.map(o => h("option", { key: o, value: o }, nom ? nom(o) : o)));
   return h("div", { className: "panneau-exercices-fond", style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
     h("div", { className: "panneau-exercices", onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", height: "88vh", display: "flex", flexDirection: "column", fontFamily: FONT, color: INK } },
@@ -10411,7 +10466,7 @@ function PanneauExercices({ mode, ex, apres, st, S, onChoisir, onFermer }) {
       h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 10px" } }, remplacer ? "Même geste, même muscle d'abord. Tes charges déjà notées restent sous l'ancien exercice." : apres && apres !== "fin" ? "Il se place juste après l'exercice ouvert. Doses de la banque, tu les changes si tu veux." : "Il se place en fin de séance. Doses de la banque, tu les changes si tu veux."),
       h("div", { style: { display: "flex", gap: 6, marginBottom: 10 } }, ongletBtn("similaires", "Similaires", cat.similaires.length + (directs ? directs.candidats.filter(c => !cat.similaires.some(x => x.id === c.exo.id)).length : 0)), ongletBtn("banque", "Toute la banque"), ongletBtn("cardio", "Cardio & mobilité")),
       onglet === "banque" && h("div", { style: { marginBottom: 8 } },
-        h("input", { className: "recherche-exo", value: recherche, onChange: e => setRecherche(e.target.value), placeholder: "Rechercher par nom…", inputMode: "search", style: { width: "100%", boxSizing: "border-box", background: FIELD, color: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "10px 12px", fontSize: 14, fontFamily: FONT, marginBottom: 6 } }),
+        h("input", { className: "recherche-exo", value: recherche, onChange: e => setRecherche(e.target.value), placeholder: "Rechercher par nom…", inputMode: "search", style: { width: "100%", boxSizing: "border-box", background: FIELD, color: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "10px 12px", fontSize: 16, fontFamily: FONT, marginBottom: 6 } }),
         h("div", { style: { display: "flex", gap: 6 } }, select(fMuscle, setFMuscle, muscles, "Muscle"), select(fComp, setFComp, comps, "Compartiment", c => NOM_COMP[c] || c), select(fMat, setFMat, mats, "Matériel"))),
       h("div", { className: "liste-exos", style: { flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8 } },
         onglet === "similaires" && [
@@ -10863,7 +10918,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.9"));
+  }, "v20.10"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -11004,7 +11059,7 @@ function Onboarding({
         border: `1.5px solid ${LINE}`,
         borderRadius: 10,
         padding: "11px 12px",
-        fontSize: 14,
+        fontSize: 16,
         background: FIELD,
         outline: "none",
         marginBottom: 10
@@ -11024,7 +11079,7 @@ function Onboarding({
         border: `1.5px solid ${LINE}`,
         borderRadius: 10,
         padding: "11px 12px",
-        fontSize: 14,
+        fontSize: 16,
         background: FIELD,
         outline: "none",
         fontFamily: "monospace",
@@ -11245,7 +11300,7 @@ function Onboarding({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "12px 12px",
-      fontSize: 15,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 10
@@ -11269,7 +11324,7 @@ function Onboarding({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "11px 12px",
-      fontSize: 14,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       fontFamily: "monospace"
@@ -11979,7 +12034,7 @@ function Reglages({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -11993,7 +12048,7 @@ function Reglages({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12456,7 +12511,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12475,7 +12530,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12488,7 +12543,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 8
@@ -12503,7 +12558,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       resize: "none",
@@ -12891,7 +12946,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 10px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12904,7 +12959,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 10px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12953,7 +13008,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 10px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       textAlign: "center"
@@ -13002,7 +13057,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px",
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: 700,
       background: FIELD,
       outline: "none",
@@ -13202,11 +13257,16 @@ function Idees({
   code,
   style,
   contexte,
+  solo,
   onAjout,
   toast
 }) {
   const [liste, setListe] = useState(null);
   const [busy, setBusy] = useState(false);
+  // v20.10 : la génération prend plusieurs secondes — on montre le temps qui passe et une barre
+  // (attendu ≈ 20 s, un second appel de relecture peut doubler), et on mesure la durée réelle du serveur
+  const [attente, setAttente] = useState(0);
+  useEffect(() => { if (!busy) return; const t0 = Date.now(); const it = setInterval(() => setAttente(Math.round((Date.now() - t0) / 1000)), 500); return () => { clearInterval(it); setAttente(0); }; }, [busy]);
   const generer = async () => {
     setBusy(true);
     try {
@@ -13218,12 +13278,18 @@ function Idees({
         body: JSON.stringify({
           style: Array.isArray(style) ? style[0] : style,
           styles: Array.isArray(style) ? style : [style],
-          contexte
+          contexte,
+          solo: !!solo
         })
       });
       let r = await appel();
       if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
-      if (r.status === 503) toast("Génération non configurée (clé API manquante)", { erreur: true });else if (r.status === 502) { let d = null; try { d = await r.json(); } catch {} toast(d && d.statut ? `L'IA n'a pas répondu (erreur ${d.statut}) — réessaie plus tard` : "L'IA a répondu dans un format inattendu — réessaie", { erreur: true }); }else if (r.status === 403) toast("Code duo inconnu du serveur — réessaie dans un instant", { erreur: true });else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain", { erreur: true }); }else if (!r.ok) toast("Oups, réessaie", { erreur: true });else setListe(await r.json());
+      if (r.status === 503) toast("Génération non configurée (clé API manquante)", { erreur: true });else if (r.status === 502) { let d = null; try { d = await r.json(); } catch {} toast(d && d.statut ? `L'IA n'a pas répondu (erreur ${d.statut}) — réessaie plus tard` : "L'IA a répondu dans un format inattendu — réessaie", { erreur: true }); }else if (r.status === 403) toast("Code duo inconnu du serveur — réessaie dans un instant", { erreur: true });else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain", { erreur: true }); }else if (!r.ok) toast("Oups, réessaie", { erreur: true });else {
+        const l = await r.json(); setListe(l);
+        // mesure côté serveur (v20.10) : durée et nombre d'appels à l'IA, pour savoir où part le temps
+        const ms = parseInt(r.headers.get("x-duree-ms")), appels = parseInt(r.headers.get("x-appels"));
+        if (ms > 0) toast(`${l.length} idées en ${Math.round(ms / 1000)} s${appels > 1 ? " (relecture comprise)" : ""}`);
+      }
     } catch {
       toast("Serveur injoignable", { erreur: true });
     }
@@ -13255,7 +13321,10 @@ function Idees({
   }, /*#__PURE__*/React.createElement(Orbe, {
     s: 18,
     c: COL.G
-  }), "Je réfléchis…") : liste ? "D'autres idées" : "Générer des idées de récompenses"), liste && /*#__PURE__*/React.createElement("div", {
+  }), "Je réfléchis…", attente > 0 && /*#__PURE__*/React.createElement("span", { className: "attente-idees", style: { fontWeight: 600, color: SUB } }, attente, " s")) : liste ? "D'autres idées" : "Générer des idées de récompenses"), busy && /*#__PURE__*/React.createElement("div", {
+    className: "progression-idees",
+    style: { height: 4, borderRadius: 999, background: "rgba(255,255,255,.08)", marginTop: 6, overflow: "hidden" }
+  }, /*#__PURE__*/React.createElement("div", { style: { height: "100%", borderRadius: 999, background: COL.G, width: `${Math.min(96, 100 * (1 - Math.exp(-attente / 12)))}%`, transition: "width .5s linear" } })), busy && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, color: SUB, marginTop: 4 } }, attente < 15 ? "Une vingtaine de secondes en général." : attente < 35 ? "Encore un instant — l'IA relit ses idées." : "C'est long… le serveur répond parfois lentement, tu peux attendre ou réessayer."), liste && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -13283,7 +13352,7 @@ function Idees({
     style: {
       color: SUB
     }
-  }, "· N", it.niveau)), it.concret && /*#__PURE__*/React.createElement("div", {
+  }, "· Niveau ", it.niveau)), it.concret && /*#__PURE__*/React.createElement("div", {
     className: "idee-concret",
     style: { fontSize: 10.5, color: SUB, fontWeight: 500, marginTop: 3, lineHeight: 1.4 }
   }, "Concrètement : ", it.concret)))));
@@ -13859,7 +13928,7 @@ function Stepper({
       textAlign: "center",
       fontFamily: DISPLAY,
       fontWeight: 700,
-      fontSize: compact ? 13.5 : 16,
+      fontSize: 16,
       background: "none",
       border: "none",
       outline: "none",

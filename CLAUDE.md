@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.9**
+Version actuelle : **v20.10**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.9"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.10"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -48,7 +48,9 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   `09`), les évolutions v20.6 (`08`), v20.8 (`09b` : XP par difficulté, idées,
   notifications de séance, clôture à 3 h), v20.9 (`09c` : la séance libre —
   ajout depuis chaque onglet du panneau, retrait, réordonnancement, reps
-  réelles, journal, programme inchangé, proposition après 3 retraits) et les
+  réelles, journal, programme inchangé, proposition après 3 retraits), v20.10
+  (`09d` : champs à 16 px, négos harmonisées, « Déplacer » et appui long,
+  gainage remplaçable, carte des premiers XP, idées avec progression) et les
   non-régressions v19.10 → v19.21.
 - `outils/worker.test.js` — le worker importé dans Node avec un faux KV et un
   faux `fetch` : secrets hors du code, en-têtes, validation, quotas, photos,
@@ -277,6 +279,39 @@ ce qu'on change pour un jour ne touche le programme.
   suite → carte `.proposition-retrait` « on l'enlève du programme ? »
   (`enleverDuProgramme` retire l'exercice de chaque séance du programme,
   `garderDansProgramme` remet le compteur à zéro).
+
+### Retours terrain sur la v20.9 (v20.10)
+
+- **Champs de saisie à 16 px minimum** partout (Safari iOS zoome sur tout
+  champ plus petit) : la suite 09d vérifie qu'aucun `input`, `textarea` ou
+  `select` visible n'est en dessous.
+- **Table des négos** : même en-tête que « Le Pari » (titre, sous-titre), puis
+  une ligne de puces (duo, ACTUALISER, hors ligne) — `.table-negos`,
+  `.negos-puces`.
+- **Déplacer** : dans la carte focus, le bouton « Déplacer » ouvre un menu
+  `.menu-deplacer` (« Monter d'une place » / « Descendre d'une place »,
+  `.monter` / `.descendre`). Dans la liste, **appui long (450 ms, sans
+  bouger)** sur une ligne `button[data-exo]` la soulève (`.ligne-exercice.en-vol`)
+  pour la glisser ; pointer events + `setPointerCapture`, un écouteur
+  `touchmove` non passif sur `document` bloque le défilement pendant le
+  glisser seulement, le clic qui suit est avalé ; `onOrdre(ids)` écrit
+  `J.ordre`.
+- **Gainage** : les lignes `button[data-gain]` ont « Remplacer »
+  (`.remplacer-gainage`) et « + Ajouter un exercice après celui-ci »
+  (`.ajouter-apres-gainage`) ; `seanceDuJour` applique les remplacements au
+  gainage et range un gainage ajouté « après » un gainage dans le bloc
+  gainage ; le panneau exclut aussi les gainages déjà présents et, ancré sur
+  un gainage, ouvre « Similaires » sur les gainages.
+- **Carte « Gagne tes premiers XP »** : croix `.fermer-premiers-xp`
+  (`st.carteXPFermee`), disparaît d'elle-même dès que `st.xp > 0`.
+- **Idées de récompenses** : « Niveau 2 » (plus « N2 ») ; prompt en
+  **formulations nominales** sans pronom de locuteur (« offert par ton
+  coach » ; en solo « que tu t'offres », `solo: true` dans la demande) et
+  une idée portant « je / on va… » est écartée (`VOIX_RE`) ; pendant
+  l'attente, compteur de secondes et barre (`.progression-idees`) ; le worker
+  renvoie `x-duree-ms` et `x-appels` (1, ou 2 si relecture) et l'app le dit
+  en toast (« 8 idées en 14 s »). La relecture ne part que sur détection d'un
+  problème (hors format, moins de 4 idées propres, plus d'un tiers écartées).
 
 ## Structure de l'interface
 

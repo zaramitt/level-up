@@ -258,6 +258,40 @@ Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
 
+## v20.10 — septembre 2026
+
+Retour terrain de Léo sur la v20.9, premier commit : bugs et clarté.
+
+- **Champs de saisie à 16 px minimum.** → Safari iOS zoome sur tout champ
+  plus petit, et l'écran reste zoomé à la fermeture du clavier (vu sur le
+  prénom). Vérifié par le harnais sur tous les écrans qui ont un champ.
+- **Déplacer un exercice : un libellé explicite plus un appui long.** Les
+  flèches ▲ ▼ nues étaient incompréhensibles. « Déplacer » ouvre « Monter /
+  Descendre d'une place » ; dans la liste, un appui long soulève l'exercice
+  pour le glisser. Arbitrage tactile : tant que l'appui long n'a pas abouti,
+  un doigt qui bouge fait défiler (et annule l'appui) ; une fois l'exercice
+  soulevé, le défilement est bloqué. → Pas de conflit avec le scroll, pas de
+  poignée à viser, tap franc sur iOS (le clic qui suit le relâchement est
+  avalé).
+- **Tout exercice a « Remplacer » et « Ajouter un exercice après celui-ci »**,
+  gainage compris (le cardio, dans la liste des exercices, les avait déjà).
+  → Le gainage était le seul bloc figé.
+- **Idées de récompenses en voix nominale**, sans pronom de locuteur : « Un
+  café dans ton endroit préféré, offert par ton coach » / en solo « que tu
+  t'offres ». → « Je t'emmène dans ton café préféré » faisait croire à la
+  coachée qu'elle devait offrir. Une idée qui garde un « je » est écartée
+  par le worker.
+- **Temps de génération : mesuré et montré, pas deviné.** Le worker renvoie la
+  durée et le nombre d'appels ; l'app affiche une progression pendant
+  l'attente et la mesure en toast. Le second appel (relecture) ne part
+  qu'après détection d'un problème — c'était déjà le cas, la mesure dira si
+  c'est lui qui pèse. Écarté : couper la relecture ou raccourcir la sortie
+  sans mesure réelle.
+- **Carte « Gagne tes premiers XP »** : fermable, et disparaît d'elle-même
+  dès les premiers XP. → Elle restait affichée sans raison.
+- Table des négos harmonisée avec le thème (en-tête comme « Le Pari », puces),
+  « + » des reps recadré dans la carte focus.
+
 ## v20.9 — septembre 2026
 
 Chantier Programmes, étape 4 : **la séance libre**. Décisions détaillées dans

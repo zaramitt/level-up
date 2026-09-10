@@ -94,10 +94,12 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     check('retiré pour aujourd\'hui : disparu de la liste, mémorisé dans le jour, le programme intact, toast « Retiré. Ça ne change rien à tes XP. »', !l.includes(A.exos[1].nom) && st.jour[jour].retires[0] === A.exos[1].id && st.programmePerso.seances.A.exos.some(e => e.id === A.exos[1].id) && /Retiré\. Ça ne change rien à tes XP\./.test(await texte(p)), l.join(' | '));
     check('ni en positif ni en négatif : XP inchangés, compte « 0/5 »', st.xp === 300 && /0\/5/.test(await texte(p)));
     await ouvrirFocus(p, A.exos[0].nom);
+    await p.locator('.focus-exercice .deplacer-exercice').tap(); await p.waitForTimeout(300); // v20.10 : « Déplacer » ouvre le menu Monter / Descendre
     check('premier exercice : « ▲ » désactivé, « ▼ » actif', await p.locator('.focus-exercice .monter').isDisabled() && !(await p.locator('.focus-exercice .descendre').isDisabled()));
     await p.locator('.focus-exercice .descendre').tap(); await p.waitForTimeout(400);
     l = await lignes(p);
     check('« Descendre » : il passe en deuxième position, l\'ordre du jour est mémorisé', l[1] === A.exos[0].nom && l[0] === A.exos[2].nom && JSON.stringify((await etat(p)).jour[jour].ordre) === JSON.stringify(l.map(n => A.exos.find(e => e.nom === n).id)), l.join(' | '));
+    if (!(await p.locator('.focus-exercice .menu-deplacer').count())) { await p.locator('.focus-exercice .deplacer-exercice').tap(); await p.waitForTimeout(300); }
     await p.locator('.focus-exercice .monter').tap(); await p.waitForTimeout(400);
     check('« Monter » : retour en tête', (await lignes(p))[0] === A.exos[0].nom);
     await fermerFocus(p);

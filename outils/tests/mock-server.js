@@ -61,7 +61,7 @@ chargerWorker.then(() => http.createServer((req, res) => {
     lire(req, body => {
       console.log('MOCK /idees reçu:', body.slice(0, 160));
       if (gardeIA()) return;
-      json(res, 200, [2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: 'Idée factice ' + (i + 1), concret: 'ce qui se passe vraiment pour l\'idée ' + (i + 1) })));
+      res.writeHead(200, { 'content-type': 'application/json', 'x-duree-ms': '1200', 'x-appels': '1' }); res.end(JSON.stringify([2, 2, 3, 3, 4, 4, 5, 5].map((n, i) => ({ niveau: n, label: 'Idée factice ' + (i + 1), concret: 'ce qui se passe vraiment pour l\'idée ' + (i + 1) }))));
     });
     return;
   }
