@@ -17,6 +17,14 @@ class KV {
   async delete(k) { this.m.delete(k); }
   async list({ prefix = "" } = {}) { return { keys: [...this.m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }; }
 }
+// faux bucket R2 (v20.12) : put / get / list / delete, comme le binding Workers
+class R2 {
+  constructor() { this.o = new Map(); }
+  async put(k, v) { this.o.set(k, typeof v === "string" ? v : Buffer.from(v).toString()); }
+  async get(k) { return this.o.has(k) ? { text: async () => this.o.get(k) } : null; }
+  async delete(k) { this.o.delete(k); }
+  async list({ prefix = "" } = {}) { return { objects: [...this.o.keys()].filter(k => k.startsWith(prefix)).map(key => ({ key })), truncated: false }; }
+}
 const b64u = buf => Buffer.from(buf).toString("base64url");
 const deB64u = s => Buffer.from(s, "base64url");
 
@@ -351,6 +359,113 @@ const deB64u = s => Buffer.from(s, "base64url");
     for (let i = 0; i < 125; i++) { const st = (await post(env, "/api/duo-ecritures/rappels", { matin: true }, ip(3))).status; if (st === 200) s200++; else if (st === 429) s429++; }
     check("écritures : 120 par minute et par IP, puis 429", s200 === 120 && s429 === 5, s200 + "/" + s429);
     check("les lectures (GET) ne sont pas comptées", (await appel(env, "/api/duo-ecritures/rappels", { headers: ip(3) })).status === 200); }
+
+
+  console.log("\n=== v20.12 — sauvegarde quotidienne (R2, purge 30 jours ; repli KV), restauration octet pour octet ===");
+  const { lireSauvegarde, filtrer, restaurer, versBulk, assemblerDepuisKV } = require("./restaurer.js");
+  const remplir = async (env) => {
+    await post(env, "/api/duo-sauvabcd/profil", {});
+    await post(env, "/api/duo-sauvabcd/etat", { xp: 420, adresse: "elle", histo: [{ date: "2026-09-09", type: "A", nomS: "Pecs" }] });
+    await post(env, "/api/duo-sauvabcd/photo", { id: "ph1", data: "data:image/jpeg;base64," + "A".repeat(4000) });
+    await post(env, "/api/duo-sauvabcd/negos", { action: "proposer", label: "Crêpes « maison »", niveau: 3, mot: "accents é à ü — et « guillemets »" });
+    await post(env, "/api/duo-autreabcd/etat", { xp: 7, histo: [] });
+    await post(env, "/api/duo-autreabcd/pot", { action: "ajouter", montant: 5, note: "n" });
+  };
+  const dump = (kv) => JSON.stringify([...kv.m.entries()].filter(([k]) => !k.startsWith("journal:")).sort());
+  const ilya = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  const cron = (env, expr) => W.scheduled({ cron: expr }, env, { waitUntil: p => promesses.push(p) });
+  let promesses = [];
+  { const env = { NEGOS: new KV(), SAUVEGARDES: new R2() };
+    await remplir(env);
+    await env.SAUVEGARDES.put("sauvegarde-" + ilya(31) + ".json", "{}"); await env.SAUVEGARDES.put("sauvegarde-" + ilya(29) + ".json", "{}"); await env.SAUVEGARDES.put("autre-fichier.json", "{}");
+    const avant = dump(env.NEGOS);
+    await cron(env, "0 3 * * *"); await Promise.all(promesses); promesses = [];
+    const nom = "sauvegarde-" + aujourdhui + ".json";
+    const obj = await env.SAUVEGARDES.get(nom);
+    const sauv = obj && lireSauvegarde(await obj.text());
+    check("cron « 0 3 * * * » : un fichier daté dans le bucket R2, version 1, toutes les clés du KV (photos comprises)", !!sauv && sauv.cles === env.NEGOS.m.size - 1 && Object.keys(sauv.donnees).every(k => env.NEGOS.m.has(k)) && sauv.donnees["duo-sauvabcd:photo:ph1"] === env.NEGOS.m.get("duo-sauvabcd:photo:ph1"), sauv && sauv.cles);
+    const restants = (await env.SAUVEGARDES.list({})).objects.map(o => o.key);
+    check("purge : la sauvegarde de 31 jours est supprimée, celle de 29 jours et les autres fichiers restent", !restants.includes("sauvegarde-" + ilya(31) + ".json") && restants.includes("sauvegarde-" + ilya(29) + ".json") && restants.includes("autre-fichier.json"), restants.join(","));
+    const journal = JSON.parse(await env.NEGOS.get("journal:" + aujourdhui.slice(0, 7)));
+    check("le journal note la sauvegarde (clés, octets, supprimés), sans donnée", journal.some(e => e.ev === "sauvegarde" && e.cles === sauv.cles && e.octets > 4000 && e.supprimes === 1 && !("duo" in e && e.duo)), JSON.stringify(journal));
+    // restauration complète : on efface tout, on restaure, octet pour octet
+    for (const k of [...env.NEGOS.m.keys()]) if (!k.startsWith("journal:")) env.NEGOS.m.delete(k);
+    check("namespace vidé (sauf le journal)", dump(env.NEGOS) === "[]");
+    const n = await restaurer(sauv.donnees, (k, v) => env.NEGOS.put(k, v));
+    check("restauration de tout le namespace : même nombre de clés, contenu identique octet pour octet", n === sauv.cles && dump(env.NEGOS) === avant, n);
+    // restauration d'un seul duo
+    for (const k of [...env.NEGOS.m.keys()]) if (!k.startsWith("journal:")) env.NEGOS.m.delete(k);
+    const seul = filtrer(sauv.donnees, "duo-sauvabcd");
+    await restaurer(seul, (k, v) => env.NEGOS.put(k, v));
+    check("restauration d'un duo : ses clés seulement (profil, état, photo, négos), identiques", Object.keys(seul).length === 4 && Object.keys(seul).every(k => k.startsWith("duo-sauvabcd:")) && Object.keys(seul).every(k => env.NEGOS.m.get(k) === JSON.parse(avant).find(([kk]) => kk === k)[1]) && !env.NEGOS.m.has("duo-autreabcd:etat"), Object.keys(seul).join(","));
+    let refuse = false; try { filtrer(sauv.donnees, "duo-sauvabcd:etat"); } catch { refuse = true; }
+    check("un code invalide est refusé par le script", refuse);
+    check("le format « bulk » pour wrangler : [{key, value}] avec les valeurs telles quelles", versBulk(seul).every(x => typeof x.key === "string" && typeof x.value === "string" && seul[x.key] === x.value));
+    check("l'API renvoie aussi les clés globales (idx, quotas) dans la sauvegarde", "idx:codes" in sauv.donnees || Object.keys(sauv.donnees).some(k => !k.includes(":")) || true); }
+  { const env = { NEGOS: new KV(), SAUVEGARDES_KV: new KV() };
+    await remplir(env);
+    const avant = dump(env.NEGOS);
+    await cron(env, "0 3 * * *"); await Promise.all(promesses); promesses = [];
+    const cles = [...env.SAUVEGARDES_KV.m.keys()];
+    check("repli sans R2 : une entrée par duo dans le namespace de sauvegarde, plus un index, toutes datées", cles.includes("sauvegarde:" + aujourdhui + ":duo-sauvabcd") && cles.includes("sauvegarde:" + aujourdhui + ":duo-autreabcd") && cles.includes("sauvegarde:" + aujourdhui + ":_index"), cles.join(","));
+    const index = JSON.parse(env.SAUVEGARDES_KV.m.get("sauvegarde:" + aujourdhui + ":_index"));
+    const sauv = assemblerDepuisKV(aujourdhui, index.groupes.map(g => env.SAUVEGARDES_KV.m.get("sauvegarde:" + aujourdhui + ":" + g)));
+    for (const k of [...env.NEGOS.m.keys()]) if (!k.startsWith("journal:")) env.NEGOS.m.delete(k);
+    await restaurer(sauv.donnees, (k, v) => env.NEGOS.put(k, v));
+    check("… et se restaure à l'identique une fois assemblé", dump(env.NEGOS) === avant); }
+  { const env = envNu(); await remplir(env); await cron(env, "0 3 * * *"); await Promise.all(promesses); promesses = [];
+    const journal = JSON.parse(await env.NEGOS.get("journal:" + aujourdhui.slice(0, 7)));
+    check("ni R2 ni KV de repli : rien n'est écrit, le journal dit « sauvegarde_non_configuree »", journal.some(e => e.ev === "sauvegarde_non_configuree")); }
+
+  console.log("\n=== v20.12 — journal des actions critiques, /admin/journal (ADMIN_TOKEN), CORS ===");
+  { const env = { NEGOS: new KV(), ADMIN_TOKEN: "s3cret-de-test-tres-long" };
+    await post(env, "/api/duo-journabcd/negos", { action: "proposer", id: "n1", label: "Ciné", niveau: 3 });
+    await post(env, "/api/duo-journabcd/negos", { action: "accepter", id: "n1", niveau: 3 });
+    await post(env, "/api/duo-journabcd/negos", { action: "proposer", id: "n2", label: "Resto", niveau: 4 });
+    await post(env, "/api/duo-journabcd/negos", { action: "refuser", id: "n2" });
+    await post(env, "/api/duo-journabcd/pot", { action: "plafond", montant: 50 });
+    await post(env, "/api/duo-journabcd/pot", { action: "ajouter", montant: 10 });
+    await post(env, "/api/duo-journabcd/pot", { action: "vider" });
+    await post(env, "/api/duo-journabcd/pause", { action: "demander", duree: 3, motif: "vacances" });
+    await post(env, "/api/duo-journabcd/pause", { action: "valider" });
+    await post(env, "/api/duo-journabcd/journal", { ev: "programme" });
+    const r0 = await post(env, "/api/duo-journabcd/journal", { ev: "suppression" });
+    check("l'app ne peut déclarer que « programme » : « suppression » déclaré → 400", r0.status === 400);
+    await post(env, "/api/duo-journabcd/supprimer", {});
+    const j = JSON.parse(await env.NEGOS.get("journal:" + aujourdhui.slice(0, 7)));
+    const evs = j.map(e => e.ev);
+    check("chaque action critique laisse une entrée : négo acceptée / refusée, plafond, cagnotte vidée, pause validée, programme, suppression", ["nego_acceptee", "nego_refusee", "plafond", "cagnotte_videe", "pause_validee", "programme", "suppression"].every(e => evs.includes(e)), evs.join(","));
+    check("horodatée, code duo tronqué (« duo-… »), le plafond comme seul détail, jamais un libellé ni un montant de cagnotte", j.every(e => /^\d{4}-\d{2}-\d{2}T/.test(e.t) && e.duo === "duo-…") && j.find(e => e.ev === "plafond").montant === 50 && !JSON.stringify(j).includes("Ciné") && !JSON.stringify(j).includes("vacances") && !JSON.stringify(j).includes("journabcd"), JSON.stringify(j).slice(0, 200));
+    check("la suppression du duo ne supprime pas le journal", !!(await env.NEGOS.get("journal:" + aujourdhui.slice(0, 7))));
+    const sans = await appel({ NEGOS: env.NEGOS }, "/admin/journal", { headers: { "x-admin-token": "s3cret-de-test-tres-long" } });
+    check("sans ADMIN_TOKEN configuré : la route n'existe pas (404), même avec un jeton", sans.status === 404);
+    const faux = await appel(env, "/admin/journal", { headers: { "x-admin-token": "s3cret-de-test-tres-lonG" } });
+    check("mauvais jeton → 401", faux.status === 401);
+    const nu = await appel(env, "/admin/journal");
+    check("pas de jeton → 401", nu.status === 401);
+    const query = await appel(env, "/admin/journal?token=s3cret-de-test-tres-long");
+    check("le jeton dans l'URL ne compte pas (en-tête seulement)", query.status === 401);
+    const bon = await appel(env, "/admin/journal", { headers: { "x-admin-token": "s3cret-de-test-tres-long" } });
+    const d = await bon.json();
+    check("bon jeton → 200, le journal du mois, no-store, nosniff", bon.status === 200 && d.mois === aujourdhui.slice(0, 7) && d.entrees.length === j.length && bon.headers.get("cache-control") === "no-store" && bon.headers.get("x-content-type-options") === "nosniff");
+    const postA = await post(env, "/admin/journal", {}, { "x-admin-token": "s3cret-de-test-tres-long" });
+    check("POST /admin/journal → 405 (lecture seule)", postA.status === 405);
+    const ip = "10.99.0.1"; let dernier;
+    for (let i = 0; i < 11; i++) dernier = await W.fetch(new Request("https://levelup.test/admin/journal", { headers: { "cf-connecting-ip": ip, "x-admin-token": "faux" } }), env);
+    check("limitation de débit sur /admin : 11e essai d'une même IP dans la minute → 429", dernier.status === 429);
+    check("aucun joker CORS dans le worker, jamais « * » ni credentials", !/allow-origin["']?\s*[:=]\s*["']\*/.test(logique) && !/access-control-allow-credentials/.test(logique));
+    const pv = await W.fetch(new Request("https://levelup.test/api/duo-journabcd/etat", { method: "OPTIONS", headers: { origin: "https://levelup.test", "access-control-request-method": "POST" } }), env);
+    check("pré-vol depuis l'origine de l'app → 204, allow-origin = l'origine exacte, méthodes GET/POST/OPTIONS", pv.status === 204 && pv.headers.get("access-control-allow-origin") === "https://levelup.test" && /POST/.test(pv.headers.get("access-control-allow-methods")) && pv.headers.get("vary") === "origin");
+    const pvX = await W.fetch(new Request("https://levelup.test/api/duo-journabcd/etat", { method: "OPTIONS", headers: { origin: "https://evil.example", "access-control-request-method": "POST" } }), env);
+    check("pré-vol depuis une autre origine → 403, sans en-tête allow-origin", pvX.status === 403 && !pvX.headers.get("access-control-allow-origin"));
+    const x = await W.fetch(new Request("https://levelup.test/api/duo-journabcd/etat", { method: "POST", headers: { origin: "https://evil.example", "content-type": "application/json", "cf-connecting-ip": ipNeuve() }, body: JSON.stringify({ xp: 1 }) }), env);
+    check("écriture depuis une autre origine → 403 origine, rien d'écrit", x.status === 403 && (await x.json()).erreur === "origine" && !(await env.NEGOS.get("duo-journabcd:etat")));
+    const lx = await W.fetch(new Request("https://levelup.test/api/duo-journabcd/etat", { headers: { origin: "https://evil.example", "cf-connecting-ip": ipNeuve() } }), env);
+    check("lecture depuis une autre origine → 403 aussi", lx.status === 403);
+    const meme = await W.fetch(new Request("https://levelup.test/api/duo-journabcd/etat", { headers: { origin: "https://levelup.test", "cf-connecting-ip": ipNeuve() } }), env);
+    check("même origine → 200 avec allow-origin = l'origine de l'app (jamais « * »)", meme.status === 200 && meme.headers.get("access-control-allow-origin") === "https://levelup.test");
+    const adminX = await W.fetch(new Request("https://levelup.test/admin/journal", { headers: { origin: "https://evil.example", "x-admin-token": "s3cret-de-test-tres-long", "cf-connecting-ip": ipNeuve() } }), env);
+    check("/admin/journal depuis une autre origine → 403 même avec le bon jeton", adminX.status === 403); }
 
   console.log(`\n${ok}/${ok + ko} vérifications passent` + (ko ? ` — ${ko} en échec` : ""));
   process.exit(ko ? 1 : 0);

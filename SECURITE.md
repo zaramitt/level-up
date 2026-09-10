@@ -573,3 +573,200 @@ worker) :
 - **Edge sur Windows** : `/abonner` refuse les services hors Apple / Google /
   Mozilla ; l'app le dit. Si une utilisatrice le demande, ajouter
   `*.notify.windows.com` à `HOTES_PUSH` (avec une vérification de suffixe).
+
+
+---
+
+# Passage 2 (v20.12) — sauvegardes et traçabilité
+
+## Sauvegarde du KV
+
+Chaque nuit à 3 h (cron `0 3 * * *`), le worker lit **tout** le namespace
+`LEVELUP` (profils, états, historiques, négos, paris, cagnottes, pauses,
+abonnements, index, photos, journal) et dépose un fichier
+`sauvegarde-AAAA-MM-JJ.json` dans le bucket R2 **`level-up-sauvegardes`**
+(liaison `SAUVEGARDES` dans `wrangler.jsonc`). Format : `{ version: 1,
+date, cles, donnees: { "<clé KV>": "<valeur telle quelle>" } }` — les valeurs
+sont des chaînes copiées octet pour octet, une photo de 240 Ko reste une
+photo de 240 Ko. Le même cron supprime les fichiers de plus de **30 jours**.
+Le journal note chaque sauvegarde (nombre de clés, taille, fichiers purgés).
+
+Repli si R2 n'est pas utilisable (plan, région, refus du bucket) : lier un
+**second namespace KV** sous le nom `SAUVEGARDES_KV` ; le cron y écrit une
+entrée par duo (`sauvegarde:<date>:<code>`, plus `sauvegarde:<date>:_index`)
+avec un TTL de 30 jours qui fait la purge tout seul (une valeur KV est bornée
+à 25 Mo, d'où le découpage par duo). Sans aucune des deux liaisons, rien
+n'est écrit et le journal dit `sauvegarde_non_configuree`.
+
+**À vérifier dans le dashboard après déploiement** (Workers & Pages →
+level-up) :
+
+1. **Settings → Bindings** : une ligne **R2 bucket**, variable `SAUVEGARDES`,
+   bucket `level-up-sauvegardes`. Si elle manque, Workers Builds a refusé
+   `wrangler.jsonc` : ouvre **Deployments** → le dernier build → le log dit
+   « bucket not found » (nom différent de `level-up-sauvegardes` : renomme le
+   bucket ou corrige `wrangler.jsonc`) ou « R2 not enabled » (active R2 dans
+   le menu **R2 Object Storage**, plan gratuit : 10 Go).
+2. **Settings → Triggers → Cron Triggers** : quatre expressions, dont
+   `0 3 * * *`.
+3. **Settings → Variables and Secrets** : `ADMIN_TOKEN` (type Secret, une
+   chaîne longue et aléatoire : `openssl rand -base64 32`).
+4. Le lendemain matin : **R2 Object Storage → level-up-sauvegardes** →
+   un objet `sauvegarde-<date>.json`. Sa taille doit correspondre à peu
+   près aux photos stockées (compte 250 Ko par photo).
+5. `curl -H "x-admin-token: <ADMIN_TOKEN>" https://<ton-worker>/admin/journal`
+   → une entrée `"ev":"sauvegarde"` avec `cles` et `octets`. Si tu vois
+   `sauvegarde_non_configuree`, la liaison n'est pas prise : redéploie.
+
+Limites connues : un cron a le même budget CPU qu'une requête ; l'export est
+surtout de l'attente réseau (une lecture KV par clé), ce qui tient largement
+pour quelques duos. Au-delà de quelques centaines de photos, le fichier
+dépasse le Mo par dizaines : R2 s'en moque, mais surveille le temps du cron
+dans **Observability** le jour où l'app s'ouvre.
+
+## Restauration
+
+Le script est `outils/restaurer.js`. Il ne supprime jamais rien : il ajoute
+et écrase les clés qu'il restaure, une clé absente de la sauvegarde reste en
+l'état.
+
+**1. Récupérer la sauvegarde.** Sur ton ordinateur, dans le dépôt, avec
+`wrangler` connecté (`npx wrangler login`) :
+
+```
+npx wrangler r2 object get level-up-sauvegardes/sauvegarde-2026-09-10.json --file sauvegarde.json
+```
+
+ou depuis le dashboard : **R2 → level-up-sauvegardes → l'objet → Download**.
+Avec le repli KV : `npx wrangler kv key list --namespace-id=<ID_SAUVEGARDES_KV>
+--prefix "sauvegarde:2026-09-10:"` puis `kv key get` sur chaque groupe ;
+`assemblerDepuisKV` du script recompose un fichier version 1 (voir les tests).
+
+**2. Restaurer un profil précis** (le duo `duo-xxxxxxxxxx`) :
+
+```
+node outils/restaurer.js sauvegarde.json --code duo-xxxxxxxxxx --bulk restauration.json
+npx wrangler kv bulk put --namespace-id=b01ca4e9f02549828073664575d5eaf8 restauration.json
+```
+
+(l'identifiant du namespace est celui de `wrangler.jsonc`). Le script dit
+combien de clés il a préparées ; `wrangler` confirme l'écriture.
+
+**3. Restaurer tout le namespace** : même commande sans `--code`. À faire
+sur un namespace vide ou après un incident ; sur un namespace vivant, les
+clés plus récentes que la sauvegarde sont écrasées par leur version de la
+sauvegarde (c'est le but), les clés créées depuis restent.
+
+**4. Sans `wrangler`, par l'API Cloudflare** (jeton créé dans **My Profile →
+API Tokens → Create Token → Edit Cloudflare Workers** ou un jeton
+personnalisé avec `Workers KV Storage: Edit`) :
+
+```
+node outils/restaurer.js sauvegarde.json [--code duo-xxxxxxxxxx] \
+  --compte <ACCOUNT_ID> --namespace b01ca4e9f02549828073664575d5eaf8 --jeton <CF_API_TOKEN>
+```
+
+Le script écrit par paquets de 5 000 clés (`PUT …/storage/kv/namespaces/<id>/bulk`).
+
+**5. Vérifier** : ouvrir l'app avec le code restauré (Suivi côté coach, ou
+`curl https://<ton-worker>/api/<code>/etat`) ; les photos se rouvrent depuis
+l'onglet Progrès. Pour comparer octet pour octet : `npx wrangler kv key get
+--namespace-id=… "<code>:etat"` et la valeur `donnees["<code>:etat"]` du fichier
+doivent être identiques (`diff <(…) <(…)`).
+
+**6. Le test réel.** La procédure a été jouée de bout en bout le
+10 septembre 2026 dans le vrai runtime Workers (workerd, via Miniflare, KV et
+R2 réels en local) par `outils/sauvegarde.e2e.js` : six clés dont une photo
+de 240 023 octets, accents et emoji dans une négo → cron `0 3 * * *` → objet
+`sauvegarde-2026-09-10.json` (240 989 octets) → suppression de toutes les clés
+→ restauration d'un seul duo (ses 5 clés, rien d'autre) → restauration
+complète → **identique octet pour octet** à l'état d'avant. Le même
+enchaînement tourne sur faux KV et faux R2 dans `outils/worker.test.js`
+(purge à 31 jours, conservation à 29, repli KV, format bulk). Pour rejouer le
+test réel : `npm i --no-save miniflare@4 && node outils/sauvegarde.e2e.js`.
+Ce qui n'a pas pu être testé d'ici : le compte Cloudflare lui-même
+(liaison, quota R2) — d'où la liste de vérifications ci-dessus, et une
+restauration d'essai à faire une fois sur un code de test dès la première
+sauvegarde en place.
+
+## Journal des actions critiques
+
+Clé KV `journal:AAAA-MM` (2 000 entrées au plus par mois), écrite par le
+worker au moment de l'action, sans donnée sensible : `{ t: horodatage ISO,
+ev, duo: "duo-…" (quatre caractères), montant: <plafond seulement> }`.
+Événements : `suppression` (`/supprimer`), `plafond` et `cagnotte_videe`
+(`/pot`), `nego_acceptee` / `nego_refusee` (`/negos`), `pari_accepte` /
+`pari_refuse` / `pari_resolu` (`/paris`), `pause_validee` / `pause_refusee`
+(`/pause`), `programme` (déclaré par l'app via `POST /api/<code>/journal`, le
+seul événement qu'elle a le droit de déclarer : l'adoption ou le changement de
+programme se décide dans le téléphone), `sauvegarde`,
+`sauvegarde_non_configuree`. Jamais un libellé, un motif, un montant de
+cagnotte, un code complet. La suppression d'un duo ne touche pas au journal.
+
+Lecture : `GET /admin/journal?mois=AAAA-MM` avec l'en-tête `x-admin-token:
+<ADMIN_TOKEN>` (comparaison en temps constant ; le jeton dans l'URL ne compte
+pas ; 10 essais par minute et par IP ; `404` tant que le secret n'est pas
+posé, `401` sinon ; `no-store`, `nosniff`, lecture seule).
+
+```
+curl -s -H "x-admin-token: $ADMIN_TOKEN" "https://<ton-worker>/admin/journal?mois=2026-09" | jq .
+```
+
+## CORS — la configuration exacte
+
+Dans `worker.js`, pour `/api/…` et `/admin/…` :
+
+```
+origine autorisée   = url.origin (l'origine du worker lui-même : https://level-up.<compte>.workers.dev,
+                       ou ton domaine le jour venu) — aucune autre, aucun joker, aucune liste
+requête avec Origin ≠ url.origin       → 403 {"erreur":"origine"}, rien n'est lu ni écrit
+OPTIONS (pré-vol) depuis url.origin    → 204
+    access-control-allow-origin: <url.origin>
+    access-control-allow-methods: GET, POST, OPTIONS
+    access-control-allow-headers: content-type, x-admin-token
+    access-control-max-age: 600
+    vary: origin
+OPTIONS depuis une autre origine       → 403, sans en-tête allow-origin
+réponses de l'API                      → access-control-allow-origin: <url.origin> ; vary: origin
+jamais                                 → access-control-allow-credentials, « * »
+```
+
+Une requête sans en-tête `Origin` (navigation, `curl`, le service worker en
+même origine) passe : c'est le comportement des navigateurs pour la même
+origine. Vérifié par `outils/worker.test.js` (pré-vol, écriture et lecture
+depuis `https://evil.example` → 403 ; même origine → 200 avec l'origine
+exacte) et par le test de bout en bout.
+
+## Dépendances : `npm audit`
+
+`package.json` et `package-lock.json` sont désormais dans le dépôt. L'app
+elle-même n'a **aucune** dépendance npm (React vient de cdnjs avec SRI, le
+worker et le moteur sont sans import). La seule entrée est celle du
+harnais : `playwright` **1.56.1**, figée (pas de `^`), soit trois paquets
+résolus dans le lockfile (`playwright`, `playwright-core`, `fsevents`
+optionnel).
+
+Rapport du 10 septembre 2026, `npm audit` (registre npm, Node 22.22.2) :
+**0 vulnérabilité** (info, low, moderate, high, critical : 0). `miniflare`,
+utilisé pour le test de bout en bout, est installé à la demande
+(`--no-save`) et reste hors du lockfile. À refaire à chaque changement de
+version de Playwright et à chaque rotation (calendrier ci-dessous) : `npm
+audit` dans le dépôt.
+
+## Rotation des secrets — calendrier et procédures
+
+Tous les 90 jours, ensemble. Premier tour : **9 septembre 2026** (pose des
+secrets). **Prochaine échéance : 8 décembre 2026**, puis 8 mars 2027,
+6 juin 2027, 4 septembre 2027 — note-les dans ton agenda, l'app ne le
+rappellera pas.
+
+| Secret | Où | Procédure | Effet visible |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | console Anthropic + dashboard Workers | 1. Console Anthropic → **API keys** → **Create key** (dans le workspace level-up). 2. Dashboard → level-up → **Settings → Variables and Secrets** → `ANTHROPIC_API_KEY` → **Edit** → coller → **Deploy**. 3. Vérifier : **Générer des idées** dans l'app → des idées, pas « non configurée ». 4. Console → l'ancienne clé → **Disable**, puis **Delete** au tour suivant. | aucun pendant la bascule (le worker relit le secret à chaque requête) |
+| Paire VAPID (`VAPID_PRIV`, `VAPID_PUB`) | `node outils/vapid.js` + dashboard | 1. `node outils/vapid.js` → deux valeurs. 2. Dashboard → `VAPID_PRIV` (Secret) et `VAPID_PUB` (Text) → **Edit** → **Deploy**. 3. Fermer le terminal. | les abonnements pris avec l'ancienne clé ne valent plus rien : chaque téléphone voit la carte « On a renforcé la sécurité de l'app. Réactive tes rappels en un tap » — c'est prévu (v20.4), un tap |
+| `ADMIN_TOKEN` | dashboard | 1. `openssl rand -base64 32`. 2. Dashboard → `ADMIN_TOKEN` (Secret) → **Edit** → **Deploy**. 3. Mettre à jour la valeur là où tu la gardes (gestionnaire de mots de passe), jamais dans le dépôt. 4. Vérifier avec le `curl` de la section Journal. | aucun pour les utilisatrices |
+
+Hors calendrier, tourner **immédiatement** : une clé aperçue dans un log, un
+écran partagé, un dépôt ou un terminal ; un appareil perdu qui avait accès au
+dashboard ; le jeton API Cloudflare utilisé pour une restauration, à
+**supprimer** dès la restauration finie (**My Profile → API Tokens**).

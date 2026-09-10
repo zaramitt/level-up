@@ -3988,6 +3988,8 @@ function App() {
       return s;
     });
     setRegen(null);
+    // journal des actions critiques (v20.12) : l'adoption ou le changement de programme, sans détail
+    if (code) fetch(api(code, "/journal"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ev: "programme" }) }).catch(() => {});
     toast("Programme adopté — tes charges sont conservées");
   };
   if (role !== "coach" && !st.programme) return /*#__PURE__*/React.createElement(Regenerer, {
@@ -11115,7 +11117,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.11"));
+  }, "v20.12"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {

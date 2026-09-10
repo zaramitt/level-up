@@ -34,6 +34,10 @@ Les fondations sur lesquelles reposent plusieurs chantiers à la fois.
 - **Turnstile sur les routes IA et `/profil`** (mode géré, invisible la plupart
   du temps) : en réserve, si le budget journalier et la limitation de débit ne
   suffisent pas.
+- **Restauration d'essai sur Cloudflare** : une fois la liaison R2 en place, restaurer un
+  duo de test depuis une sauvegarde réelle (`outils/restaurer.js --compte … --namespace …`)
+  et vérifier dans le dashboard. Le cycle complet est testé localement (workerd), pas encore
+  sur le compte.
 - **Chiffrement des photos côté client** (clé dérivée du code) : protège
   contre une fuite du stockage ou un regard sur le dashboard, pas contre qui a
   le code. À décider quand l'app s'ouvre.
