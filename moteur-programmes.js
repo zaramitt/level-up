@@ -118,11 +118,30 @@
     focusHaut: { muscles: "Pecs · dos · épaules", nom: "Focus haut du corps", comp: ["poussee_h", "tirage_h", "poussee_v", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
       cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
     recup: { muscles: "Récupération active", nom: "Récupération active", comp: ["cardio_mobilite"], iso: [], bas: false,
-      cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1200 }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }] }
+      cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1200 }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }] },
+    // v20.11 : la séance cardio dédiée (objectif ou sport qui réclament du cardio, dès 4 séances) — 30 min
+    // d'un appareil (bornées par le temps disponible) et une mobilité pour finir
+    cardio: { muscles: "Cardio", nom: "Cardio", comp: ["cardio_mobilite"], iso: [], bas: false,
+      cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1800, dedie: true }, { c: "cardio_mobilite", type: "mobilite" }] }
   };
+  // v20.11 : le cardio fait partie du programme quand l'objectif ou le sport le réclame (règles 10 et 11) :
+  // perdre du poids, se sentir mieux, ou progresser dans un sport d'endurance. Sinon il reste une option
+  // explicite d'« Ajuster ma séance ».
+  // → "objectif" (perdre du poids, se sentir mieux : le cardio est le cœur, finishers ET séance dédiée dès 4×),
+  //   "sport" (sport d'endurance avec intention de progresser : finishers, les sorties du sport font le reste), ou false
+  // Avec un sport pratiqué pour progresser, le sport fait déjà les séances d'endurance : finishers seulement,
+  // jamais de séance dédiée qui viendrait s'ajouter aux jours de sport.
+  const cardioIntegre = entrees => {
+    if (!entrees) return false;
+    const sp = entrees.sport && SPORTS[entrees.sport], intention = !!(sp && entrees.intention === "sport");
+    if (entrees.objectif === "poids" || entrees.objectif === "mieux") return intention ? "sport" : "objectif";
+    return intention && sp.endurance ? "sport" : false;
+  };
+  const FINISHER_S = 900, FINISHER_MIN_S = 600;
   const appartientAuFocus = (e, focus) => {
     const f = FOCUS[focus];
     if (!f) return false;
+    if (e.compartiment === "cardio_mobilite" && e.role === "cardio") return true; // finisher cardio (v20.11) : admis dans toute séance de force
     if (!f.comp.includes(e.compartiment)) return false;
     if (e.compartiment === "isolation" && !f.iso.includes(e.muscle)) return false;
     return true;
@@ -140,6 +159,14 @@
     6: { nom: "push-pull-legs-x2", description: "push / pull / legs, deux fois", seances: ["push", "pull", "legs", "push", "pull", "legs"] },
     7: { nom: "push-pull-legs-x2-recup", description: "push / pull / legs deux fois + un jour de récupération active (mobilité, cardio léger) — jamais une 7e séance de force", seances: ["push", "pull", "legs", "push", "pull", "legs", "recup"] }
   };
+  // v20.11 : quand le cardio fait partie du programme, une séance cardio dédiée dès 4 séances par semaine
+  // (le 7× garde son jour de récupération active, qui a déjà 20 min de cardio léger)
+  const SQUELETTES_CARDIO = {
+    4: { nom: "fullbody-ABC-cardio", description: "3 séances full body + 1 séance cardio", seances: ["fullA", "fullB", "fullC", "cardio"] },
+    5: { nom: "haut-bas-x2-cardio", description: "haut / bas deux fois + 1 séance cardio", seances: ["haut", "bas", "haut", "bas", "cardio"] },
+    6: { nom: "ppl-haut-bas-cardio", description: "push / pull / legs, puis haut / bas, + 1 séance cardio", seances: ["push", "pull", "legs", "haut", "bas", "cardio"] }
+  };
+  const squeletteDe = (frequence, cardio) => (cardio === "objectif" && SQUELETTES_CARDIO[frequence]) || SQUELETTES[frequence];
 
   /* ------------------------------------------------------------------ */
   /* Objectifs (règle 11) et sports (règle 10) : des modificateurs      */
@@ -173,9 +200,9 @@
   // d'isolation du bas devient une seconde case unilatérale ; gainage anti-rotation en plus
   const SPORTS = {
     // obligatoires : une entrée = un exercice ou une liste d'alternatives (le premier admissible est pris)
-    course: { libelle: "à la course à pied", nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    cyclisme: { libelle: "au vélo", nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
-    natation: { libelle: "à la natation", nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
+    course: { endurance: true, libelle: "à la course à pied", nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    cyclisme: { endurance: true, libelle: "au vélo", nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    natation: { endurance: true, libelle: "à la natation", nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
     // v20.7 : le foot pèse vraiment — ischios obligatoires, hanches (adducteurs, abducteurs), mollets, unilatéral,
     // anti-rotation, avec des options de difficulté 1 pour qu'une débutante voie aussi la différence
     football: { libelle: "au foot", nom: "Football", prioritaires: ["ischio-jambiers", "fessiers", "adducteurs", "abducteurs", "mollets", "quadriceps"],
@@ -266,8 +293,10 @@
   const choisir = (banque, cas, focus, ctx) => {
     const ph = phareDe(banque, cas, focus, ctx);
     if (ph) return ph;
-    let cands = banque.exercices.filter(e => e.compartiment === cas.c && admissible(e, ctx, focus));
+    let cands = banque.exercices.filter(e => e.compartiment === cas.c && admissible(cas.finisher ? { ...e, role: "cardio" } : e, ctx, focus));
     if (cas.c === "cardio_mobilite") cands = cands.filter(e => e.type === cas.type);
+    // v20.11 : le finisher préfère un appareil (tapis, vélo, rameur…) à un exercice au sol (burpees) quand la salle le permet
+    if (cas.finisher) { const m = cands.filter(e => (e.materiel || []).includes("tapis / machine cardio")); if (m.length) cands = m; }
     // niveau 2 : pas de régression ; niveau 3 : ni difficulté 1 ni régression — sauf absence totale d'alternative
     // (pour une isolation, l'alternative se cherche dans le même muscle : un mollet ne se remplace pas par un hip thrust)
     if (ctx.niveau >= 2) {
@@ -303,7 +332,8 @@
   const exerciceProgramme = (e, dose, role) => ({
     id: e.id, nom: e.nom, compartiment: e.compartiment, muscle: e.muscle, secondaires: e.secondaires || [], difficulte: e.difficulte, echelle: e.echelle,
     unilateral: !!e.unilateral, accessoire: !!e.accessoire, regression: !!e.regression, consigne: e.consigne, erreur: e.erreur, demo: e.demo, materiel: e.materiel,
-    series: dose.series, reps: dose.reps || null, duree_s: dose.duree_s || null, repos_s: dose.repos_s, role: role || null
+    series: dose.series, reps: dose.reps || null, duree_s: dose.duree_s || null, repos_s: dose.repos_s, role: role || null,
+    ...(e.compartiment === "cardio_mobilite" ? { type: e.type } : {})
   });
   const doser = (e, ctx) => {
     if (e.compartiment === "cardio_mobilite") return { series: 1, duree_s: ctx.dureeCardio && e.type === "cardio" ? ctx.dureeCardio : e.duree_s, repos_s: 0 };
@@ -336,10 +366,16 @@
   // compression pour tenir dans le temps : la case supplémentaire de l'objectif, puis les isolations
   // (l'obligatoire de l'objectif en dernier), puis séries, puis repos jusqu'aux planchers
   // (ordre de DECISIONS.md « Adapter ma séance ») ; jamais les polyarticulaires
-  const comprimer = (s, tempsMin, nbMin) => {
+  const comprimer = (s, tempsMin, nbMin, cardioMode) => {
     const tient = () => dureeSeance(s) <= tempsMin;
     const forces = () => s.exercices.filter(estForce);
     const retirer = x => s.exercices.splice(s.exercices.indexOf(x), 1);
+    const retirerFinisher = () => { const fin = s.exercices.find(x => x.role === "cardio"); if (!fin) return false; retirer(fin); s._finisherRetire = true; return true; };
+    // v20.11 : le finisher cardio passe de 15 à 10 min avant que quoi que ce soit ne saute ; quand c'est le sport
+    // (pas l'objectif) qui l'a demandé, il saute ensuite en premier — les sorties du sport font le cardio
+    const retrecirFinisher = () => { while (!tient()) { const fin = s.exercices.find(x => x.role === "cardio" && x.duree_s > FINISHER_MIN_S); if (!fin) break; fin.duree_s = Math.max(FINISHER_MIN_S, fin.duree_s - 300); } };
+    retrecirFinisher();
+    if (!tient() && cardioMode === "sport") retirerFinisher();
     while (!tient()) {
       const extra = s.exercices.filter(x => x.role === "objectif_extra");
       if (!extra.length) break;
@@ -351,7 +387,14 @@
       if (g.length < 2 || !g.some(x => x.role === "sport")) break;
       retirer(g.find(x => x.role !== "sport"));
     }
-    // l'isolation obligatoire de l'objectif (hip thrust) ne saute qu'en tout dernier recours
+    // l'isolation obligatoire de l'objectif (hip thrust) ne saute qu'en tout dernier recours ; celles que le sport
+    // a marquées passent après le finisher cardio (v20.11)
+    while (!tient()) {
+      const isos = s.exercices.filter(x => x.compartiment === "isolation" && x.role !== "objectif" && x.role !== "sport");
+      if (isos.length && forces().length > nbMin) { retirer(isos[isos.length - 1]); continue; }
+      break;
+    }
+    if (!tient()) retirerFinisher();
     while (!tient()) {
       const isos = s.exercices.filter(x => x.compartiment === "isolation" && x.role !== "objectif");
       if (isos.length && forces().length > nbMin) { retirer(isos[isos.length - 1]); continue; }
@@ -367,6 +410,7 @@
       if (!r.length) break;
       for (const x of r) x.repos_s = Math.max(x.compartiment === "isolation" ? PLANCHER_REPOS.isolation : PLANCHER_REPOS.compose, x.repos_s - 30);
     }
+    if (!tient()) retirerFinisher();
     // dernier recours : le temps l'emporte sur le nombre minimal d'exercices du niveau —
     // les isolations restantes sautent, puis le gainage ; jamais un polyarticulaire
     while (!tient()) {
@@ -483,7 +527,8 @@
     const difficulteMax = Math.min(niv.difficulteMax, obj.difficulteMax || 3);
 
     // squelette ; le jour focus du 5× suit le côté dominant (objectif, puis sport)
-    const squelette = SQUELETTES[frequence];
+    const cardio = cardioIntegre({ objectif: objCle, sport: entrees.sport, intention: intentionSport ? "sport" : "soi" });
+    const squelette = squeletteDe(frequence, cardio);
     const cote = obj.cote || (intentionSport ? sport.cote : null) || "bas";
     const focusList = squelette.seances.map(f => f === "focus" ? (cote === "haut" ? "focusHaut" : "focusBas") : f);
 
@@ -534,6 +579,9 @@
         const cas = cases.find(c => c.c === e.compartiment && !c.force);
         if (cas) { cas.force = [id]; cas.compose = true; composesAPlacer.splice(composesAPlacer.indexOf(id), 1); }
       }
+      // v20.11 : cardio intégré — un finisher de 15 min (10 au minimum, compression) en fin de chaque séance de force
+      if (cardio && focus !== "recup" && focus !== "cardio") cases.push({ c: "cardio_mobilite", type: "cardio", duree: FINISHER_S, finisher: true });
+      for (const cas of cases) if (cas.dedie) cas.duree = Math.min(1800, Math.max(900, Math.floor((tempsMin - 12) / 5) * 300));
       cases[0].ouverture = true;
       for (const cas of cases) {
         let e = null, role = null;
@@ -561,7 +609,7 @@
           continue;
         }
         const dose = doser(e, { ...ctx, dureeCardio: cas.duree });
-        exercices.push(exerciceProgramme(e, dose, role || (cas.sport ? "sport" : null)));
+        exercices.push(exerciceProgramme(e, dose, role || (cas.sport ? "sport" : cas.finisher ? "cardio" : null)));
         ctx.dejaSeance.add(e.id); ctxBase.dejaSemaine.add(e.id); ctxBase.compteSemaine[e.id] = (ctxBase.compteSemaine[e.id] || 0) + 1;
         if (e.compartiment === "isolation") { ctx.musclesSeance.add(e.muscle); ctxBase.musclesSemaine.add(e.muscle); }
       }
@@ -571,9 +619,10 @@
       exercices.forEach(x => { delete x._k; });
       const s = { lettre: lettres[i], nom: f.nom, focus, exercices, dureeMin: 0 };
       // règle 6 : tenir dans le temps
-      if (!comprimer(s, tempsMin, nbExos[0])) avertissements.push(`Séance ${s.lettre} : ${dureeSeance(s)} min même compressée, au-delà des ${tempsMin} min demandées.`);
+      if (!comprimer(s, tempsMin, nbExos[0], cardio)) avertissements.push(`Séance ${s.lettre} : ${dureeSeance(s)} min même compressée, au-delà des ${tempsMin} min demandées.`);
       if (s._objectifRetire) avertissements.push(`Séance ${s.lettre} : même l'exercice obligatoire de l'objectif ne tenait pas dans ${tempsMin} min, retiré en dernier recours.`);
       if (s._extraRetiree) avertissements.push(`Séance ${s.lettre} : la case supplémentaire de l'objectif ne tenait pas dans ${tempsMin} min, retirée.`);
+      if (s._finisherRetire) avertissements.push(`Séance ${s.lettre} : le cardio de fin de séance ne tenait pas dans ${tempsMin} min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.`);
       s.dureeMin = dureeSeance(s);
       return s;
     });
@@ -627,7 +676,7 @@
     // règle 7 : nombre minimal d'exercices (si le matériel ou le temps a fait sauter des cases)
     for (const s of seances) {
       const c = s.exercices.filter(estForce).length, nbExos = nbExosDe(niveau, objCle, s.focus);
-      if (s.focus !== "recup" && c < nbExos[0]) avertissements.push(`Séance ${s.lettre} : ${c} exercices seulement (minimum ${nbExos[0]} au niveau ${niveau}${objCle === "force" ? " en force" : ""}) — ${s._sousMinimum ? `le temps (${tempsMin} min) l'a emporté sur le nombre d'exercices` : "matériel trop restreint pour ce focus"}.`);
+      if (s.focus !== "recup" && s.focus !== "cardio" && c < nbExos[0]) avertissements.push(`Séance ${s.lettre} : ${c} exercices seulement (minimum ${nbExos[0]} au niveau ${niveau}${objCle === "force" ? " en force" : ""}) — ${s._sousMinimum ? `le temps (${tempsMin} min) l'a emporté sur le nombre d'exercices` : "matériel trop restreint pour ce focus"}.`);
     }
 
     // règle 4 : placement dans la semaine — d'abord sans toucher aux jours de sport, sinon en mode
@@ -642,6 +691,14 @@
       else { jours = placer(seances, [], false); if (jours) avertissements.push(`${frequence} séances et ${joursSport.length} jours de ${nomSport} : impossible d'éviter une grosse séance jambes près d'un jour de sport, les séances sont placées sans en tenir compte — à toi d'ajuster.`); }
     }
     if (!jours) avertissements.push("Aucun placement dans la semaine ne respecte la règle 4 (même gros groupe deux jours consécutifs).");
+    // v20.11 : le cardio, partie intégrante du programme — dit dans « À savoir »
+    if (cardio) {
+      const pourquoi = obj.nom === "Perdre du poids" || obj.nom === "Me sentir mieux" ? `objectif « ${obj.nom} »` : `pour progresser ${sport.libelle}`;
+      const dediee = seances.find(x => x.focus === "cardio");
+      const dediteAVenir = cardio === "objectif" && frequence < 4;
+      const finishers = seances.filter(x => x.exercices.some(e => e.role === "cardio")).length;
+      avertissements.push(`Cardio intégré (${pourquoi}) : ${finishers ? `10 à 15 min d'appareil en fin de ${finishers === seances.filter(x => x.focus !== "cardio" && x.focus !== "recup").length ? "chaque" : "presque chaque"} séance de force` : "pas de finisher, faute de temps"}${dediee ? `, et une séance cardio dédiée (${dediee.lettre}, ${dediee.dureeMin} min)` : dediteAVenir ? " — une séance cardio dédiée viendrait à partir de 4 séances par semaine" : cardio === "sport" ? " — tes sorties font le reste" : ""}. Les XP du cardio dépendent de la durée.`);
+    }
     const semaine = [];
     for (let d = 1; d <= 7; d++) {
       const i = jours ? jours.indexOf(d) : (d <= seances.length ? d - 1 : -1);
@@ -713,7 +770,8 @@
         id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
         pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
         series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
-        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null, difficulte: x.difficulte
+        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null, difficulte: x.difficulte,
+        ...(x.compartiment === "cardio_mobilite" ? { type: x.type || (x.muscle === "cardio" ? "cardio" : "mobilite") } : {})
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
         id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
@@ -834,7 +892,8 @@
     return {
       id: e.id, nom: e.nom, dose: doseDe(x), repos, charge: !cardio && chargeDe(e, materiel), pdc: !cardio && pdcPossible(e),
       series: x.series, reps: x.reps, duree: x.duree_s, unilateral: x.unilateral, consigne: e.consigne || "", erreur: e.erreur || "",
-      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true
+      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true,
+      ...(cardio ? { type: e.type } : {})
     };
   };
   // le catalogue du panneau « Ajouter / Remplacer » : les similaires (muscle principal dans le focus de la
@@ -874,7 +933,7 @@
     // temps en plus (v20.6) : des compléments tant qu'il reste au moins 8 min — le gainage s'il manque,
     // une isolation d'un muscle du focus pas encore travaillé, puis un finisher (cardio, ou mobilité
     // en reprise douce). Jamais plus de trois ajouts, jamais au-delà du temps demandé.
-    const ajouts = [];
+    const ajouts = []; let optionCardio = null;
     const banque = opts.banque, entrees = opts.entrees || {};
     const f = S.focus && FOCUS[S.focus];
     if (opts.complements !== false && banque && f && f.comp && S.focus !== "recup" && dureeSeance(s) + 8 <= tempsMin) {
@@ -883,7 +942,7 @@
       const ctx = { niveau, niv, materiel, difficulteMax: Math.min(niv.difficulteMax, obj.difficulteMax || 3), obj, prioritaires: [], favoris: new Set(), phares: new Set(), distancePhare: () => 0,
         unilateral: false, dejaSemaine: new Set(), compteSemaine: {}, musclesSemaine: new Set(), dejaSeance: new Set(s.exercices.map(x => x.id)), musclesSeance: new Set(s.exercices.filter(x => x.compartiment === "isolation").map(x => x.muscle)) };
       const versApp = x => ({ id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, materiel), pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
-        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement", difficulte: x.difficulte });
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement", difficulte: x.difficulte, ...(x.compartiment === "cardio_mobilite" ? { type: x.type } : {}) });
       const ajouter = (e, pourquoi, dureeCardio) => {
         if (!e || ajouts.length >= 3) return false;
         const x = exerciceProgramme(e, doser(e, { ...ctx, dureeCardio }), "complement");
@@ -891,13 +950,30 @@
         x._app = versApp(x); s.exercices.push(x); ctx.dejaSeance.add(e.id); if (e.compartiment === "isolation") ctx.musclesSeance.add(e.muscle);
         ajouts.push({ id: e.id, nom: e.nom, pourquoi }); return true;
       };
+      const cardioDeja = s.exercices.some(x => x.compartiment === "cardio_mobilite" && x.type !== "mobilite");
+      const candsCardio = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === "cardio" && faisable(e, materiel) && !ctx.dejaSeance.has(e.id))
+        .sort((a, b) => ((b.materiel || []).includes("tapis / machine cardio") ? 1 : 0) - ((a.materiel || []).includes("tapis / machine cardio") ? 1 : 0) || a.nom.localeCompare(b.nom));
+      const dureeCardio = () => { const reste = Math.max(0, (tempsMin - dureeSeance(s)) * 60 - 60); return reste >= 300 ? Math.min(900, Math.max(300, Math.floor(reste / 60) * 60)) : 0; };
+      // v20.11 : cardio explicitement demandé (« ajouter 15 min de cardio ? » avec le choix de l'appareil) : il passe en premier
+      if (opts.cardio && opts.cardio.id && !cardioDeja) {
+        const e = banque.exercices.find(x => x.id === opts.cardio.id && x.compartiment === "cardio_mobilite" && x.type === "cardio");
+        const d = Math.min(1800, Math.max(300, Math.round((parseInt(opts.cardio.duree) || 15) / 5) * 300));
+        if (e && !ctx.dejaSeance.has(e.id) && dureeSeance({ exercices: [...s.exercices] }) + d / 60 <= tempsMin + 0.5) ajouter(e, "cardio demandé", d);
+      }
+      // v20.11 : l'objectif ou le sport réclament du cardio → il vient en premier parmi les compléments (refusable d'un tap)
+      const veutCardio = cardioIntegre(entrees);
+      if (veutCardio && !cardioDeja && !s.exercices.some(x => x.role === "cardio") && candsCardio.length) { const d = dureeCardio(); if (d) ajouter(candsCardio[0], "cardio (objectif)", d); }
       if (!s.exercices.some(x => x.compartiment === "gainage")) ajouter(choisir(banque, { c: "gainage" }, S.focus, ctx), "gainage");
       for (const mu of f.iso) { if (dureeSeance(s) + 5 > tempsMin || ajouts.length >= 2) break; if (ctx.musclesSeance.has(mu)) continue; ajouter(choisir(banque, { c: "isolation", m: [mu] }, S.focus, ctx), `isolation ${MUSCLE_COURT[mu] || mu}`); }
-      if (!s.exercices.some(x => x.compartiment === "cardio_mobilite")) {
-        const type = entrees.objectif === "douce" ? "mobilite" : "cardio";
-        const cands = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === type && faisable(e, materiel) && !ctx.dejaSeance.has(e.id));
-        const reste = Math.max(0, (tempsMin - dureeSeance(s)) * 60 - 60);
-        if (cands.length && reste >= 300) ajouter(cands[0], type === "cardio" ? "finisher cardio" : "mobilité", Math.min(900, Math.max(300, Math.floor(reste / 60) * 60)));
+      if (entrees.objectif === "douce" && !s.exercices.some(x => x.compartiment === "cardio_mobilite")) {
+        const cands = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === "mobilite" && faisable(e, materiel) && !ctx.dejaSeance.has(e.id));
+        const d = dureeCardio();
+        if (cands.length && d) ajouter(cands[0], "mobilité", d);
+      }
+      // sans objectif cardio : pas de cardio d'office, mais l'option explicite « ajouter 15 min de cardio ? » avec le choix de l'appareil
+      if (!veutCardio && !s.exercices.some(x => x.compartiment === "cardio_mobilite" && x.type !== "mobilite") && candsCardio.length) {
+        const d = dureeCardio();
+        if (d) optionCardio = { duree: d, candidats: candsCardio.slice(0, 6).map(e => ({ id: e.id, nom: e.nom })) };
       }
       s.exercices.forEach((x, k) => { x._k = k; });
       s.exercices.sort((a, b) => rangOrdre(a) - rangOrdre(b) || a._k - b._k);
@@ -909,7 +985,7 @@
       exos: s.exercices.filter(x => x.compartiment !== "gainage").map(retour),
       gainage: s.exercices.filter(x => x.compartiment === "gainage").map(retour),
       dureeMin: dureeSeance(s),
-      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, intensifie: energie === "fond", ajouts, avantMin: avant, tient, retires: Math.max(0, S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - (s.exercices.length - ajouts.length)) }
+      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, intensifie: energie === "fond", ajouts, optionCardio, avantMin: avant, tient, retires: Math.max(0, S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - (s.exercices.length - ajouts.length)) }
     };
   };
 
@@ -976,8 +1052,20 @@
     const seances = prog.semaine.filter(j => j.seance).map(j => j.seance);
     const f = prog.entrees.frequence, niveau = prog.entrees.niveau, niv = NIVEAU[niveau], materiel = prog.entrees.materiel;
     // squelette
-    const attendu = SQUELETTES[f];
+    const cardio = cardioIntegre(prog.entrees);
+    const attendu = squeletteDe(f, cardio);
     if (!attendu || prog.squelette.nom !== attendu.nom) v.push({ regle: "squelette", message: `squelette ${prog.squelette.nom} au lieu de ${attendu && attendu.nom}` });
+    // v20.11 : le cardio est là quand l'objectif ou le sport le réclame (finisher dans chaque séance de force,
+    // sauf faute de temps signalée ; séance dédiée dès 4×), et jamais imposé sinon
+    for (const s of seances) {
+      const fin = s.exercices.filter(e => e.role === "cardio");
+      if (s.focus === "recup" || s.focus === "cardio") { if (s.exercices.some(e => e.compartiment !== "cardio_mobilite")) v.push({ regle: "cardio", message: `séance ${s.lettre} (${s.focus}) : de la force dans une séance cardio / récupération` }); continue; }
+      if (cardio && !fin.length && !prog.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : le cardio de fin`))) v.push({ regle: "cardio", message: `séance ${s.lettre} : pas de finisher cardio alors que l'objectif ou le sport le réclame` });
+      if (cardio && fin.some(e => e.duree_s < FINISHER_MIN_S || e.duree_s > FINISHER_S)) v.push({ regle: "cardio", message: `séance ${s.lettre} : finisher cardio hors 10-15 min` });
+      if (!cardio && fin.length) v.push({ regle: "cardio", message: `séance ${s.lettre} : un finisher cardio sans que l'objectif ou le sport le demande` });
+    }
+    if (cardio === "objectif" && f >= 4 && f <= 6 && !seances.some(s => s.focus === "cardio")) v.push({ regle: "cardio", message: "pas de séance cardio dédiée à partir de 4 séances" });
+    if (cardio !== "objectif" && seances.some(s => s.focus === "cardio")) v.push({ regle: "cardio", message: "une séance cardio dédiée sans objectif cardio" });
     const focusAttendus = attendu ? attendu.seances.map(x => x === "focus" ? /^focus/ : x) : [];
     if (seances.length !== focusAttendus.length) v.push({ regle: "squelette", message: `${seances.length} séances au lieu de ${focusAttendus.length}` });
     else seances.forEach((s, i) => { const a = focusAttendus[i]; if (a instanceof RegExp ? !a.test(s.focus) : s.focus !== a) v.push({ regle: "squelette", message: `séance ${s.lettre} : focus ${s.focus} au lieu de ${a}` }); });
@@ -999,7 +1087,7 @@
         if (alt.length) v.push({ regle: 7, message: `${e.nom} (difficulté ${e.difficulte}${e.regression ? ", régression" : ""}) au niveau ${niveau} alors que ${alt[0].nom} existe` });
       }
       const c = s.exercices.filter(estForce).length, extra = s.exercices.filter(e => e.role === "objectif_extra").length, nbExos = nbExosDe(niveau, prog.entrees.objectif, s.focus);
-      if (s.focus !== "recup" && (c < nbExos[0] || c > nbExos[1] + extra) && !prog.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : ${c} exercices`))) v.push({ regle: 7, message: `séance ${s.lettre} : ${c} exercices (attendu ${nbExos.join("-")}${extra ? " + " + extra + " d'objectif" : ""})` });
+      if (s.focus !== "recup" && s.focus !== "cardio" && (c < nbExos[0] || c > nbExos[1] + extra) && !prog.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : ${c} exercices`))) v.push({ regle: 7, message: `séance ${s.lettre} : ${c} exercices (attendu ${nbExos.join("-")}${extra ? " + " + extra + " d'objectif" : ""})` });
       if (niveau === 1 && s.exercices.some(e => e.echelle === "avance")) v.push({ regle: 9, message: `séance ${s.lettre} : version avancée pour un débutant` });
       const musclesIso = s.exercices.filter(e => e.compartiment === "isolation").map(e => e.muscle);
       if (prog.entrees.objectif === "force" && new Set(musclesIso).size !== musclesIso.length) v.push({ regle: 11, message: `séance ${s.lettre} : deux isolations du même muscle en force (${musclesIso.join(", ")})` });
@@ -1020,5 +1108,5 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS, cardioIntegre, squeletteDe };
 });

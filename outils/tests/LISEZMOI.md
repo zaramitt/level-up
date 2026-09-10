@@ -41,6 +41,16 @@ node outils/sync.test.js             # les copies embarquées sont-elles à jour
   mobilité, après l'exercice ouvert), retrait et réordonnancement, reps
   réelles par série → incrément, séance libre complète, journal fidèle,
   programme inchangé après les ajouts d'un jour, proposition après 3 retraits.
+- `09d-v2010-clarte.js` — v20.10 : plus aucun champ sous 16 px (onboarding,
+  séance, récompenses, réglages), table des négos harmonisée, « + » des reps
+  dans la carte, « Déplacer » et son menu, appui long puis glisser (touch via
+  CDP, le défilement seul ne déplace rien), gainage Remplacer / Ajouter
+  après, carte des premiers XP, idées avec progression et mesure.
+- `09e-v2011-cardio.js` — v20.11 : le cardio — finisher dans le programme
+  « Perdre du poids » et « À savoir », carte cardio (chrono, durée, champs
+  selon l'appareil, « Terminer le cardio », photo en option), XP selon la
+  durée, chrono qui survit à la fermeture, jour « Cardio » joué comme une
+  séance (journal, historique, Progrès), option cardio d'« Ajuster ».
 - `10` à `21` — non-régressions v19.10 → v19.21, portées sur les nouvelles
   questions d'onboarding quand elles passaient par les anciennes.
 

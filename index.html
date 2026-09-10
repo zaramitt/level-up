@@ -201,11 +201,30 @@
     focusHaut: { muscles: "Pecs · dos · épaules", nom: "Focus haut du corps", comp: ["poussee_h", "tirage_h", "poussee_v", "tirage_v", "isolation", "gainage"], iso: ISO_HAUT, bas: false,
       cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
     recup: { muscles: "Récupération active", nom: "Récupération active", comp: ["cardio_mobilite"], iso: [], bas: false,
-      cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1200 }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }] }
+      cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1200 }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }, { c: "cardio_mobilite", type: "mobilite" }] },
+    // v20.11 : la séance cardio dédiée (objectif ou sport qui réclament du cardio, dès 4 séances) — 30 min
+    // d'un appareil (bornées par le temps disponible) et une mobilité pour finir
+    cardio: { muscles: "Cardio", nom: "Cardio", comp: ["cardio_mobilite"], iso: [], bas: false,
+      cases: [{ c: "cardio_mobilite", type: "cardio", duree: 1800, dedie: true }, { c: "cardio_mobilite", type: "mobilite" }] }
   };
+  // v20.11 : le cardio fait partie du programme quand l'objectif ou le sport le réclame (règles 10 et 11) :
+  // perdre du poids, se sentir mieux, ou progresser dans un sport d'endurance. Sinon il reste une option
+  // explicite d'« Ajuster ma séance ».
+  // → "objectif" (perdre du poids, se sentir mieux : le cardio est le cœur, finishers ET séance dédiée dès 4×),
+  //   "sport" (sport d'endurance avec intention de progresser : finishers, les sorties du sport font le reste), ou false
+  // Avec un sport pratiqué pour progresser, le sport fait déjà les séances d'endurance : finishers seulement,
+  // jamais de séance dédiée qui viendrait s'ajouter aux jours de sport.
+  const cardioIntegre = entrees => {
+    if (!entrees) return false;
+    const sp = entrees.sport && SPORTS[entrees.sport], intention = !!(sp && entrees.intention === "sport");
+    if (entrees.objectif === "poids" || entrees.objectif === "mieux") return intention ? "sport" : "objectif";
+    return intention && sp.endurance ? "sport" : false;
+  };
+  const FINISHER_S = 900, FINISHER_MIN_S = 600;
   const appartientAuFocus = (e, focus) => {
     const f = FOCUS[focus];
     if (!f) return false;
+    if (e.compartiment === "cardio_mobilite" && e.role === "cardio") return true; // finisher cardio (v20.11) : admis dans toute séance de force
     if (!f.comp.includes(e.compartiment)) return false;
     if (e.compartiment === "isolation" && !f.iso.includes(e.muscle)) return false;
     return true;
@@ -223,6 +242,14 @@
     6: { nom: "push-pull-legs-x2", description: "push / pull / legs, deux fois", seances: ["push", "pull", "legs", "push", "pull", "legs"] },
     7: { nom: "push-pull-legs-x2-recup", description: "push / pull / legs deux fois + un jour de récupération active (mobilité, cardio léger) — jamais une 7e séance de force", seances: ["push", "pull", "legs", "push", "pull", "legs", "recup"] }
   };
+  // v20.11 : quand le cardio fait partie du programme, une séance cardio dédiée dès 4 séances par semaine
+  // (le 7× garde son jour de récupération active, qui a déjà 20 min de cardio léger)
+  const SQUELETTES_CARDIO = {
+    4: { nom: "fullbody-ABC-cardio", description: "3 séances full body + 1 séance cardio", seances: ["fullA", "fullB", "fullC", "cardio"] },
+    5: { nom: "haut-bas-x2-cardio", description: "haut / bas deux fois + 1 séance cardio", seances: ["haut", "bas", "haut", "bas", "cardio"] },
+    6: { nom: "ppl-haut-bas-cardio", description: "push / pull / legs, puis haut / bas, + 1 séance cardio", seances: ["push", "pull", "legs", "haut", "bas", "cardio"] }
+  };
+  const squeletteDe = (frequence, cardio) => (cardio === "objectif" && SQUELETTES_CARDIO[frequence]) || SQUELETTES[frequence];
 
   /* ------------------------------------------------------------------ */
   /* Objectifs (règle 11) et sports (règle 10) : des modificateurs      */
@@ -256,9 +283,9 @@
   // d'isolation du bas devient une seconde case unilatérale ; gainage anti-rotation en plus
   const SPORTS = {
     // obligatoires : une entrée = un exercice ou une liste d'alternatives (le premier admissible est pris)
-    course: { libelle: "à la course à pied", nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
-    cyclisme: { libelle: "au vélo", nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
-    natation: { libelle: "à la natation", nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
+    course: { endurance: true, libelle: "à la course à pied", nom: "Course à pied", prioritaires: ["ischio-jambiers", "fessiers", "mollets", "chaîne postérieure", "abducteurs"], favoris: ["bulgare", "stepup", "planche_laterale", "pallof", "mollets", "nordic", "rdl", "abduction", "clamshell", "legcurl", "legcurl_assis", "glute_ham_raise"], obligatoires: [["nordic", "legcurl", "legcurl_assis", "legcurl_ballon"]], unilateral: true, brasMin: true, antiRotation: true, cote: "bas" },
+    cyclisme: { endurance: true, libelle: "au vélo", nom: "Cyclisme", prioritaires: ["quadriceps", "fessiers", "chaîne postérieure"], favoris: ["bulgare", "stepup", "planche_laterale"], unilateral: true, brasMin: true, antiRotation: false, cote: "bas" },
+    natation: { endurance: true, libelle: "à la natation", nom: "Natation", prioritaires: ["dos (grand dorsal)", "épaules", "arrière d'épaule", "triceps"], favoris: ["traction", "tirage_v", "tirage_ela", "pallof"], unilateral: false, brasMin: false, antiRotation: true, cote: "haut" },
     // v20.7 : le foot pèse vraiment — ischios obligatoires, hanches (adducteurs, abducteurs), mollets, unilatéral,
     // anti-rotation, avec des options de difficulté 1 pour qu'une débutante voie aussi la différence
     football: { libelle: "au foot", nom: "Football", prioritaires: ["ischio-jambiers", "fessiers", "adducteurs", "abducteurs", "mollets", "quadriceps"],
@@ -349,8 +376,10 @@
   const choisir = (banque, cas, focus, ctx) => {
     const ph = phareDe(banque, cas, focus, ctx);
     if (ph) return ph;
-    let cands = banque.exercices.filter(e => e.compartiment === cas.c && admissible(e, ctx, focus));
+    let cands = banque.exercices.filter(e => e.compartiment === cas.c && admissible(cas.finisher ? { ...e, role: "cardio" } : e, ctx, focus));
     if (cas.c === "cardio_mobilite") cands = cands.filter(e => e.type === cas.type);
+    // v20.11 : le finisher préfère un appareil (tapis, vélo, rameur…) à un exercice au sol (burpees) quand la salle le permet
+    if (cas.finisher) { const m = cands.filter(e => (e.materiel || []).includes("tapis / machine cardio")); if (m.length) cands = m; }
     // niveau 2 : pas de régression ; niveau 3 : ni difficulté 1 ni régression — sauf absence totale d'alternative
     // (pour une isolation, l'alternative se cherche dans le même muscle : un mollet ne se remplace pas par un hip thrust)
     if (ctx.niveau >= 2) {
@@ -386,7 +415,8 @@
   const exerciceProgramme = (e, dose, role) => ({
     id: e.id, nom: e.nom, compartiment: e.compartiment, muscle: e.muscle, secondaires: e.secondaires || [], difficulte: e.difficulte, echelle: e.echelle,
     unilateral: !!e.unilateral, accessoire: !!e.accessoire, regression: !!e.regression, consigne: e.consigne, erreur: e.erreur, demo: e.demo, materiel: e.materiel,
-    series: dose.series, reps: dose.reps || null, duree_s: dose.duree_s || null, repos_s: dose.repos_s, role: role || null
+    series: dose.series, reps: dose.reps || null, duree_s: dose.duree_s || null, repos_s: dose.repos_s, role: role || null,
+    ...(e.compartiment === "cardio_mobilite" ? { type: e.type } : {})
   });
   const doser = (e, ctx) => {
     if (e.compartiment === "cardio_mobilite") return { series: 1, duree_s: ctx.dureeCardio && e.type === "cardio" ? ctx.dureeCardio : e.duree_s, repos_s: 0 };
@@ -419,10 +449,16 @@
   // compression pour tenir dans le temps : la case supplémentaire de l'objectif, puis les isolations
   // (l'obligatoire de l'objectif en dernier), puis séries, puis repos jusqu'aux planchers
   // (ordre de DECISIONS.md « Adapter ma séance ») ; jamais les polyarticulaires
-  const comprimer = (s, tempsMin, nbMin) => {
+  const comprimer = (s, tempsMin, nbMin, cardioMode) => {
     const tient = () => dureeSeance(s) <= tempsMin;
     const forces = () => s.exercices.filter(estForce);
     const retirer = x => s.exercices.splice(s.exercices.indexOf(x), 1);
+    const retirerFinisher = () => { const fin = s.exercices.find(x => x.role === "cardio"); if (!fin) return false; retirer(fin); s._finisherRetire = true; return true; };
+    // v20.11 : le finisher cardio passe de 15 à 10 min avant que quoi que ce soit ne saute ; quand c'est le sport
+    // (pas l'objectif) qui l'a demandé, il saute ensuite en premier — les sorties du sport font le cardio
+    const retrecirFinisher = () => { while (!tient()) { const fin = s.exercices.find(x => x.role === "cardio" && x.duree_s > FINISHER_MIN_S); if (!fin) break; fin.duree_s = Math.max(FINISHER_MIN_S, fin.duree_s - 300); } };
+    retrecirFinisher();
+    if (!tient() && cardioMode === "sport") retirerFinisher();
     while (!tient()) {
       const extra = s.exercices.filter(x => x.role === "objectif_extra");
       if (!extra.length) break;
@@ -434,7 +470,14 @@
       if (g.length < 2 || !g.some(x => x.role === "sport")) break;
       retirer(g.find(x => x.role !== "sport"));
     }
-    // l'isolation obligatoire de l'objectif (hip thrust) ne saute qu'en tout dernier recours
+    // l'isolation obligatoire de l'objectif (hip thrust) ne saute qu'en tout dernier recours ; celles que le sport
+    // a marquées passent après le finisher cardio (v20.11)
+    while (!tient()) {
+      const isos = s.exercices.filter(x => x.compartiment === "isolation" && x.role !== "objectif" && x.role !== "sport");
+      if (isos.length && forces().length > nbMin) { retirer(isos[isos.length - 1]); continue; }
+      break;
+    }
+    if (!tient()) retirerFinisher();
     while (!tient()) {
       const isos = s.exercices.filter(x => x.compartiment === "isolation" && x.role !== "objectif");
       if (isos.length && forces().length > nbMin) { retirer(isos[isos.length - 1]); continue; }
@@ -450,6 +493,7 @@
       if (!r.length) break;
       for (const x of r) x.repos_s = Math.max(x.compartiment === "isolation" ? PLANCHER_REPOS.isolation : PLANCHER_REPOS.compose, x.repos_s - 30);
     }
+    if (!tient()) retirerFinisher();
     // dernier recours : le temps l'emporte sur le nombre minimal d'exercices du niveau —
     // les isolations restantes sautent, puis le gainage ; jamais un polyarticulaire
     while (!tient()) {
@@ -566,7 +610,8 @@
     const difficulteMax = Math.min(niv.difficulteMax, obj.difficulteMax || 3);
 
     // squelette ; le jour focus du 5× suit le côté dominant (objectif, puis sport)
-    const squelette = SQUELETTES[frequence];
+    const cardio = cardioIntegre({ objectif: objCle, sport: entrees.sport, intention: intentionSport ? "sport" : "soi" });
+    const squelette = squeletteDe(frequence, cardio);
     const cote = obj.cote || (intentionSport ? sport.cote : null) || "bas";
     const focusList = squelette.seances.map(f => f === "focus" ? (cote === "haut" ? "focusHaut" : "focusBas") : f);
 
@@ -617,6 +662,9 @@
         const cas = cases.find(c => c.c === e.compartiment && !c.force);
         if (cas) { cas.force = [id]; cas.compose = true; composesAPlacer.splice(composesAPlacer.indexOf(id), 1); }
       }
+      // v20.11 : cardio intégré — un finisher de 15 min (10 au minimum, compression) en fin de chaque séance de force
+      if (cardio && focus !== "recup" && focus !== "cardio") cases.push({ c: "cardio_mobilite", type: "cardio", duree: FINISHER_S, finisher: true });
+      for (const cas of cases) if (cas.dedie) cas.duree = Math.min(1800, Math.max(900, Math.floor((tempsMin - 12) / 5) * 300));
       cases[0].ouverture = true;
       for (const cas of cases) {
         let e = null, role = null;
@@ -644,7 +692,7 @@
           continue;
         }
         const dose = doser(e, { ...ctx, dureeCardio: cas.duree });
-        exercices.push(exerciceProgramme(e, dose, role || (cas.sport ? "sport" : null)));
+        exercices.push(exerciceProgramme(e, dose, role || (cas.sport ? "sport" : cas.finisher ? "cardio" : null)));
         ctx.dejaSeance.add(e.id); ctxBase.dejaSemaine.add(e.id); ctxBase.compteSemaine[e.id] = (ctxBase.compteSemaine[e.id] || 0) + 1;
         if (e.compartiment === "isolation") { ctx.musclesSeance.add(e.muscle); ctxBase.musclesSemaine.add(e.muscle); }
       }
@@ -654,9 +702,10 @@
       exercices.forEach(x => { delete x._k; });
       const s = { lettre: lettres[i], nom: f.nom, focus, exercices, dureeMin: 0 };
       // règle 6 : tenir dans le temps
-      if (!comprimer(s, tempsMin, nbExos[0])) avertissements.push(`Séance ${s.lettre} : ${dureeSeance(s)} min même compressée, au-delà des ${tempsMin} min demandées.`);
+      if (!comprimer(s, tempsMin, nbExos[0], cardio)) avertissements.push(`Séance ${s.lettre} : ${dureeSeance(s)} min même compressée, au-delà des ${tempsMin} min demandées.`);
       if (s._objectifRetire) avertissements.push(`Séance ${s.lettre} : même l'exercice obligatoire de l'objectif ne tenait pas dans ${tempsMin} min, retiré en dernier recours.`);
       if (s._extraRetiree) avertissements.push(`Séance ${s.lettre} : la case supplémentaire de l'objectif ne tenait pas dans ${tempsMin} min, retirée.`);
+      if (s._finisherRetire) avertissements.push(`Séance ${s.lettre} : le cardio de fin de séance ne tenait pas dans ${tempsMin} min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.`);
       s.dureeMin = dureeSeance(s);
       return s;
     });
@@ -710,7 +759,7 @@
     // règle 7 : nombre minimal d'exercices (si le matériel ou le temps a fait sauter des cases)
     for (const s of seances) {
       const c = s.exercices.filter(estForce).length, nbExos = nbExosDe(niveau, objCle, s.focus);
-      if (s.focus !== "recup" && c < nbExos[0]) avertissements.push(`Séance ${s.lettre} : ${c} exercices seulement (minimum ${nbExos[0]} au niveau ${niveau}${objCle === "force" ? " en force" : ""}) — ${s._sousMinimum ? `le temps (${tempsMin} min) l'a emporté sur le nombre d'exercices` : "matériel trop restreint pour ce focus"}.`);
+      if (s.focus !== "recup" && s.focus !== "cardio" && c < nbExos[0]) avertissements.push(`Séance ${s.lettre} : ${c} exercices seulement (minimum ${nbExos[0]} au niveau ${niveau}${objCle === "force" ? " en force" : ""}) — ${s._sousMinimum ? `le temps (${tempsMin} min) l'a emporté sur le nombre d'exercices` : "matériel trop restreint pour ce focus"}.`);
     }
 
     // règle 4 : placement dans la semaine — d'abord sans toucher aux jours de sport, sinon en mode
@@ -725,6 +774,14 @@
       else { jours = placer(seances, [], false); if (jours) avertissements.push(`${frequence} séances et ${joursSport.length} jours de ${nomSport} : impossible d'éviter une grosse séance jambes près d'un jour de sport, les séances sont placées sans en tenir compte — à toi d'ajuster.`); }
     }
     if (!jours) avertissements.push("Aucun placement dans la semaine ne respecte la règle 4 (même gros groupe deux jours consécutifs).");
+    // v20.11 : le cardio, partie intégrante du programme — dit dans « À savoir »
+    if (cardio) {
+      const pourquoi = obj.nom === "Perdre du poids" || obj.nom === "Me sentir mieux" ? `objectif « ${obj.nom} »` : `pour progresser ${sport.libelle}`;
+      const dediee = seances.find(x => x.focus === "cardio");
+      const dediteAVenir = cardio === "objectif" && frequence < 4;
+      const finishers = seances.filter(x => x.exercices.some(e => e.role === "cardio")).length;
+      avertissements.push(`Cardio intégré (${pourquoi}) : ${finishers ? `10 à 15 min d'appareil en fin de ${finishers === seances.filter(x => x.focus !== "cardio" && x.focus !== "recup").length ? "chaque" : "presque chaque"} séance de force` : "pas de finisher, faute de temps"}${dediee ? `, et une séance cardio dédiée (${dediee.lettre}, ${dediee.dureeMin} min)` : dediteAVenir ? " — une séance cardio dédiée viendrait à partir de 4 séances par semaine" : cardio === "sport" ? " — tes sorties font le reste" : ""}. Les XP du cardio dépendent de la durée.`);
+    }
     const semaine = [];
     for (let d = 1; d <= 7; d++) {
       const i = jours ? jours.indexOf(d) : (d <= seances.length ? d - 1 : -1);
@@ -796,7 +853,8 @@
         id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, prog.entrees.materiel),
         pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
         series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral,
-        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null, difficulte: x.difficulte
+        consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: x.role || null, difficulte: x.difficulte,
+        ...(x.compartiment === "cardio_mobilite" ? { type: x.type || (x.muscle === "cardio" ? "cardio" : "mobilite") } : {})
       }));
       const gainage = s.exercices.filter(x => x.compartiment === "gainage").map(g => ({
         id: g.id, nom: g.nom, dose: doseDe(g), duree: g.duree_s || null, reps: g.reps || null, repos: g.repos_s || 45, consigne: g.consigne || "", erreur: g.erreur || ""
@@ -917,7 +975,8 @@
     return {
       id: e.id, nom: e.nom, dose: doseDe(x), repos, charge: !cardio && chargeDe(e, materiel), pdc: !cardio && pdcPossible(e),
       series: x.series, reps: x.reps, duree: x.duree_s, unilateral: x.unilateral, consigne: e.consigne || "", erreur: e.erreur || "",
-      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true
+      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true,
+      ...(cardio ? { type: e.type } : {})
     };
   };
   // le catalogue du panneau « Ajouter / Remplacer » : les similaires (muscle principal dans le focus de la
@@ -957,7 +1016,7 @@
     // temps en plus (v20.6) : des compléments tant qu'il reste au moins 8 min — le gainage s'il manque,
     // une isolation d'un muscle du focus pas encore travaillé, puis un finisher (cardio, ou mobilité
     // en reprise douce). Jamais plus de trois ajouts, jamais au-delà du temps demandé.
-    const ajouts = [];
+    const ajouts = []; let optionCardio = null;
     const banque = opts.banque, entrees = opts.entrees || {};
     const f = S.focus && FOCUS[S.focus];
     if (opts.complements !== false && banque && f && f.comp && S.focus !== "recup" && dureeSeance(s) + 8 <= tempsMin) {
@@ -966,7 +1025,7 @@
       const ctx = { niveau, niv, materiel, difficulteMax: Math.min(niv.difficulteMax, obj.difficulteMax || 3), obj, prioritaires: [], favoris: new Set(), phares: new Set(), distancePhare: () => 0,
         unilateral: false, dejaSemaine: new Set(), compteSemaine: {}, musclesSemaine: new Set(), dejaSeance: new Set(s.exercices.map(x => x.id)), musclesSeance: new Set(s.exercices.filter(x => x.compartiment === "isolation").map(x => x.muscle)) };
       const versApp = x => ({ id: x.id, nom: x.nom, dose: doseDe(x), repos: x.repos_s || 0, charge: x.compartiment !== "cardio_mobilite" && chargeDe(x, materiel), pdc: x.compartiment !== "cardio_mobilite" && pdcPossible(x),
-        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement", difficulte: x.difficulte });
+        series: x.series, reps: x.reps || null, duree: x.duree_s || null, unilateral: !!x.unilateral, consigne: x.consigne || "", erreur: x.erreur || "", compartiment: x.compartiment, muscle: x.muscle, role: "complement", difficulte: x.difficulte, ...(x.compartiment === "cardio_mobilite" ? { type: x.type } : {}) });
       const ajouter = (e, pourquoi, dureeCardio) => {
         if (!e || ajouts.length >= 3) return false;
         const x = exerciceProgramme(e, doser(e, { ...ctx, dureeCardio }), "complement");
@@ -974,13 +1033,30 @@
         x._app = versApp(x); s.exercices.push(x); ctx.dejaSeance.add(e.id); if (e.compartiment === "isolation") ctx.musclesSeance.add(e.muscle);
         ajouts.push({ id: e.id, nom: e.nom, pourquoi }); return true;
       };
+      const cardioDeja = s.exercices.some(x => x.compartiment === "cardio_mobilite" && x.type !== "mobilite");
+      const candsCardio = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === "cardio" && faisable(e, materiel) && !ctx.dejaSeance.has(e.id))
+        .sort((a, b) => ((b.materiel || []).includes("tapis / machine cardio") ? 1 : 0) - ((a.materiel || []).includes("tapis / machine cardio") ? 1 : 0) || a.nom.localeCompare(b.nom));
+      const dureeCardio = () => { const reste = Math.max(0, (tempsMin - dureeSeance(s)) * 60 - 60); return reste >= 300 ? Math.min(900, Math.max(300, Math.floor(reste / 60) * 60)) : 0; };
+      // v20.11 : cardio explicitement demandé (« ajouter 15 min de cardio ? » avec le choix de l'appareil) : il passe en premier
+      if (opts.cardio && opts.cardio.id && !cardioDeja) {
+        const e = banque.exercices.find(x => x.id === opts.cardio.id && x.compartiment === "cardio_mobilite" && x.type === "cardio");
+        const d = Math.min(1800, Math.max(300, Math.round((parseInt(opts.cardio.duree) || 15) / 5) * 300));
+        if (e && !ctx.dejaSeance.has(e.id) && dureeSeance({ exercices: [...s.exercices] }) + d / 60 <= tempsMin + 0.5) ajouter(e, "cardio demandé", d);
+      }
+      // v20.11 : l'objectif ou le sport réclament du cardio → il vient en premier parmi les compléments (refusable d'un tap)
+      const veutCardio = cardioIntegre(entrees);
+      if (veutCardio && !cardioDeja && !s.exercices.some(x => x.role === "cardio") && candsCardio.length) { const d = dureeCardio(); if (d) ajouter(candsCardio[0], "cardio (objectif)", d); }
       if (!s.exercices.some(x => x.compartiment === "gainage")) ajouter(choisir(banque, { c: "gainage" }, S.focus, ctx), "gainage");
       for (const mu of f.iso) { if (dureeSeance(s) + 5 > tempsMin || ajouts.length >= 2) break; if (ctx.musclesSeance.has(mu)) continue; ajouter(choisir(banque, { c: "isolation", m: [mu] }, S.focus, ctx), `isolation ${MUSCLE_COURT[mu] || mu}`); }
-      if (!s.exercices.some(x => x.compartiment === "cardio_mobilite")) {
-        const type = entrees.objectif === "douce" ? "mobilite" : "cardio";
-        const cands = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === type && faisable(e, materiel) && !ctx.dejaSeance.has(e.id));
-        const reste = Math.max(0, (tempsMin - dureeSeance(s)) * 60 - 60);
-        if (cands.length && reste >= 300) ajouter(cands[0], type === "cardio" ? "finisher cardio" : "mobilité", Math.min(900, Math.max(300, Math.floor(reste / 60) * 60)));
+      if (entrees.objectif === "douce" && !s.exercices.some(x => x.compartiment === "cardio_mobilite")) {
+        const cands = banque.exercices.filter(e => e.compartiment === "cardio_mobilite" && e.type === "mobilite" && faisable(e, materiel) && !ctx.dejaSeance.has(e.id));
+        const d = dureeCardio();
+        if (cands.length && d) ajouter(cands[0], "mobilité", d);
+      }
+      // sans objectif cardio : pas de cardio d'office, mais l'option explicite « ajouter 15 min de cardio ? » avec le choix de l'appareil
+      if (!veutCardio && !s.exercices.some(x => x.compartiment === "cardio_mobilite" && x.type !== "mobilite") && candsCardio.length) {
+        const d = dureeCardio();
+        if (d) optionCardio = { duree: d, candidats: candsCardio.slice(0, 6).map(e => ({ id: e.id, nom: e.nom })) };
       }
       s.exercices.forEach((x, k) => { x._k = k; });
       s.exercices.sort((a, b) => rangOrdre(a) - rangOrdre(b) || a._k - b._k);
@@ -992,7 +1068,7 @@
       exos: s.exercices.filter(x => x.compartiment !== "gainage").map(retour),
       gainage: s.exercices.filter(x => x.compartiment === "gainage").map(retour),
       dureeMin: dureeSeance(s),
-      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, intensifie: energie === "fond", ajouts, avantMin: avant, tient, retires: Math.max(0, S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - (s.exercices.length - ajouts.length)) }
+      adaptee: { tempsMin, energie, chargeFacteur: energie === "petite" ? 0.9 : 1, intensifie: energie === "fond", ajouts, optionCardio, avantMin: avant, tient, retires: Math.max(0, S.exos.length + (Array.isArray(S.gainage) ? S.gainage.length : 0) - (s.exercices.length - ajouts.length)) }
     };
   };
 
@@ -1059,8 +1135,20 @@
     const seances = prog.semaine.filter(j => j.seance).map(j => j.seance);
     const f = prog.entrees.frequence, niveau = prog.entrees.niveau, niv = NIVEAU[niveau], materiel = prog.entrees.materiel;
     // squelette
-    const attendu = SQUELETTES[f];
+    const cardio = cardioIntegre(prog.entrees);
+    const attendu = squeletteDe(f, cardio);
     if (!attendu || prog.squelette.nom !== attendu.nom) v.push({ regle: "squelette", message: `squelette ${prog.squelette.nom} au lieu de ${attendu && attendu.nom}` });
+    // v20.11 : le cardio est là quand l'objectif ou le sport le réclame (finisher dans chaque séance de force,
+    // sauf faute de temps signalée ; séance dédiée dès 4×), et jamais imposé sinon
+    for (const s of seances) {
+      const fin = s.exercices.filter(e => e.role === "cardio");
+      if (s.focus === "recup" || s.focus === "cardio") { if (s.exercices.some(e => e.compartiment !== "cardio_mobilite")) v.push({ regle: "cardio", message: `séance ${s.lettre} (${s.focus}) : de la force dans une séance cardio / récupération` }); continue; }
+      if (cardio && !fin.length && !prog.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : le cardio de fin`))) v.push({ regle: "cardio", message: `séance ${s.lettre} : pas de finisher cardio alors que l'objectif ou le sport le réclame` });
+      if (cardio && fin.some(e => e.duree_s < FINISHER_MIN_S || e.duree_s > FINISHER_S)) v.push({ regle: "cardio", message: `séance ${s.lettre} : finisher cardio hors 10-15 min` });
+      if (!cardio && fin.length) v.push({ regle: "cardio", message: `séance ${s.lettre} : un finisher cardio sans que l'objectif ou le sport le demande` });
+    }
+    if (cardio === "objectif" && f >= 4 && f <= 6 && !seances.some(s => s.focus === "cardio")) v.push({ regle: "cardio", message: "pas de séance cardio dédiée à partir de 4 séances" });
+    if (cardio !== "objectif" && seances.some(s => s.focus === "cardio")) v.push({ regle: "cardio", message: "une séance cardio dédiée sans objectif cardio" });
     const focusAttendus = attendu ? attendu.seances.map(x => x === "focus" ? /^focus/ : x) : [];
     if (seances.length !== focusAttendus.length) v.push({ regle: "squelette", message: `${seances.length} séances au lieu de ${focusAttendus.length}` });
     else seances.forEach((s, i) => { const a = focusAttendus[i]; if (a instanceof RegExp ? !a.test(s.focus) : s.focus !== a) v.push({ regle: "squelette", message: `séance ${s.lettre} : focus ${s.focus} au lieu de ${a}` }); });
@@ -1082,7 +1170,7 @@
         if (alt.length) v.push({ regle: 7, message: `${e.nom} (difficulté ${e.difficulte}${e.regression ? ", régression" : ""}) au niveau ${niveau} alors que ${alt[0].nom} existe` });
       }
       const c = s.exercices.filter(estForce).length, extra = s.exercices.filter(e => e.role === "objectif_extra").length, nbExos = nbExosDe(niveau, prog.entrees.objectif, s.focus);
-      if (s.focus !== "recup" && (c < nbExos[0] || c > nbExos[1] + extra) && !prog.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : ${c} exercices`))) v.push({ regle: 7, message: `séance ${s.lettre} : ${c} exercices (attendu ${nbExos.join("-")}${extra ? " + " + extra + " d'objectif" : ""})` });
+      if (s.focus !== "recup" && s.focus !== "cardio" && (c < nbExos[0] || c > nbExos[1] + extra) && !prog.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : ${c} exercices`))) v.push({ regle: 7, message: `séance ${s.lettre} : ${c} exercices (attendu ${nbExos.join("-")}${extra ? " + " + extra + " d'objectif" : ""})` });
       if (niveau === 1 && s.exercices.some(e => e.echelle === "avance")) v.push({ regle: 9, message: `séance ${s.lettre} : version avancée pour un débutant` });
       const musclesIso = s.exercices.filter(e => e.compartiment === "isolation").map(e => e.muscle);
       if (prog.entrees.objectif === "force" && new Set(musclesIso).size !== musclesIso.length) v.push({ regle: 11, message: `séance ${s.lettre} : deux isolations du même muscle en force (${musclesIso.join(", ")})` });
@@ -1103,7 +1191,7 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS, cardioIntegre, squeletteDe };
 });
 </script>
 <script id="banque-exercices">
@@ -1926,21 +2014,27 @@ const gainageDe = S => Array.isArray(S.gainage) ? S.gainage : S.gainage ? GAINAG
 const nbSeries = ex => parseInt(ex.dose) || 3;
 // v20.9 (étape 4) : la séance libre — vide au départ, on ajoute ce qu'on fait ; ses XP viennent des exercices
 const SEANCE_LIBRE = { nom: "Séance libre", geste: null, couleur: COL.B, focus: "libre", exos: [], gainage: [], dureeMin: null, libre: true };
+// v20.11 : le jour « Cardio » (K) joue comme une séance libre ouverte sur le cardio
+const SEANCE_CARDIO = { nom: "Cardio", geste: null, couleur: COL.K, focus: "cardio", exos: [], gainage: [], dureeMin: null, libre: true, cardioSeul: true };
 // la séance du jour telle qu'elle se joue : programme (ou séance libre), adaptée (temps / énergie),
 // exercices remplacés du jour, retirés, ajoutés (après un exercice ou en fin), et l'ordre du jour.
 // Le programme, lui, ne bouge pas : tout ça vit dans st.jour[date].
 const seanceDuJour = (j, seances) => {
   if (!j || !j.seance) return null;
-  const libre = j.seance === "L";
-  const base = libre ? SEANCE_LIBRE : seances[j.seance];
+  const libre = j.seance === "L" || j.seance === "K";
+  const base = j.seance === "L" ? SEANCE_LIBRE : j.seance === "K" ? SEANCE_CARDIO : seances[j.seance];
   if (!base) return null;
   const S = j.adaptee && j.adaptee.seance ? j.adaptee.seance : base;
   const rempl = j.remplacements || {};
   const retires = new Set(j.retires || []);
   const retiresExos = S.exos.map(e => rempl[e.id] || e).filter(e => retires.has(e.id)).map(e => ({ id: e.id, nom: e.nom }));
   let exos = S.exos.map(e => rempl[e.id] || e).filter(e => !retires.has(e.id));
+  // v20.10 : le gainage se remplace et s'augmente aussi (un gainage ajouté « après » un gainage rejoint le bloc gainage)
+  const gainage = gainageDe(S).map(g => rempl[g.id] || g);
   for (const a of j.ajouts || []) {
-    if (exos.some(e => e.id === a.id)) continue;
+    if (exos.some(e => e.id === a.id) || gainage.some(g => g.id === a.id)) continue;
+    const kg = a.apres ? gainage.findIndex(g => g.id === a.apres) : -1;
+    if (kg >= 0 && a.compartiment === "gainage") { gainage.splice(kg + 1, 0, a); continue; }
     const k = a.apres ? exos.findIndex(e => e.id === a.apres) : -1;
     if (k >= 0) exos.splice(k + 1, 0, a); else exos.push(a);
   }
@@ -1948,10 +2042,12 @@ const seanceDuJour = (j, seances) => {
     const pos = new Map(j.ordre.map((id, i) => [id, i]));
     exos = exos.map((e, i) => [e, pos.has(e.id) ? pos.get(e.id) : 1000 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
   }
-  return { ...S, exos, libre, retiresExos };
+  return { ...S, exos, gainage, libre, retiresExos };
 };
 // le journal d'une séance (v20.9) : ce qui a été FAIT — prévus validés, ajoutés, retirés, remplacés, séries,
 // reps réelles, charges, type de charge, ressenti. Progrès et « dernier » lisent les charges, pas le programme.
+// libellé d'un jour cardio dans l'historique : « Cardio — Rameur 25 min · 4,2 km » (v20.11), sinon l'ancien « quoi »
+const libelleCardioHisto = h => { const faits = (h.exos || []).filter(e => e.fait); return faits.length ? "Cardio — " + faits.map(e => e.nom + (e.cardio ? " " + fmtCardio(e.cardio) : "")).join(", ") : h.quoi || "Cardio"; };
 const journalDe = (j, S, charges, jourK) => {
   const exos = (S ? S.exos : []).map(e => {
     const l = (charges || {})[e.id] || [];
@@ -1960,18 +2056,20 @@ const journalDe = (j, S, charges, jourK) => {
       id: e.id, nom: e.nom, fait: (j.faits || []).includes(e.id), xp: (j.xpExos || {})[e.id] || 0,
       ...(e.ajoute ? { ajoute: true } : {}), ...(e.remplace ? { remplace: e.remplace } : {}),
       series: c ? (c.series || []).slice() : [], reps: c && c.reps ? c.reps.slice() : [], type: c && c.type || null,
+      ...(c && c.cardio ? { cardio: { ...c.cardio } } : {}),
       ressenti: (j.ressentis || {})[e.id] || null
     };
   });
   // retirés : id + nom (le programme peut changer, le journal reste lisible)
   const retires = (j.retires || []).map(id => (S && S.retiresExos || []).find(r => r.id === id) || { id, nom: id });
-  return { exos, retires, ...(j.seance === "L" ? { libre: true } : {}) };
+  return { exos, retires, ...(j.seance === "L" ? { libre: true } : {}), ...(j.seance === "K" ? { cardio: true } : {}) };
 };
 // v20.6 : une entrée de charge porte un type — rien (charge classique), « leste » (+kg au poids du
 // corps), « assiste » (kg d'assistance, stockés en négatif : moins d'assistance = mieux), « pdc »
 const valeursCharge = e => e == null ? [] : e.kg != null ? [Number(e.kg)] : (e.series || []).filter(v => v != null && v !== "").map(Number).filter(v => !isNaN(v));
 const fmtCharge = e => {
   if (e == null) return "";
+  if (e.cardio) return fmtCardio(e.cardio);
   if (e.type === "pdc") return "poids du corps";
   const l = valeursCharge(e);
   if (!l.length) return "";
@@ -1987,6 +2085,18 @@ const maxCharge = e => {
   return neg.length ? Math.max(...neg) : 0;
 };
 const CARDIO = ["Marche inclinée", "Escaliers / stairmaster", "Rameur", "Vélo", "Corde à sauter"];
+// v20.11 : le cardio, citoyen de première classe — un exercice de cardio se note (durée au chrono ou saisie,
+// et selon l'appareil distance, vitesse, inclinaison, résistance), ses XP dépendent de la durée, la photo
+// reste possible mais facultative. Les cinq boutons du jour « Cardio » renvoient aux exercices de la banque.
+const CARDIO_IDS = { "Marche inclinée": "marche_inclinee", "Escaliers / stairmaster": "escaliers", "Rameur": "rameur", "Vélo": "velo", "Corde à sauter": "corde" };
+const estCardio = ex => !!ex && (ex.type === "cardio" || (ex.compartiment === "cardio_mobilite" && ex.muscle === "cardio"));
+const CARDIO_CHAMPS = { marche_inclinee: ["distance", "vitesse", "inclinaison"], course_douce: ["distance", "vitesse", "inclinaison"], escaliers: ["resistance"], rameur: ["distance", "resistance"], velo: ["distance", "vitesse", "resistance"], elliptique: ["distance", "resistance"], corde: [], burpees: [], montees: [] };
+const CHAMP_CARDIO = { distance: { lib: "Distance", unite: "km", pas: 0.1, max: 60 }, vitesse: { lib: "Vitesse", unite: "km/h", pas: 0.5, max: 30 }, inclinaison: { lib: "Inclinaison", unite: "%", pas: 1, max: 20 }, resistance: { lib: "Résistance / niveau", unite: "niv.", pas: 1, max: 30 } };
+// barème (DECISIONS.md, v20.11) : cohérent avec 10 / 15 / 20 par exercice — moins de 10 min : 5, 10-19 : 10, 20-29 : 15, 30 min et plus : 20
+const xpCardioMin = min => min < 10 ? 5 : min < 20 ? 10 : min < 30 ? 15 : 20;
+const dureeCardioPrevue = ex => ex && ex.duree ? ex.duree / 60 : parseInt(ex && ex.dose) || 15;
+const fmtNb = v => String(Math.round(v * 10) / 10).replace(".", ",");
+const fmtCardio = c => c ? [c.duree_s ? Math.round(c.duree_s / 60) + " min" : null, c.distance ? fmtNb(c.distance) + " km" : null, c.vitesse ? fmtNb(c.vitesse) + " km/h" : null, c.inclinaison ? fmtNb(c.inclinaison) + " %" : null, c.resistance ? "niveau " + fmtNb(c.resistance) : null].filter(Boolean).join(" · ") : "";
 const HABITUDES = [{
   id: "repas",
   label: "3 vrais repas aujourd'hui (parole d'honneur)",
@@ -2092,8 +2202,9 @@ const XP = {
 };
 // v20.8 : barème selon la difficulté de l'exercice (banque : 1 / 2 / 3) — 10 / 15 / 20 XP ; un exercice
 // sans difficulté connue (anciens programmes) vaut 15. Sans photo : 5 XP de moins (jamais sous 5).
-const xpExo = ex => ex && ex.difficulte === 1 ? 10 : ex && ex.difficulte === 3 ? 20 : XP.exo;
-const xpExoSansPhoto = ex => Math.max(5, xpExo(ex) - 5);
+const xpExo = ex => estCardio(ex) ? xpCardioMin(dureeCardioPrevue(ex)) : ex && ex.difficulte === 1 ? 10 : ex && ex.difficulte === 3 ? 20 : XP.exo;
+// sans photo : 5 de moins — sauf le cardio (v20.11), dont la durée est la preuve
+const xpExoSansPhoto = ex => estCardio(ex) ? xpExo(ex) : Math.max(5, xpExo(ex) - 5);
 const xpSeance = S => S.focus === "recup" ? S.exos.length * XP.recupItem + XP.bonusRecup : S.exos.reduce((a, e) => a + xpExo(e), 0) + XP.bonusSeance + (gainageDe(S).length ? gainageDe(S).length * XP.gainageItem + XP.bonusGainage : 0);
 const fourchetteXP = S => { const l = S.exos.map(xpExo); const mn = Math.min(...l), mx = Math.max(...l); return l.length && mn !== mx ? `${mn} à ${mx} XP par exercice` : `${l.length ? mn : XP.exo} XP par exercice`; };
 const DECAY = 25; // XP perdus par jour sans aucun passage
@@ -3909,7 +4020,7 @@ function App() {
   // barre « Terminer la séance » fixe au-dessus de la barre d'onglets, tant qu'une
   // séance est en cours avec au moins un exercice validé (le chrono se pose
   // au-dessus d'elle)
-  const barreFin = !!(role !== "coach" && tab === "jour" && estSeance(J.seance) && !recupJ && !J.valide && (J.faits || []).length > 0 && !reglagesOuvert);
+  const barreFin = !!(role !== "coach" && tab === "jour" && (estSeance(J.seance) || J.seance === "K") && !recupJ && !J.valide && (J.faits || []).length > 0 && !reglagesOuvert);
   // une séance libre n'a pas de bonus « complète » : ses XP viennent des exercices faits
   const tousFaitsJ = !!(SJ && !SJ.libre && SJ.exos.length > 0 && (J.faits || []).length >= SJ.exos.length);
   const niveau = niveauDe(st.xp);
@@ -3982,6 +4093,7 @@ function App() {
   // récap des XP de la séance du jour, pour la popup de célébration
   const recapSeance = partiel => {
     const libre = !!(SJ && SJ.libre);
+    const cardioSeul = !!(SJ && SJ.cardioSeul);
     const exos = (J.faits || []).length;
     const xpExos = recupJ ? exos * XP.recupItem : (J.faits || []).reduce((a, id) => a + ((J.xpExos || {})[id] || xpExo(exoDuJour(id))), 0);
     const bonus = partiel ? 0 : recupJ ? XP.bonusRecup : XP.bonusSeance;
@@ -3989,6 +4101,7 @@ function App() {
     return {
       partiel,
       libre,
+      cardioSeul,
       exos,
       total: (SJ ? SJ.exos.length : exos),
       xpExos,
@@ -4066,7 +4179,7 @@ function App() {
         }].slice(-200);
         return s;
       });
-      const ptsPhoto = xpExo(exoDuJour(p.exId));
+      const ptsPhoto = xpValidation(p.exId, true);
       figerReps(p.exId);
       setJour(j => ({
         ...j,
@@ -4076,7 +4189,8 @@ function App() {
           [p.exId]: photoId
         },
         xpExos: { ...(j.xpExos || {}), [p.exId]: ptsPhoto },
-        activite: Date.now()
+        activite: Date.now(),
+        ...(j.seance === "K" ? { cardioFait: true } : {})
       }));
       setBurst(p.exId);
       setTimeout(() => setBurst(null), 1900);
@@ -4426,6 +4540,22 @@ function App() {
     });
   };
   const noterReps = (exId, arr, explicite) => { repsRef.current[exId] = arr; if (explicite) persisterReps(exId, arr); };
+  // v20.11 : la notation d'un cardio (durée, distance, vitesse, inclinaison, résistance, chrono en cours) — dans
+  // l'entrée du jour, comme une charge ; Progrès et « dernier » la lisent
+  const noterCardio = (exId, data) => maj(s => {
+    const l = s.charges[exId] || [];
+    let e = l[l.length - 1];
+    if (!e || e.date !== jourKey) { e = { date: jourKey, series: [] }; l.push(e); }
+    e.cardio = { ...(e.cardio || {}), ...data };
+    for (const k of Object.keys(e.cardio)) if (e.cardio[k] == null || e.cardio[k] === "" || e.cardio[k] === false) delete e.cardio[k];
+    s.charges[exId] = l.slice(-30);
+    if (s.jour[jourKey]) s.jour[jourKey].activite = Date.now();
+    return s;
+  });
+  const cardioDuJour = exId => { const l = (stRef.current || st).charges[exId] || []; const e = l[l.length - 1]; return e && e.date === jourKey && e.cardio ? e.cardio : null; };
+  // XP d'un cardio à la validation : la durée notée, sinon la durée prévue
+  const xpCardioNote = exId => { const ex = exoDuJour(exId), c = cardioDuJour(exId); return xpCardioMin(c && c.duree_s ? c.duree_s / 60 : dureeCardioPrevue(ex)); };
+  const xpValidation = (exId, photo) => { const ex = exoDuJour(exId); return estCardio(ex) ? xpCardioNote(exId) : photo ? xpExo(ex) : xpExoSansPhoto(ex); };
   const figerReps = exId => { const arr = repsRef.current[exId]; const ex = exoDuJour(exId); if (arr && arr.length && ex && ex.reps) persisterReps(exId, arr); };
   // retraits et remplacements d'affilée (v20.9) : après trois séances de suite, l'app propose de l'enlever du programme
   const compterRetraits = (s, j) => {
@@ -4466,6 +4596,7 @@ function App() {
       if (s.programme === "perso" && s.programmePerso) for (const L of Object.keys(s.programmePerso.seances)) {
         const sc = s.programmePerso.seances[L];
         sc.exos = sc.exos.map(e => e.id === exId ? cand.exo : e);
+        if (Array.isArray(sc.gainage)) sc.gainage = sc.gainage.map(g => g.id === exId ? cand.exo : g);
       }
       return s;
     });
@@ -5666,7 +5797,7 @@ function App() {
       fontSize: 10,
       color: SUB
     }
-  }, "+", XP.cardio, " XP"))), /*#__PURE__*/React.createElement("button", {
+  }, "5 à 20 XP selon la durée"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => choisir("R"),
     style: {
       ...GLASS,
@@ -5728,6 +5859,8 @@ function App() {
     onAjouter: setAjouter,
     onRetirer: setRetrait,
     onDeplacer: deplacerExo,
+    onOrdre: ids => setJour(j => ({ ...j, ordre: ids })),
+    onCardio: noterCardio,
     onReps: noterReps,
     onAdapter: () => setAdapter(true),
     onAnnulerAdaptation: () => setJour(j => ({
@@ -5751,16 +5884,20 @@ function App() {
     onAnnulerExo: annulerExo,
     onAnnulerGain: annulerGain,
     validerSansPhoto: exId => {
-      const pts = xpExoSansPhoto(exoDuJour(exId));
+      const cardio = estCardio(exoDuJour(exId));
+      if (cardio) { const c = cardioDuJour(exId); if (c && c.chronoDebut) noterCardio(exId, { duree_s: Math.max(60, Math.round((Date.now() - c.chronoDebut) / 60000) * 60), chronoDebut: null }); }
+      const pts = xpValidation(exId, false);
       figerReps(exId);
       setJour(j => ({
         ...j,
         faits: [...j.faits, exId],
         xpExos: { ...(j.xpExos || {}), [exId]: pts },
-        activite: Date.now()
+        activite: Date.now(),
+        ...(j.seance === "K" ? { cardioFait: true } : {})
       }));
-      gagne(pts, "· sans photo");
+      gagne(pts, cardio ? "· cardio noté" : "· sans photo");
     },
+    onCardio: noterCardio,
     onPartiel: finirPartiel,
     timer: timer,
     burst: burst
@@ -5850,7 +5987,8 @@ function App() {
   }, /*#__PURE__*/React.createElement(Ic, {
     n: "shuffle",
     s: 13
-  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), J.seance === "K" && /*#__PURE__*/React.createElement("div", {
+  }), "Joker — journée couverte sans rien faire (", jokersRestants, "/2 ce mois)")), J.seance === "K" && SJ && SJ.exos.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "choix-cardio",
     style: {
       marginTop: 14
     }
@@ -5865,25 +6003,7 @@ function App() {
       color: SUB,
       marginBottom: 10
     }
-  }, "20-30 min · tu peux parler en phrases courtes · 📷 photo de la machine (ou du parcours) pour valider"), J.cardioFait ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "14px 0",
-      fontWeight: 700,
-      color: COL.K
-    }
-  }, "Cardio validé aujourd'hui ✔ \xA0+", XP.cardio, " XP", /*#__PURE__*/React.createElement("button", {
-    onClick: annulerCardio,
-    style: {
-      display: "block",
-      margin: "8px auto 0",
-      background: "none",
-      border: "none",
-      color: SUB,
-      fontSize: 11,
-      textDecoration: "underline"
-    }
-  }, "↩ annuler")) : /*#__PURE__*/React.createElement("div", {
+  }, "20-30 min · tu peux parler en phrases courtes · durée, distance et réglages se notent dans la carte, la photo est facultative · 5 à 20 XP selon la durée"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -5891,20 +6011,7 @@ function App() {
     }
   }, CARDIO.map(c => /*#__PURE__*/React.createElement("button", {
     key: c,
-    onClick: () => st.reglages?.photoOblig === false ? (setJour(j => ({
-      ...j,
-      cardioFait: true
-    })), maj(s => {
-      s.histo.unshift({
-        date: jourKey,
-        type: "K",
-        quoi: c
-      });
-      return s;
-    }), gagne(XP.cardio, "· cardio ✔")) : ouvrirCamera({
-      type: "cardio",
-      quoi: c
-    }),
+    onClick: () => ajouterExo(CARDIO_IDS[c]),
     style: {
       border: `1.5px solid ${COL.K}`,
       color: COL.K,
@@ -5912,9 +6019,13 @@ function App() {
       borderRadius: 999,
       padding: "9px 14px",
       fontWeight: 600,
-      fontSize: 13
+      fontSize: 13,
+      touchAction: "manipulation"
     }
-  }, "📷 ", c))))), J.seance === "R" && /*#__PURE__*/React.createElement(Carte, {
+  }, c)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAjouter("fin"),
+    style: { border: `1.5px dashed ${LINE}`, color: SUB, background: "none", borderRadius: 999, padding: "9px 14px", fontWeight: 600, fontSize: 13, touchAction: "manipulation" }
+  }, "+ autre chose")))), J.seance === "R" && /*#__PURE__*/React.createElement(Carte, {
     style: {
       marginTop: 14,
       textAlign: "center"
@@ -5945,16 +6056,23 @@ function App() {
       padding: "10px 18px",
       fontWeight: 700
     }
-  }, "Voir mes habitudes")), st.xp === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Voir mes habitudes")), st.xp === 0 && !st.carteXPFermee && /*#__PURE__*/React.createElement("div", {
+    className: "carte-premiers-xp",
     style: {
       background: "rgba(44,229,167,.12)",
       border: `1.5px solid ${COL.C}`,
       borderRadius: 14,
       padding: "12px 14px",
       marginTop: 14,
-      marginBottom: 10
+      marginBottom: 10,
+      position: "relative"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "fermer-premiers-xp",
+    "aria-label": "Fermer",
+    onClick: () => maj(s => { s.carteXPFermee = true; return s; }),
+    style: { position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 999, border: `1px solid ${LINE}`, background: GLASSBG, color: SUB, fontSize: 14, lineHeight: 1, display: "grid", placeItems: "center", padding: 0, touchAction: "manipulation" }
+  }, "✕"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 800,
       fontSize: 13.5,
@@ -6278,7 +6396,7 @@ function App() {
       fontSize: 13,
       fontWeight: 600
     }
-  }, h.type === "K" ? h.quoi || "Cardio" : h.type === "L" ? `Séance libre${h.exos ? ` — ${h.exos.filter(e => e.fait).length} exercice${h.exos.filter(e => e.fait).length > 1 ? "s" : ""}` : ""}` : `Séance ${h.type} — ${h.nomS || SEANCES[h.type]?.nom || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, h.type === "K" ? libelleCardioHisto(h) : h.type === "L" ? `Séance libre${h.exos ? ` — ${h.exos.filter(e => e.fait).length} exercice${h.exos.filter(e => e.fait).length > 1 ? "s" : ""}` : ""}` : `Séance ${h.type} — ${h.nomS || SEANCES[h.type]?.nom || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11
     }
@@ -6381,7 +6499,7 @@ function App() {
       fontSize: 21,
       lineHeight: 1.2
     }
-  }, celebration.libre ? "Séance libre enregistrée" : celebration.partiel ? "Séance enregistrée" : "Séance validée !"), /*#__PURE__*/React.createElement("div", {
+  }, celebration.cardioSeul ? "Cardio enregistré" : celebration.libre ? "Séance libre enregistrée" : celebration.partiel ? "Séance enregistrée" : "Séance validée !"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13.5,
       color: SUB,
@@ -6780,7 +6898,9 @@ function SeanceView({
   onAjouter,
   onRetirer,
   onDeplacer,
-  onReps
+  onOrdre,
+  onReps,
+  onCardio
 }) {
   const photoOblig = st.reglages?.photoOblig !== false;
   const tousFaits = !S.libre && S.exos.length > 0 && J.faits.length >= S.exos.length;
@@ -6797,6 +6917,72 @@ function SeanceView({
   // même logique pour le gainage : un cadre déployé à la fois, détails et
   // bouton de lancement dans le corps
   const [gainOuvert, setGainOuvert] = useState(null);
+  // v20.10 : « Déplacer » ouvre un petit menu Monter / Descendre dans la carte focus ; et, dans la liste,
+  // un appui long (450 ms, sans bouger) soulève l'exercice pour le glisser à la place voulue. Le geste ne
+  // se dispute pas le défilement : tant que l'appui long n'a pas abouti, un doigt qui bouge fait défiler
+  // (et annule l'appui) ; une fois l'exercice soulevé, le touchmove natif est bloqué (écouteur non
+  // passif sur le document, React rend les siens passifs) pour qu'iOS ne fasse plus défiler.
+  const [menuDeplacer, setMenuDeplacer] = useState(null);
+  const [drag, setDrag] = useState(null); // { id, depuis, vers, dy, h }
+  const dragRef = useRef(null), pressRef = useRef(null), rectsRef = useRef([]), clicAvale = useRef(false);
+  useEffect(() => {
+    const bloquer = e => { if (dragRef.current) e.preventDefault(); };
+    document.addEventListener("touchmove", bloquer, { passive: false });
+    return () => document.removeEventListener("touchmove", bloquer);
+  }, []);
+  const finirDrag = () => {
+    const d = dragRef.current;
+    dragRef.current = null; setDrag(null);
+    if (!d) return;
+    if (d.vers !== d.depuis && onOrdre) {
+      const ids = S.exos.map(e => e.id);
+      ids.splice(d.depuis, 1); ids.splice(d.vers, 0, d.id);
+      onOrdre(ids);
+    }
+    clicAvale.current = true; setTimeout(() => { clicAvale.current = false; }, 350);
+  };
+  const annulerAppui = () => { if (pressRef.current) { clearTimeout(pressRef.current.timer); pressRef.current = null; } };
+  const gestesLigne = (ex, i) => {
+    if (J.faits.includes(ex.id) || S.exos.length < 2) return {};
+    return {
+      onPointerDown: e => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const cible = e.currentTarget, pid = e.pointerId, y0 = e.clientY;
+        annulerAppui();
+        pressRef.current = { id: ex.id, x: e.clientX, y: e.clientY, timer: setTimeout(() => {
+          pressRef.current = null;
+          rectsRef.current = [...document.querySelectorAll("button[data-exo]")].map(b => { const r = b.getBoundingClientRect(); return { id: b.dataset.exo, top: r.top, bottom: r.bottom }; });
+          const r = rectsRef.current.find(x => x.id === ex.id);
+          const d = { id: ex.id, depuis: i, vers: i, y0, dy: 0, h: r ? r.bottom - r.top + 34 : 70 };
+          dragRef.current = d; setDrag({ ...d });
+          try { cible.setPointerCapture(pid); } catch {}
+          if (navigator.vibrate) navigator.vibrate(12);
+        }, 450) };
+      },
+      onPointerMove: e => {
+        const pr = pressRef.current;
+        if (pr && !dragRef.current && (Math.abs(e.clientX - pr.x) > 8 || Math.abs(e.clientY - pr.y) > 8)) { annulerAppui(); return; }
+        const d = dragRef.current;
+        if (!d) return;
+        const y = e.clientY, autres = rectsRef.current.filter(x => x.id !== d.id);
+        let vers = autres.findIndex(x => y < (x.top + x.bottom) / 2);
+        if (vers < 0) vers = autres.length;
+        d.dy = y - d.y0; d.vers = vers;
+        setDrag({ ...d });
+      },
+      onPointerUp: () => { annulerAppui(); finirDrag(); },
+      onPointerCancel: () => { annulerAppui(); finirDrag(); },
+      onContextMenu: e => { if (dragRef.current || pressRef.current) e.preventDefault(); }
+    };
+  };
+  // décalage visuel pendant un glisser : la ligne soulevée suit le doigt, les autres s'écartent
+  const styleDrag = (ex, i) => {
+    if (!drag) return {};
+    if (drag.id === ex.id) return { transform: `translateY(${drag.dy}px)`, zIndex: 5, boxShadow: "0 12px 30px rgba(0,0,0,.45)", transition: "none", borderColor: S.couleur };
+    const k = i > drag.depuis ? i - 1 : i; // rang de cette ligne parmi les autres
+    const d = k >= drag.vers ? (i > drag.depuis ? 0 : drag.h) : (i > drag.depuis ? -drag.h : 0);
+    return { transform: `translateY(${d}px)`, transition: "transform .15s ease" };
+  };
   useEffect(() => setGainOuvert(null), [cle]);
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6823,13 +7009,13 @@ function SeanceView({
       fontFamily: DISPLAY,
       fontSize: 16
     }
-  }, S.libre ? "SÉANCE LIBRE" : ["SÉANCE ", J.seance || Object.keys(SEANCES).find(k => SEANCES[k] === S)]), /*#__PURE__*/React.createElement("div", {
+  }, S.cardioSeul ? "CARDIO" : S.libre ? "SÉANCE LIBRE" : ["SÉANCE ", J.seance || Object.keys(SEANCES).find(k => SEANCES[k] === S)]), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11.5,
       opacity: .9,
       fontWeight: 500
     }
-  }, S.libre ? "Ce que tu fais aujourd'hui · les XP de chaque exercice fait" : [S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", fourchetteXP(S), " · +", XP.bonusSeance, " si complète"]), S.sport && /*#__PURE__*/React.createElement("div", {
+  }, S.cardioSeul ? "Ton cardio du jour · 5 à 20 XP selon la durée" : S.libre ? "Ce que tu fais aujourd'hui · les XP de chaque exercice fait" : [S.nom, S.geste ? " (" + S.geste + ")" : "", " · ", fourchetteXP(S), " · +", XP.bonusSeance, " si complète"]), S.sport && /*#__PURE__*/React.createElement("div", {
     className: "note-sport",
     style: {
       fontSize: 11,
@@ -7002,6 +7188,7 @@ function SeanceView({
       onChoisir: r => onRessenti(ex, r)
     })) : /*#__PURE__*/React.createElement("div", {
       key: ex.id,
+      className: "ligne-exercice" + (drag && drag.id === ex.id ? " en-vol" : ""),
       style: {
         position: "relative",
         overflow: "hidden",
@@ -7011,7 +7198,8 @@ function SeanceView({
         padding: ouvert ? "15px 16px 16px" : "13px 16px",
         marginTop: 8,
         transition: "border-color .2s, padding .22s ease",
-        animation: burst === ex.id ? "flashOk 1.5s ease-out" : "none"
+        animation: burst === ex.id ? "flashOk 1.5s ease-out" : "none",
+        ...styleDrag(ex, i)
       }
     }, burst === ex.id && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -7042,9 +7230,10 @@ function SeanceView({
        touch-action:manipulation global — sans quoi iOS attend un éventuel
        double-tap et avale le premier appui, comme sur le stepper (v19.6). */
     /*#__PURE__*/React.createElement("button", {
-      onClick: () => basculer(ex.id),
+      onClick: () => { if (clicAvale.current) return; basculer(ex.id); },
       "aria-expanded": ouvert,
       "data-exo": ex.id,
+      ...gestesLigne(ex, i),
       style: {
         display: "flex",
         alignItems: "center",
@@ -7056,7 +7245,8 @@ function SeanceView({
         padding: 0,
         color: INK,
         userSelect: "none",
-        WebkitUserSelect: "none"
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -7209,16 +7399,10 @@ function SeanceView({
       className: "ajouter-apres",
       onClick: () => onAjouter(ex.id),
       style: { display: "inline-flex", alignItems: "center", gap: 6, color: INK, background: "rgba(255,255,255,.08)", border: `1px solid ${LINE}`, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, fontWeight: 700, touchAction: "manipulation" }
-    }, "+ Ajouter après"), !fait && S.exos.length > 1 && /*#__PURE__*/React.createElement("span", {
-      className: "deplacer-exercice",
-      style: { display: "inline-flex", gap: 4 }
-    }, /*#__PURE__*/React.createElement("button", {
-      className: "monter", "aria-label": "Monter", disabled: i === 0, onClick: () => onDeplacer(ex.id, -1),
-      style: { width: 34, height: 30, borderRadius: 999, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === 0 ? "#5A6274" : INK, fontSize: 12, padding: 0, touchAction: "manipulation" }
-    }, "▲"), /*#__PURE__*/React.createElement("button", {
-      className: "descendre", "aria-label": "Descendre", disabled: i === S.exos.length - 1, onClick: () => onDeplacer(ex.id, 1),
-      style: { width: 34, height: 30, borderRadius: 999, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === S.exos.length - 1 ? "#5A6274" : INK, fontSize: 12, padding: 0, touchAction: "manipulation" }
-    }, "▼")), photoSrc && /*#__PURE__*/React.createElement("img", {
+    }, "+ Ajouter un exercice après celui-ci"), !fait && S.exos.length > 1 && /*#__PURE__*/React.createElement("button", {
+      className: "deplacer-exercice", "aria-expanded": menuDeplacer === ex.id, onClick: () => setMenuDeplacer(m => m === ex.id ? null : ex.id),
+      style: { display: "inline-flex", alignItems: "center", gap: 6, color: menuDeplacer === ex.id ? S.couleur : INK, background: "rgba(255,255,255,.08)", border: `1px solid ${menuDeplacer === ex.id ? S.couleur : LINE}`, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, fontWeight: 700, touchAction: "manipulation" }
+    }, "Déplacer"), photoSrc && /*#__PURE__*/React.createElement("img", {
       src: photoSrc,
       onClick: () => onZoom({
         src: photoSrc,
@@ -7234,7 +7418,23 @@ function SeanceView({
         cursor: "pointer",
         marginLeft: "auto"
       }
-    })), !fait && (ex.charge || ex.pdc) && /*#__PURE__*/React.createElement("div", {
+    })), !fait && menuDeplacer === ex.id && /*#__PURE__*/React.createElement("div", {
+      className: "menu-deplacer",
+      style: { ...GLASS, borderRadius: 12, padding: "10px 12px", marginBottom: 14, borderColor: S.couleur + "66" }
+    }, /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8 } }, /*#__PURE__*/React.createElement("button", {
+      className: "monter", disabled: i === 0, onClick: () => onDeplacer(ex.id, -1),
+      style: { flex: 1, borderRadius: 10, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === 0 ? "#5A6274" : INK, fontSize: 12.5, fontWeight: 700, padding: "9px 10px", touchAction: "manipulation" }
+    }, "▲ Monter d'une place"), /*#__PURE__*/React.createElement("button", {
+      className: "descendre", disabled: i === S.exos.length - 1, onClick: () => onDeplacer(ex.id, 1),
+      style: { flex: 1, borderRadius: 10, border: `1px solid ${LINE}`, background: "rgba(255,255,255,.08)", color: i === S.exos.length - 1 ? "#5A6274" : INK, fontSize: 12.5, fontWeight: 700, padding: "9px 10px", touchAction: "manipulation" }
+    }, "▼ Descendre d'une place")), /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, color: SUB, marginTop: 7, lineHeight: 1.4 } }, "Ou, dans la liste : appuie longtemps sur un exercice et glisse-le à la place voulue.")), !fait && estCardio(ex) && /*#__PURE__*/React.createElement(CardioInputs, {
+      key: ex.id + ":cardio",
+      ex: ex,
+      couleur: S.couleur,
+      duJour: der && der.date === auj() && der.cardio ? der.cardio : null,
+      dernier: derAffiche && derAffiche.cardio && derAffiche.date !== auj() ? derAffiche.cardio : null,
+      onSave: d => onCardio(ex.id, d)
+    }), !fait && (ex.charge || ex.pdc) && /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 14
       }
@@ -7315,7 +7515,20 @@ function SeanceView({
         s: 13,
         w: 2.4
       }), "Fin de série → lancer le repos ", fmtSec(ex.repos)));
-    })(), !fait ? /*#__PURE__*/React.createElement("div", {
+    })(), !fait && estCardio(ex) ? /*#__PURE__*/React.createElement("div", {
+      className: "validation-cardio",
+      style: { display: "flex", gap: 8 }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "terminer-cardio",
+      onClick: () => validerSansPhoto(ex.id),
+      style: { flex: 1, background: S.couleur, color: "#fff", border: "none", borderRadius: 12, padding: "13px 12px", fontWeight: 800, fontSize: 13, touchAction: "manipulation" }
+    }, /*#__PURE__*/React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 7 } }, /*#__PURE__*/React.createElement(Ic, { n: "check", s: 14, w: 2.6 }), "Terminer le cardio")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => onCamera({ type: "exo", exId: ex.id }),
+      disabled: chargeur,
+      title: "Ajouter une photo (facultatif)",
+      "aria-label": "Ajouter une photo (facultatif)",
+      style: { background: GLASSBG, color: SUB, border: `1.5px solid ${LINE}`, borderRadius: 12, padding: "13px 14px", fontWeight: 800, fontSize: 13, flexShrink: 0, touchAction: "manipulation" }
+    }, /*#__PURE__*/React.createElement(Ic, { n: "camera", s: 15, w: 2.2 }))) : !fait ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 8
@@ -7392,7 +7605,7 @@ function SeanceView({
         padding: 0
       }
     }, "↩")))));
-  }), S.libre && S.exos.length === 0 && /*#__PURE__*/React.createElement("div", { className: "libre-vide", style: { fontSize: 12.5, color: SUB, lineHeight: 1.5, padding: "14px 4px 2px" } }, "Séance vide pour l'instant : ajoute ce que tu fais, dans l'ordre où tu le fais. Chaque exercice validé rapporte ses XP."),
+  }), S.libre && !S.cardioSeul && S.exos.length === 0 && /*#__PURE__*/React.createElement("div", { className: "libre-vide", style: { fontSize: 12.5, color: SUB, lineHeight: 1.5, padding: "14px 4px 2px" } }, "Séance vide pour l'instant : ajoute ce que tu fais, dans l'ordre où tu le fais. Chaque exercice validé rapporte ses XP."),
   !J.valide && /*#__PURE__*/React.createElement("button", {
     className: "ajouter-exercice",
     onClick: () => onAjouter("fin"),
@@ -7479,6 +7692,7 @@ function SeanceView({
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGainOuvert(o => o === g.id ? null : g.id),
       "aria-expanded": ouvertG,
+      "data-gain": g.id,
       style: {
         display: "flex",
         width: "100%",
@@ -7663,7 +7877,10 @@ function SeanceView({
       n: "play",
       s: 11,
       w: 2.4
-    }), "démo"), (ok || tours > 0) && !J.gainValide && /*#__PURE__*/React.createElement("button", {
+    }), "démo"), !ok && /*#__PURE__*/React.createElement("button", {
+      className: "remplacer-gainage", onClick: () => onRemplacer(g),
+      style: { display: "inline-flex", alignItems: "center", gap: 6, color: INK, background: "rgba(255,255,255,.08)", border: `1px solid ${LINE}`, borderRadius: 999, padding: "9px 12px", fontSize: 11.5, fontWeight: 700, flexShrink: 0, touchAction: "manipulation" }
+    }, /*#__PURE__*/React.createElement(Ic, { n: "shuffle", s: 11, w: 2.4 }), "Remplacer"), (ok || tours > 0) && !J.gainValide && /*#__PURE__*/React.createElement("button", {
       onClick: () => onAnnulerGain(g),
       title: ok ? "Annuler" : "Remettre à zéro",
       style: {
@@ -7680,7 +7897,7 @@ function SeanceView({
         padding: 0,
         flexShrink: 0
       }
-    }, "↩")))));
+    }, "↩")), !ok && /*#__PURE__*/React.createElement("button", { className: "ajouter-apres-gainage", onClick: () => onAjouter(g.id), style: { width: "100%", marginTop: 8, background: "none", border: `1px dashed ${LINE}`, borderRadius: 10, color: SUB, fontSize: 11.5, fontWeight: 700, padding: "8px 10px", touchAction: "manipulation" } }, "+ Ajouter un exercice après celui-ci"))));
   }), !J.gainValide && gainFait && /*#__PURE__*/React.createElement("button", {
     onClick: onValiderGain,
     style: {
@@ -7743,7 +7960,7 @@ function SerieInputs({
     if (onReps) onReps(exId, a, true);
   };
   const tousTenus = repsMax != null && repsVals.length > 0 && repsVals.every(r => Number(r) >= repsMax);
-  const repsStepper = i => repsMax != null && /*#__PURE__*/React.createElement("div", { className: "reps-serie", style: { flex: "0 0 104px", minWidth: 0 } }, /*#__PURE__*/React.createElement(Stepper, { compact: true, unite: "reps", pas: 1, min: 0, max: 60, accent: couleur, valeur: repsVals[i] != null && repsVals[i] !== "" ? repsVals[i] : repsMax, onChange: v => fixerReps(i, v) }));
+  const repsStepper = i => repsMax != null && /*#__PURE__*/React.createElement("div", { className: "reps-serie", style: { flex: "0 0 auto" } }, /*#__PURE__*/React.createElement(Stepper, { compact: true, unite: "reps", pas: 1, min: 0, max: 60, accent: couleur, valeur: repsVals[i] != null && repsVals[i] !== "" ? repsVals[i] : repsMax, onChange: v => fixerReps(i, v) }));
   const aideTenu = /*#__PURE__*/React.createElement("div", { className: "haut-fourchette-aide", style: { fontSize: 11, color: SUB, lineHeight: 1.45, marginTop: 6 } }, "Tout tenu ? C'est le signal pour monter la charge la prochaine fois — les dernières séries devraient être dures.");
   const aideReps = /*#__PURE__*/React.createElement("div", { className: "reps-aide", style: { fontSize: 10.5, color: "#5A6274", marginTop: 6 } }, "Reps pré-remplies au haut de la fourchette (", repsMax, ") : corrige celles que tu n'as pas tenues.");
   // pré-remplissage : la suggestion d'incrément si elle existe, sinon la dernière fois
@@ -8416,7 +8633,7 @@ function Recompenses({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 8
@@ -8442,7 +8659,7 @@ function Recompenses({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -8473,6 +8690,7 @@ function Recompenses({
   }, "Le niveau max est ", MAX_NIVEAU, " (Icône)")), /*#__PURE__*/React.createElement(Idees, {
     code: code,
     style: st.styles || [st.style || "soins"],
+    solo: solo,
     contexte: "grandes récompenses par paliers de niveau",
     toast: toast,
     onAjout: it => maj(s => {
@@ -8564,7 +8782,7 @@ function Recompenses({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -8818,29 +9036,17 @@ function Negos({
       letterSpacing: .3
     }
   }, txt);
-  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      margin: "6px 4px 8px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      fontSize: 13.5,
-      color: SUB
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 6
-    }
-  }, /*#__PURE__*/React.createElement(Ic, {
-    n: "users",
-    s: 14
-  }), "La table des négos")), mode === "local" && chip("○ Hors ligne — ton coach ne voit pas ces propositions", SUB, "rgba(255,255,255,.10)"), !st.coachLie && role !== "coach" && onInviter && /*#__PURE__*/React.createElement("div", {
+  // v20.10 : même en-tête que « Le Pari » et « La cagnotte » (titre + sous-titre), puis une ligne de
+  // puces (duo, actualiser, hors ligne) — plus de ligne serrée titre / bouton / code
+  return h("div", { className: "table-negos", style: { marginTop: 4 } },
+    h("div", { style: { fontWeight: 700, fontSize: 13.5, margin: "6px 4px 6px", color: SUB } },
+      h("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 } }, h(Ic, { n: "users", s: 14 }), "La table des négos"), " ",
+      h("span", { style: { fontWeight: 500, fontSize: 11 } }, "— un aller-retour, réponse sous 48 h")),
+    h("div", { className: "negos-puces", style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", margin: "0 4px 10px" } },
+      chip((role === "coach" ? "🧢 " : "💪 ") + "duo « " + code + " »", SUB, "rgba(255,255,255,.06)"),
+      mode === "sync" && h("button", { onClick: () => rafraichir(false), style: { ...GLASS, borderRadius: 999, padding: "3px 10px", fontSize: 9.5, fontWeight: 800, letterSpacing: .3, color: SUB, touchAction: "manipulation" } }, "ACTUALISER"),
+      mode === "local" && chip("HORS LIGNE — TON COACH NE VOIT PAS CES PROPOSITIONS", SUB, "rgba(255,255,255,.10)"),
+      mode === "local" && h("span", { style: { fontSize: 10.5, color: SUB } }, "mode local : passez-vous le téléphone")), !st.coachLie && role !== "coach" && onInviter && /*#__PURE__*/React.createElement("div", {
     className: "sans-coach",
     style: {
       ...GLASS,
@@ -8935,36 +9141,7 @@ function Negos({
       fontSize: 13,
       touchAction: "manipulation"
     }
-  }, "Plus tard"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginLeft: "auto",
-      display: "flex",
-      gap: 6,
-      alignItems: "center"
-    }
-  }, mode === "sync" && /*#__PURE__*/React.createElement("button", {
-    onClick: () => rafraichir(false),
-    style: {
-      background: GLASSBG,
-      border: `1px solid ${LINE}`,
-      borderRadius: 999,
-      padding: "4px 10px",
-      fontSize: 11,
-      fontWeight: 700,
-      color: SUB
-    }
-  }, "🔄"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10.5,
-      color: SUB
-    }
-  }, role === "coach" ? "🧢" : "💪", " duo « ", code, " »"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: SUB,
-      margin: "0 4px 8px"
-    }
-  }, "Un aller-retour max · réponse sous 48 h", mode === "local" && " · (mode local : passez-vous le téléphone — la synchro arrive avec le Worker)"), /*#__PURE__*/React.createElement("button", {
+  }, "Plus tard"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setOuvert(o => !o),
     style: {
       width: "100%",
@@ -9002,7 +9179,7 @@ function Negos({
       fontSize: 12,
       lineHeight: 1.7
     }
-  }, "Exercice validé photo : ", /*#__PURE__*/React.createElement("b", null, "10, 15 ou 20 XP"), " selon sa difficulté (sans photo : 5 de moins) · Bonus séance complète : ", /*#__PURE__*/React.createElement("b", null, "+", XP.bonusSeance), /*#__PURE__*/React.createElement("br", null), "Une séance complète ≈ ", /*#__PURE__*/React.createElement("b", null, "100-130 XP"), " selon le programme", /*#__PURE__*/React.createElement("br", null), "Gainage complet : ", /*#__PURE__*/React.createElement("b", null, "35"), " · Cardio 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.cardio), " · Habitude 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.habitude), " · Défi hebdo : ", /*#__PURE__*/React.createElement("b", null, XP.defi), /*#__PURE__*/React.createElement("br", null), "Jour sans passage : ", /*#__PURE__*/React.createElement("b", {
+  }, "Exercice validé photo : ", /*#__PURE__*/React.createElement("b", null, "10, 15 ou 20 XP"), " selon sa difficulté (sans photo : 5 de moins) · Cardio : ", /*#__PURE__*/React.createElement("b", null, "5 à 20 XP"), " selon la durée (10, 20, 30 min) · Bonus séance complète : ", /*#__PURE__*/React.createElement("b", null, "+", XP.bonusSeance), /*#__PURE__*/React.createElement("br", null), "Une séance complète ≈ ", /*#__PURE__*/React.createElement("b", null, "100-130 XP"), " selon le programme", /*#__PURE__*/React.createElement("br", null), "Gainage complet : ", /*#__PURE__*/React.createElement("b", null, "35"), " · Cardio 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.cardio), " · Habitude 📷 : ", /*#__PURE__*/React.createElement("b", null, XP.habitude), " · Défi hebdo : ", /*#__PURE__*/React.createElement("b", null, XP.defi), /*#__PURE__*/React.createElement("br", null), "Jour sans passage : ", /*#__PURE__*/React.createElement("b", {
     style: {
       color: COL.A
     }
@@ -9031,12 +9208,12 @@ function Negos({
       fontWeight: 600,
       marginBottom: 6
     }
-  }, "DES IDÉES POUR NE PAS SE GRATTER LA TÊTE — touche pour pré-remplir"), /*#__PURE__*/React.createElement("div", {
+  }, "DES IDÉES POUR NE PAS SE GRATTER LA TÊTE · touche pour pré-remplir"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
       gap: 6,
-      marginBottom: 10
+      marginBottom: 12
     }
   }, (st.styles || [st.style || "soins"]).flatMap(sid => PRESETS_STYLE[sid] || []).filter((p, i, a) => a.findIndex(x => x.label === p.label) === i).map((p, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
@@ -9058,7 +9235,7 @@ function Negos({
     style: {
       color: SUB
     }
-  }, "· N", p.niveau)))), /*#__PURE__*/React.createElement("input", {
+  }, "· Niveau ", p.niveau)))), /*#__PURE__*/React.createElement("input", {
     value: label,
     onChange: e => setLabel(e.target.value),
     placeholder: "… ou ta propre idée, champ libre",
@@ -9067,7 +9244,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 8
@@ -9094,7 +9271,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9120,7 +9297,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9236,7 +9413,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9262,7 +9439,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9288,7 +9465,7 @@ function Negos({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -9910,7 +10087,7 @@ function SuiviCoach({
       fontSize: 13,
       fontWeight: 600
     }
-  }, h.type === "K" ? h.quoi || "Cardio" : h.type === "L" ? "Séance libre" : `Séance ${h.type} — ${h.nomS || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, h.type === "K" ? libelleCardioHisto(h) : h.type === "L" ? "Séance libre" : `Séance ${h.type} — ${h.nomS || ""}`, (h.photos || []).length > 0 && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11
     }
@@ -10164,7 +10341,7 @@ function QuestionsProgramme({ reponses, setReponses, qIdx, setQIdx, onFin, onRet
           onChange: e => poser("objectifLibre", e.target.value),
           rows: 3,
           placeholder: "Ex : me remettre au sport après une blessure au genou, plutôt du renfo doux…",
-          style: { width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "10px 12px", fontSize: 13.5, background: FIELD, outline: "none", resize: "none", fontFamily: "inherit", color: INK }
+          style: { width: "100%", border: `1.5px solid ${LINE}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, background: FIELD, outline: "none", resize: "none", fontFamily: "inherit", color: INK }
         }),
         h("div", { style: { fontSize: 10.5, color: SUB, margin: "6px 0 8px" } }, "L'app lit ta description pour choisir les muscles à privilégier ; la structure des séances, elle, suit des règles fixes."),
         h(BoutonContinuer, { onTap: suivant, disabled: (reponses.objectifLibre || "").trim().length < 8 }, (reponses.objectifLibre || "").trim().length >= 8 ? "Continuer" : "Décris un peu plus (8 caractères min)")));
@@ -10378,10 +10555,14 @@ function PanneauExercices({ mode, ex, apres, st, S, onChoisir, onFermer }) {
   const materiel = st.reponses && Array.isArray(st.reponses.materiel) ? st.reponses.materiel : "salle";
   const niveau = st.programmePerso && st.programmePerso.moteur ? st.programmePerso.moteur.entrees.niveau : 2;
   const moteur = !!(st.programmePerso && st.programmePerso.moteur && st.programme === "perso");
-  const exclure = S.exos.map(e => e.id).filter(id => !remplacer || id !== ex.id);
+  // v20.10 : le gainage compte aussi (jamais proposer ce qui est déjà dans la séance) ; « ajouter après » un
+  // gainage ouvre sur les gainages
+  const ancreGainage = !remplacer && apres && gainageDe(S).some(g => g.id === apres);
+  const exclure = [...S.exos, ...gainageDe(S)].map(e => e.id).filter(id => !remplacer || id !== ex.id);
   const cat = useMemo(() => window.Moteur.catalogue(window.BANQUE, { focus: S.focus, materiel, exclure }), [S.focus, materiel, exclure.join(",")]);
   const directs = useMemo(() => remplacer ? window.Moteur.remplacantsPour(window.BANQUE, ex, { materiel, niveau, exclure }) : null, [remplacer, ex && ex.id, materiel, niveau, exclure.join(",")]);
   const idsDirects = new Set(directs ? directs.candidats.map(c => c.exo.id) : []);
+  if (ancreGainage) cat.similaires = cat.tous.filter(x => x.compartiment === "gainage");
   const [onglet, setOnglet] = useState(cat.similaires.length || (directs && directs.candidats.length) ? "similaires" : "banque");
   const norm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const q = norm(recherche.trim());
@@ -10403,7 +10584,7 @@ function PanneauExercices({ mode, ex, apres, st, S, onChoisir, onFermer }) {
       h("span", { style: { display: "block", fontSize: 11.5, color: SUB, marginTop: 2 } }, x.muscle, " · ", x.materiel, " · ", x.dose, x.faisable === false ? " · pas ton matériel" : "")),
     h("span", { style: { fontSize: 18, color: SUB, flexShrink: 0 } }, "＋"));
   const ongletBtn = (id, l, n) => h("button", { key: id, className: "onglet-panneau", "aria-pressed": onglet === id, onClick: () => setOnglet(id), style: { flex: 1, background: onglet === id ? tintCss(COL.G) : "rgba(255,255,255,.04)", border: `1.5px solid ${onglet === id ? COL.G : LINE}`, color: onglet === id ? COL.G : SUB, borderRadius: 999, padding: "8px 6px", fontSize: 11.5, fontWeight: 800, touchAction: "manipulation" } }, l, n != null ? ` (${n})` : "");
-  const select = (val, set, opts, lib, nom) => h("select", { value: val, onChange: e => set(e.target.value), "aria-label": lib, style: { flex: 1, minWidth: 0, background: FIELD, color: val ? INK : SUB, border: `1px solid ${LINE}`, borderRadius: 10, padding: "8px 6px", fontSize: 12, fontFamily: FONT } },
+  const select = (val, set, opts, lib, nom) => h("select", { value: val, onChange: e => set(e.target.value), "aria-label": lib, style: { flex: 1, minWidth: 0, background: FIELD, color: val ? INK : SUB, border: `1px solid ${LINE}`, borderRadius: 10, padding: "8px 6px", fontSize: 16, fontFamily: FONT } },
     h("option", { value: "" }, lib), opts.map(o => h("option", { key: o, value: o }, nom ? nom(o) : o)));
   return h("div", { className: "panneau-exercices-fond", style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
     h("div", { className: "panneau-exercices", onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 480, margin: "0 auto", background: "#10141D", borderRadius: "22px 22px 0 0", padding: "16px 18px 28px", height: "88vh", display: "flex", flexDirection: "column", fontFamily: FONT, color: INK } },
@@ -10411,7 +10592,7 @@ function PanneauExercices({ mode, ex, apres, st, S, onChoisir, onFermer }) {
       h("div", { style: { fontSize: 12, color: SUB, margin: "4px 0 10px" } }, remplacer ? "Même geste, même muscle d'abord. Tes charges déjà notées restent sous l'ancien exercice." : apres && apres !== "fin" ? "Il se place juste après l'exercice ouvert. Doses de la banque, tu les changes si tu veux." : "Il se place en fin de séance. Doses de la banque, tu les changes si tu veux."),
       h("div", { style: { display: "flex", gap: 6, marginBottom: 10 } }, ongletBtn("similaires", "Similaires", cat.similaires.length + (directs ? directs.candidats.filter(c => !cat.similaires.some(x => x.id === c.exo.id)).length : 0)), ongletBtn("banque", "Toute la banque"), ongletBtn("cardio", "Cardio & mobilité")),
       onglet === "banque" && h("div", { style: { marginBottom: 8 } },
-        h("input", { className: "recherche-exo", value: recherche, onChange: e => setRecherche(e.target.value), placeholder: "Rechercher par nom…", inputMode: "search", style: { width: "100%", boxSizing: "border-box", background: FIELD, color: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "10px 12px", fontSize: 14, fontFamily: FONT, marginBottom: 6 } }),
+        h("input", { className: "recherche-exo", value: recherche, onChange: e => setRecherche(e.target.value), placeholder: "Rechercher par nom…", inputMode: "search", style: { width: "100%", boxSizing: "border-box", background: FIELD, color: INK, border: `1px solid ${LINE}`, borderRadius: 12, padding: "10px 12px", fontSize: 16, fontFamily: FONT, marginBottom: 6 } }),
         h("div", { style: { display: "flex", gap: 6 } }, select(fMuscle, setFMuscle, muscles, "Muscle"), select(fComp, setFComp, comps, "Compartiment", c => NOM_COMP[c] || c), select(fMat, setFMat, mats, "Matériel"))),
       h("div", { className: "liste-exos", style: { flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8 } },
         onglet === "similaires" && [
@@ -10441,9 +10622,13 @@ function AdapterPanneau({ S, defautMin, entrees, onAdapter, onFermer }) {
   const [temps, setTemps] = useState(defautMin || S.dureeMin || 45);
   const [energie, setEnergie] = useState("normal");
   const [complements, setComplements] = useState(true);
+  // v20.11 : sans objectif cardio, le cardio est une option explicite (« ajouter 15 min de cardio ? ») avec le choix de l'appareil
+  const [cardio, setCardio] = useState(null); // { id, duree } ou null
   const fixer = v => { const n = Math.round(Number(v)); if (!isNaN(n)) setTemps(Math.max(10, Math.min(180, n))); };
-  const opts = { tempsMin: temps, energie, complements, banque: window.BANQUE, entrees };
+  const opts = { tempsMin: temps, energie, complements, banque: window.BANQUE, entrees, cardio };
   const apercu = window.Moteur.adapterSeance(S, opts);
+  const sansCardio = cardio ? window.Moteur.adapterSeance(S, { ...opts, cardio: null }) : apercu;
+  const optionCardio = sansCardio.adaptee.optionCardio;
   const enPlus = temps >= (S.dureeMin || 0) + 8;
   const ajouts = apercu.adaptee.ajouts || [];
   return h("div", { style: { position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end" }, onClick: onFermer },
@@ -10465,11 +10650,18 @@ function AdapterPanneau({ S, defautMin, entrees, onAdapter, onFermer }) {
           h("button", { onClick: () => setComplements(c => !c), "aria-pressed": complements, className: "bascule-complements", style: { ...GLASS, border: `1.5px solid ${complements ? COL.G : LINE}`, background: complements ? tintCss(COL.G) : GLASSBG, color: complements ? COL.G : SUB, borderRadius: 999, padding: "6px 12px", fontWeight: 800, fontSize: 11.5, touchAction: "manipulation" } }, complements ? "Oui" : "Non")),
         complements && (ajouts.length ? h("div", { style: { marginTop: 8, display: "grid", gap: 4 } }, ajouts.map(a => h("div", { key: a.id, className: "ajout", style: { fontSize: 12, display: "flex", gap: 8, alignItems: "baseline" } }, h("span", { style: { color: COL.G, fontWeight: 800 } }, "+"), h("span", { style: { flex: 1 } }, a.nom), h("span", { style: { fontSize: 10.5, color: SUB } }, a.pourquoi))))
           : h("div", { style: { fontSize: 11.5, color: SUB, marginTop: 6 } }, "Rien à ajouter : la séance est déjà complète pour ce temps."))),
+      enPlus && optionCardio && h("div", { className: "option-cardio", style: { ...GLASS, borderRadius: 14, padding: "10px 12px", marginTop: 10, borderColor: COL.K + "66" } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+          h("div", { style: { flex: 1, fontSize: 13, fontWeight: 700 } }, `Ajouter ${Math.round(optionCardio.duree / 60)} min de cardio ?`),
+          h("button", { onClick: () => setCardio(c => c ? null : { id: optionCardio.candidats[0].id, duree: Math.round(optionCardio.duree / 60) }), "aria-pressed": !!cardio, className: "bascule-cardio", style: { ...GLASS, border: `1.5px solid ${cardio ? COL.K : LINE}`, background: cardio ? tintCss(COL.K) : GLASSBG, color: cardio ? COL.K : SUB, borderRadius: 999, padding: "6px 12px", fontWeight: 800, fontSize: 11.5, touchAction: "manipulation" } }, cardio ? "Oui" : "Non")),
+        cardio && h("div", { className: "appareils-cardio", style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 } },
+          optionCardio.candidats.map(x => h("button", { key: x.id, onClick: () => setCardio(c => ({ ...c, id: x.id })), "aria-pressed": cardio.id === x.id, style: { ...GLASS, border: `1.5px solid ${cardio.id === x.id ? COL.K : LINE}`, background: cardio.id === x.id ? tintCss(COL.K) : GLASSBG, color: cardio.id === x.id ? COL.K : INK, borderRadius: 999, padding: "6px 11px", fontSize: 11.5, fontWeight: 700, touchAction: "manipulation" } }, x.nom))),
+        h("div", { style: { fontSize: 10.5, color: SUB, marginTop: 6 } }, "En fin de séance, XP selon la durée. Ton programme ne le prévoit pas d'office : ton objectif ne réclame pas de cardio.")),
       h("div", { style: { fontSize: 12, color: SUB, marginTop: 12, lineHeight: 1.5 } },
         "Résultat : ", h("b", { style: { color: INK } }, apercu.exos.length, " exercice", apercu.exos.length > 1 ? "s" : "", apercu.gainage.length ? " + gainage" : "", " · ", apercu.dureeMin, " min"),
         energie === "petite" ? " · une série de moins, charges suggérées −10 %, repos gardés." : "",
         !apercu.adaptee.tient ? " · même compressée, la séance dépasse un peu : à toi de voir." : ""),
-      h("button", { onClick: () => onAdapter({ tempsMin: temps, energie, complements }), style: { width: "100%", marginTop: 14, background: COL.G, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Ajuster ma séance"),
+      h("button", { onClick: () => onAdapter({ tempsMin: temps, energie, complements, cardio }), style: { width: "100%", marginTop: 14, background: COL.G, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontWeight: 800, fontSize: 14, touchAction: "manipulation" } }, "Ajuster ma séance"),
       h("button", { onClick: onFermer, style: { width: "100%", marginTop: 8, ...GLASS, color: INK, borderRadius: 12, padding: "11px", fontWeight: 700, fontSize: 13, touchAction: "manipulation" } }, "Laisser comme ça")));
 }
 
@@ -10538,6 +10730,35 @@ function FocusExercice({ titre, sous, couleur, onFermer, reserve = 0, children }
         h("button", { onClick: onFermer, "aria-label": "Fermer", className: "fermer-focus", style: { width: 34, height: 34, borderRadius: 999, border: `1px solid ${LINE}`, background: GLASSBG, color: INK, fontSize: 18, lineHeight: 1, display: "grid", placeItems: "center", padding: 0, flexShrink: 0, touchAction: "manipulation" } }, "✕")),
       h("div", { style: { flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "12px 16px 24px" } }, children)));
 }
+/* La notation d'un cardio (v20.11) : durée au chrono ou saisie, et selon l'appareil distance, vitesse,
+   inclinaison, résistance. Tout est écrit dans l'entrée du jour à chaque geste (onSave) ; le chrono en cours
+   survit à la fermeture de la carte (chronoDebut mémorisé). XP selon la durée : 5 / 10 / 15 / 20. */
+function CardioInputs({ ex, couleur, duJour, dernier, onSave }) {
+  const champs = CARDIO_CHAMPS[ex.id] || (ex.id in CARDIO_CHAMPS ? [] : ["distance"]);
+  const prevu = Math.round(dureeCardioPrevue(ex));
+  const [c, setC] = useState(() => ({ duree_s: duJour && duJour.duree_s ? duJour.duree_s : prevu * 60, ...(duJour || {}) }));
+  const [tic, setTic] = useState(0);
+  useEffect(() => { if (!c.chronoDebut) return; const it = setInterval(() => setTic(t => t + 1), 1000); return () => clearInterval(it); }, [c.chronoDebut]);
+  const fixer = patch => { const n = { ...c, ...patch }; setC(n); onSave(patch); };
+  const ecoule = c.chronoDebut ? Math.max(0, Math.round((Date.now() - c.chronoDebut) / 1000)) : 0;
+  const minutes = c.chronoDebut ? Math.max(1, Math.round(ecoule / 60)) : Math.round((c.duree_s || 0) / 60);
+  const lancer = () => fixer({ chronoDebut: Date.now() });
+  const stopper = () => fixer({ chronoDebut: null, duree_s: Math.max(60, Math.round(ecoule / 60) * 60) });
+  return h("div", { className: "cardio-inputs", style: { marginBottom: 14 } },
+    h("div", { style: { fontSize: 10.5, color: SUB, fontWeight: 600, marginBottom: 6 } }, "DURÉE · chrono ou saisie", dernier ? ` · dernier : ${fmtCardio(dernier)}` : ""),
+    h("div", { style: { display: "flex", gap: 8, alignItems: "stretch" } },
+      h("button", { className: "chrono-cardio", onClick: c.chronoDebut ? stopper : lancer, style: { flex: "0 0 auto", minWidth: 118, borderRadius: 12, border: `1.5px solid ${c.chronoDebut ? COL.B : couleur}`, background: c.chronoDebut ? COL.B : tintCss(couleur), color: c.chronoDebut ? "#fff" : couleur, fontWeight: 800, fontSize: 13, padding: "8px 12px", fontVariantNumeric: "tabular-nums", touchAction: "manipulation" } },
+        c.chronoDebut ? "■ " + fmtSec(ecoule) : "▶ Chrono"),
+      h("div", { className: "duree-cardio", style: { flex: 1, minWidth: 0, opacity: c.chronoDebut ? .5 : 1, pointerEvents: c.chronoDebut ? "none" : "auto" } },
+        h(Stepper, { compact: true, unite: "min", pas: 1, min: 1, max: 180, accent: couleur, valeur: minutes, onChange: v => fixer({ duree_s: Math.round(v) * 60 }) }))),
+    champs.length > 0 && h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 } },
+      champs.map(k => { const d = CHAMP_CARDIO[k]; return h("div", { key: k, className: "champ-cardio", "data-champ": k },
+        h("div", { style: { fontSize: 9.5, color: SUB, fontWeight: 700, letterSpacing: .4, marginBottom: 3 } }, d.lib.toUpperCase()),
+        h(Stepper, { compact: true, unite: d.unite, pas: d.pas, min: 0, max: d.max, accent: couleur, valeur: c[k] != null ? c[k] : "", onChange: v => fixer({ [k]: v > 0 ? v : null }) })); })),
+    h("div", { className: "xp-cardio", style: { fontSize: 11, color: SUB, marginTop: 8, lineHeight: 1.45 } },
+      c.chronoDebut ? "Chrono en cours — arrête-le à la fin, la durée se remplit toute seule. " : "",
+      h("b", { style: { color: INK } }, "+", xpCardioMin(minutes), " XP"), ` pour ${minutes} min`, " · 10 / 20 / 30 min font 10 / 15 / 20 XP. Photo facultative."));
+}
 /* Type de charge d'un exercice faisable au poids du corps (v20.6) : poids du corps, lesté, assisté */
 function TypeCharge({ valeur, couleur, onChoisir }) {
   return h("div", { className: "type-charge", style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 10 } },
@@ -10604,8 +10825,38 @@ function GrapheCharge({ id, nom, l, estDur }) {
     durs.length > 0 && h("div", { style: { fontSize: 10, color: SUB, marginTop: 2, display: "flex", alignItems: "center", gap: 5 } },
       h("span", { style: { width: 10, height: 10, borderRadius: "50%", border: `1.5px dashed ${COL.A}`, display: "inline-block" } }), "séance ressentie « trop dur »"));
 }
+/* v20.11 : la courbe d'un cardio — la durée (minutes) en ligne pleine, la distance (km) en pointillé si elle est notée */
+function GrapheCardio({ id, nom, l }) {
+  const mins = l.map(e => Math.round(e.cardio.duree_s / 60));
+  const kms = l.map(e => e.cardio.distance || null), aDist = kms.filter(v => v != null).length >= 1;
+  const W = 320, H = 100, pL = 36, pR = 36, pT = 14, pB = 22;
+  const seul = l.length === 1;
+  const x = i => pL + (seul ? (W - pL - pR) / 2 : i / (l.length - 1) * (W - pL - pR));
+  const yDe = (vals, v) => { const mx = Math.max(...vals.filter(u => u != null)), mn = Math.min(...vals.filter(u => u != null)); return seul || mx === mn ? pT + (H - pT - pB) / 2 : pT + (H - pT - pB) - (v - mn) / (mx - mn) * (H - pT - pB); };
+  const der = l[l.length - 1];
+  const up = mins[mins.length - 1] > mins[0], down = mins[mins.length - 1] < mins[0];
+  const couleur = up ? COL.C : down ? COL.D : "#8A93A6";
+  const pts = mins.map((v, i) => `${x(i).toFixed(1)},${yDe(mins, v).toFixed(1)}`).join(" ");
+  const ptsKm = aDist ? kms.map((v, i) => v == null ? null : `${x(i).toFixed(1)},${yDe(kms, v).toFixed(1)}`).filter(Boolean).join(" ") : "";
+  return h("div", { className: "graphe-charge graphe-cardio", style: { ...GLASS, borderRadius: 16, padding: "12px 14px 10px", marginBottom: 8 } },
+    h("div", { style: { display: "flex", alignItems: "baseline", gap: 8 } },
+      h("div", { style: { flex: 1, fontWeight: 700, fontSize: 13.5, minWidth: 0 } }, nom),
+      h("div", { style: { fontSize: 11, color: SUB } }, l.length, " fois")),
+    h("div", { style: { fontSize: 12, color: SUB, margin: "2px 0 4px" } }, "dernier : ", h("b", { style: { color: INK } }, fmtCardio(der.cardio)), l.length > 1 && Math.max(...mins) === mins[mins.length - 1] && mins[mins.length - 1] > Math.max(...mins.slice(0, -1)) ? h("span", { style: { color: COL.C, fontWeight: 700 } }, " · plus longue sortie") : null),
+    h("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, style: { display: "block" } },
+      h("line", { x1: pL, y1: H - pB, x2: W - pR, y2: H - pB, stroke: "rgba(255,255,255,.10)", strokeWidth: 1 }),
+      h("polyline", { points: pts, fill: "none", stroke: couleur, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" }),
+      mins.map((v, i) => h("circle", { key: i, cx: x(i), cy: yDe(mins, v), r: 3, fill: PAPER, stroke: couleur, strokeWidth: 2 })),
+      aDist && ptsKm && h("polyline", { points: ptsKm, fill: "none", stroke: COL.K, strokeWidth: 1.5, strokeDasharray: "3 3" }),
+      h("text", { x: pL - 6, y: pT + 4, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, Math.max(...mins), " min"),
+      h("text", { x: pL - 6, y: H - pB + 3, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, Math.min(...mins), " min"),
+      aDist && h("text", { x: W - pR + 6, y: pT + 4, fontSize: 9, fill: COL.K, fontFamily: FONT }, fmtNb(Math.max(...kms.filter(v => v != null))), " km"),
+      !seul && h("text", { x: pL, y: H - 6, fontSize: 9, fill: SUB, fontFamily: FONT }, fmtDateCourte(l[0].date)),
+      h("text", { x: W - pR, y: H - 6, fontSize: 9, fill: SUB, textAnchor: "end", fontFamily: FONT }, fmtDateCourte(der.date))),
+    aDist && h("div", { style: { fontSize: 10, color: SUB, marginTop: 2 } }, "ligne pleine : durée · pointillé : distance"));
+}
 function CarnetCharges({ st }) {
-  const entrees = Object.entries(st.charges || {}).map(([id, l]) => ({ id, l: (l || []).filter(e => maxCharge(e) !== 0) })).filter(x => x.l.length);
+  const entrees = Object.entries(st.charges || {}).map(([id, l]) => ({ id, l: (l || []).filter(e => maxCharge(e) !== 0), c: (l || []).filter(e => e.cardio && e.cardio.duree_s) })).filter(x => x.l.length || x.c.length);
   if (!entrees.length) {
     // v20.6 : un exemple grisé, pour voir ce qui attend
     const ilya = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
@@ -10615,10 +10866,11 @@ function CarnetCharges({ st }) {
       h("div", { style: { fontSize: 12.5, color: SUB, lineHeight: 1.5, margin: "-2px 2px 10px" } }, "Ta courbe apparaîtra ici dès ta première charge notée. Pendant une séance, note ta charge dans le champ « kg » de chaque exercice : la prochaine fois, l'app te rappellera où tu en étais."));
   }
   // triés par récence : le dernier exercice pratiqué en premier
-  entrees.sort((a, b) => b.l[b.l.length - 1].date.localeCompare(a.l[a.l.length - 1].date));
+  const derniere = x => (x.l.length ? x.l[x.l.length - 1].date : "") > (x.c.length ? x.c[x.c.length - 1].date : "") ? x.l[x.l.length - 1].date : x.c[x.c.length - 1].date;
+  entrees.sort((a, b) => derniere(b).localeCompare(derniere(a)));
   const estDur = id => e => e.ressenti === "dur" || ((st.ressentis || {})[id] || []).some(r => r.date === e.date && r.r === "dur");
-  // v20.7 : un graphique par exercice dès la première charge notée (un point), plus de liste à part
-  return h("div", null, entrees.map(x => h(GrapheCharge, { key: x.id, id: x.id, nom: nomDe(x.id), l: x.l, estDur: estDur(x.id) })));
+  // v20.7 : un graphique par exercice dès la première charge notée (un point), plus de liste à part ; v20.11 : le cardio aussi
+  return h("div", null, entrees.map(x => x.c.length && !x.l.length ? h(GrapheCardio, { key: x.id, id: x.id, nom: nomDe(x.id), l: x.c }) : h(GrapheCharge, { key: x.id, id: x.id, nom: nomDe(x.id), l: x.l, estDur: estDur(x.id) })));
 }
 
 function Onboarding({
@@ -10863,7 +11115,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.9"));
+  }, "v20.11"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -11004,7 +11256,7 @@ function Onboarding({
         border: `1.5px solid ${LINE}`,
         borderRadius: 10,
         padding: "11px 12px",
-        fontSize: 14,
+        fontSize: 16,
         background: FIELD,
         outline: "none",
         marginBottom: 10
@@ -11024,7 +11276,7 @@ function Onboarding({
         border: `1.5px solid ${LINE}`,
         borderRadius: 10,
         padding: "11px 12px",
-        fontSize: 14,
+        fontSize: 16,
         background: FIELD,
         outline: "none",
         fontFamily: "monospace",
@@ -11245,7 +11497,7 @@ function Onboarding({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "12px 12px",
-      fontSize: 15,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 10
@@ -11269,7 +11521,7 @@ function Onboarding({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "11px 12px",
-      fontSize: 14,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       fontFamily: "monospace"
@@ -11979,7 +12231,7 @@ function Reglages({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -11993,7 +12245,7 @@ function Reglages({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12456,7 +12708,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12475,7 +12727,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13.5,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12488,7 +12740,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       marginBottom: 8
@@ -12503,7 +12755,7 @@ function Paris({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px 12px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       resize: "none",
@@ -12891,7 +13143,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 10px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12904,7 +13156,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 10px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none"
     }
@@ -12953,7 +13205,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "9px 10px",
-      fontSize: 13,
+      fontSize: 16,
       background: FIELD,
       outline: "none",
       textAlign: "center"
@@ -13002,7 +13254,7 @@ function Pot({
       border: `1.5px solid ${LINE}`,
       borderRadius: 10,
       padding: "10px",
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: 700,
       background: FIELD,
       outline: "none",
@@ -13202,11 +13454,16 @@ function Idees({
   code,
   style,
   contexte,
+  solo,
   onAjout,
   toast
 }) {
   const [liste, setListe] = useState(null);
   const [busy, setBusy] = useState(false);
+  // v20.10 : la génération prend plusieurs secondes — on montre le temps qui passe et une barre
+  // (attendu ≈ 20 s, un second appel de relecture peut doubler), et on mesure la durée réelle du serveur
+  const [attente, setAttente] = useState(0);
+  useEffect(() => { if (!busy) return; const t0 = Date.now(); const it = setInterval(() => setAttente(Math.round((Date.now() - t0) / 1000)), 500); return () => { clearInterval(it); setAttente(0); }; }, [busy]);
   const generer = async () => {
     setBusy(true);
     try {
@@ -13218,12 +13475,18 @@ function Idees({
         body: JSON.stringify({
           style: Array.isArray(style) ? style[0] : style,
           styles: Array.isArray(style) ? style : [style],
-          contexte
+          contexte,
+          solo: !!solo
         })
       });
       let r = await appel();
       if (r.status === 403) { await enregistrerCode(code); r = await appel(); }
-      if (r.status === 503) toast("Génération non configurée (clé API manquante)", { erreur: true });else if (r.status === 502) { let d = null; try { d = await r.json(); } catch {} toast(d && d.statut ? `L'IA n'a pas répondu (erreur ${d.statut}) — réessaie plus tard` : "L'IA a répondu dans un format inattendu — réessaie", { erreur: true }); }else if (r.status === 403) toast("Code duo inconnu du serveur — réessaie dans un instant", { erreur: true });else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain", { erreur: true }); }else if (!r.ok) toast("Oups, réessaie", { erreur: true });else setListe(await r.json());
+      if (r.status === 503) toast("Génération non configurée (clé API manquante)", { erreur: true });else if (r.status === 502) { let d = null; try { d = await r.json(); } catch {} toast(d && d.statut ? `L'IA n'a pas répondu (erreur ${d.statut}) — réessaie plus tard` : "L'IA a répondu dans un format inattendu — réessaie", { erreur: true }); }else if (r.status === 403) toast("Code duo inconnu du serveur — réessaie dans un instant", { erreur: true });else if (r.status === 429) { const why = await raisonRefus(r); toast(why === "budget" ? "Le quota d'idées du jour est atteint pour toute l'app — réessaie demain" : why === "trop_vite" ? "Doucement — réessaie dans une minute" : "Tu as utilisé tes 10 idées du jour — réessaie demain", { erreur: true }); }else if (!r.ok) toast("Oups, réessaie", { erreur: true });else {
+        const l = await r.json(); setListe(l);
+        // mesure côté serveur (v20.10) : durée et nombre d'appels à l'IA, pour savoir où part le temps
+        const ms = parseInt(r.headers.get("x-duree-ms")), appels = parseInt(r.headers.get("x-appels"));
+        if (ms > 0) toast(`${l.length} idées en ${Math.round(ms / 1000)} s${appels > 1 ? " (relecture comprise)" : ""}`);
+      }
     } catch {
       toast("Serveur injoignable", { erreur: true });
     }
@@ -13255,7 +13518,10 @@ function Idees({
   }, /*#__PURE__*/React.createElement(Orbe, {
     s: 18,
     c: COL.G
-  }), "Je réfléchis…") : liste ? "D'autres idées" : "Générer des idées de récompenses"), liste && /*#__PURE__*/React.createElement("div", {
+  }), "Je réfléchis…", attente > 0 && /*#__PURE__*/React.createElement("span", { className: "attente-idees", style: { fontWeight: 600, color: SUB } }, attente, " s")) : liste ? "D'autres idées" : "Générer des idées de récompenses"), busy && /*#__PURE__*/React.createElement("div", {
+    className: "progression-idees",
+    style: { height: 4, borderRadius: 999, background: "rgba(255,255,255,.08)", marginTop: 6, overflow: "hidden" }
+  }, /*#__PURE__*/React.createElement("div", { style: { height: "100%", borderRadius: 999, background: COL.G, width: `${Math.min(96, 100 * (1 - Math.exp(-attente / 12)))}%`, transition: "width .5s linear" } })), busy && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, color: SUB, marginTop: 4 } }, attente < 15 ? "Une vingtaine de secondes en général." : attente < 35 ? "Encore un instant — l'IA relit ses idées." : "C'est long… le serveur répond parfois lentement, tu peux attendre ou réessayer."), liste && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -13283,7 +13549,7 @@ function Idees({
     style: {
       color: SUB
     }
-  }, "· N", it.niveau)), it.concret && /*#__PURE__*/React.createElement("div", {
+  }, "· Niveau ", it.niveau)), it.concret && /*#__PURE__*/React.createElement("div", {
     className: "idee-concret",
     style: { fontSize: 10.5, color: SUB, fontWeight: 500, marginTop: 3, lineHeight: 1.4 }
   }, "Concrètement : ", it.concret)))));
@@ -13540,7 +13806,7 @@ function ReglesJeu({
     }
   }, "Les règles du jeu"), /*#__PURE__*/React.createElement(B, {
     t: "Gagner des XP",
-    x: `Exercice validé photo : 10, 15 ou 20 XP selon sa difficulté (✓ sans photo : 5 de moins) · bonus séance complète : +${XP.bonusSeance} · gainage bouclé : ${XP.gainageItem}/exo +${XP.bonusGainage} · cardio : ${XP.cardio} · habitude : ${XP.habitude} · défi hebdo : ${XP.defi} · pari gagné : ${XP.pari}.`
+    x: `Exercice validé photo : 10, 15 ou 20 XP selon sa difficulté (✓ sans photo : 5 de moins) · cardio : 5 à 20 XP selon la durée · bonus séance complète : +${XP.bonusSeance} · gainage bouclé : ${XP.gainageItem}/exo +${XP.bonusGainage} · cardio : ${XP.cardio} · habitude : ${XP.habitude} · défi hebdo : ${XP.defi} · pari gagné : ${XP.pari}.`
   }), /*#__PURE__*/React.createElement(B, {
     t: "Perdre des XP",
     x: `Jour sans aucun passage : −${DECAY} XP. Cocher Repos ou une seule habitude suffit à couvrir la journée.`
@@ -13859,7 +14125,7 @@ function Stepper({
       textAlign: "center",
       fontFamily: DISPLAY,
       fontWeight: 700,
-      fontSize: compact ? 13.5 : 16,
+      fontSize: 16,
       background: "none",
       border: "none",
       outline: "none",

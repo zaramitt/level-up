@@ -94,10 +94,12 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     check('retiré pour aujourd\'hui : disparu de la liste, mémorisé dans le jour, le programme intact, toast « Retiré. Ça ne change rien à tes XP. »', !l.includes(A.exos[1].nom) && st.jour[jour].retires[0] === A.exos[1].id && st.programmePerso.seances.A.exos.some(e => e.id === A.exos[1].id) && /Retiré\. Ça ne change rien à tes XP\./.test(await texte(p)), l.join(' | '));
     check('ni en positif ni en négatif : XP inchangés, compte « 0/5 »', st.xp === 300 && /0\/5/.test(await texte(p)));
     await ouvrirFocus(p, A.exos[0].nom);
+    await p.locator('.focus-exercice .deplacer-exercice').tap(); await p.waitForTimeout(300); // v20.10 : « Déplacer » ouvre le menu Monter / Descendre
     check('premier exercice : « ▲ » désactivé, « ▼ » actif', await p.locator('.focus-exercice .monter').isDisabled() && !(await p.locator('.focus-exercice .descendre').isDisabled()));
     await p.locator('.focus-exercice .descendre').tap(); await p.waitForTimeout(400);
     l = await lignes(p);
     check('« Descendre » : il passe en deuxième position, l\'ordre du jour est mémorisé', l[1] === A.exos[0].nom && l[0] === A.exos[2].nom && JSON.stringify((await etat(p)).jour[jour].ordre) === JSON.stringify(l.map(n => A.exos.find(e => e.nom === n).id)), l.join(' | '));
+    if (!(await p.locator('.focus-exercice .menu-deplacer').count())) { await p.locator('.focus-exercice .deplacer-exercice').tap(); await p.waitForTimeout(300); }
     await p.locator('.focus-exercice .monter').tap(); await p.waitForTimeout(400);
     check('« Monter » : retour en tête', (await lignes(p))[0] === A.exos[0].nom);
     await fermerFocus(p);
@@ -149,9 +151,10 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     await ouvrirFocus(p, 'Squat barre');
     await p.locator('.focus-exercice button', { hasText: /^✓$/ }).tap(); await p.waitForTimeout(700);
     await ouvrirFocus(p, 'Rameur');
-    await p.locator('.focus-exercice button', { hasText: /^✓$/ }).tap(); await p.waitForTimeout(700);
+    // v20.11 : un cardio se termine par « Terminer le cardio » (XP selon la durée : 15 min → 10)
+    await p.locator('.focus-exercice .terminer-cardio').tap(); await p.waitForTimeout(700);
     let st = await etat(p);
-    check('XP : ceux des exercices faits (squat barre difficulté 2 sans photo : 10 ; rameur : 10), pas de bonus', st.xp === 320, st.xp);
+    check('XP : ceux des exercices faits (squat barre difficulté 2 sans photo : 10 ; rameur 15 min : 10), pas de bonus', st.xp === 320, st.xp);
     const barre = p.locator('button', { hasText: 'Terminer la séance' });
     check('la barre dit « Terminer la séance · 2/2 » (jamais « Valider +40 »)', (await barre.count()) === 1 && /2\/2 exercices faits/.test(await barre.innerText()));
     await barre.tap(); await p.waitForTimeout(900);
