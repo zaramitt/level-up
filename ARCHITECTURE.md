@@ -110,7 +110,7 @@ par le code duo (`<code>:etat`, `<code>:negos`…).
 | `/paris` | GET, POST | paris coach / coaché |
 | `/pot` | GET, POST | pot commun (cumul du mois en euros + historique), alimenté par les pertes d'XP |
 | `/pause` | GET, POST | demande de pause et pause active |
-| `/photo` | POST | dépôt d'une preuve photo : data URL **JPEG base64 seulement**, 300 000 caractères max, TTL 90 jours |
+| `/photo` | POST | dépôt d'une preuve photo : data URL **JPEG base64 seulement**, 300 000 caractères max, TTL 90 jours, 400 photos vivantes par code au plus (`429 {"erreur":"photos_max"}`) |
 | `/photo/<id>` | GET | lecture d'une preuve photo (texte, `nosniff`, cache privé 1 h) |
 | `/rappels` | GET, POST | préférences de rappels (drapeau `matin`) |
 | `/abonner` | POST | enregistrement d'un abonnement push (4 derniers conservés) — **services acceptés : Apple, Google/FCM, Mozilla** ; `503` sans clé VAPID |
@@ -135,9 +135,12 @@ Hors préfixe duo (v20.12) : **`GET /admin/journal?mois=AAAA-MM`** renvoie le jo
 Garde-fous communs (v20.4, voir `SECURITE.md`) : corps des requêtes plafonné
 par route (`lireJson` : 64 Ko pour `/etat`, 400 Ko pour `/photo`, 2 Ko
 ailleurs, `413` au-delà), liste blanche des champs de `/etat`, identifiants
-`[\w-]{1,40}`, limitation de débit par IP en mémoire (120 écritures/min, 6/min
-sur l'IA et `/profil`, `429 {"erreur":"trop_vite"}`), `cache-control:
-no-store` et `nosniff` sur le JSON. La page est servie avec une CSP à nonce et
+`[\w-]{1,40}`, corps JSON obligatoirement un objet (`400` sinon), limitation
+de débit par IP en mémoire (120 écritures/min, 600 lectures/min, 6/min sur
+l'IA et `/profil`, 3/min sur `/testpush`, `429 {"erreur":"trop_vite"}`), quota
+IA par adresse dans le KV (25/jour tous codes confondus, clé
+`quota:ip:<empreinte SHA-256 salée par la date>`, TTL un jour, l'adresse
+n'est jamais stockée), `cache-control: no-store` et `nosniff` sur le JSON. La page est servie avec une CSP à nonce et
 le jeu d'en-têtes de sécurité (`preparerPage`, exportée par `worker.js` et
 réutilisée par le mock du harnais). Le worker sert aussi
 `/polices/space-grotesk.woff2` (plus de Google Fonts).

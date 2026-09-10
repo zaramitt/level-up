@@ -76,6 +76,7 @@ const propre = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !
 // tailles maximales du corps des requêtes, par route (caractères)
 const TAILLES = { etat: 65536, photo: 409600, defaut: 2048 };
 const PHOTO_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/;
+const PHOTOS_MAX = 400;
 // services push acceptés pour /abonner : le worker n'appelle jamais une URL arbitraire
 const HOTES_PUSH = ["web.push.apple.com", "fcm.googleapis.com", "updates.push.services.mozilla.com"];
 const abonnementOk = (s) => {
@@ -96,7 +97,10 @@ const lireJson = async (req, max) => {
   if (annonce > max) return { erreur: new Response("trop gros", { status: 413 }) };
   const texte = await req.text();
   if (texte.length > max) return { erreur: new Response("trop gros", { status: 413 }) };
-  try { return { b: JSON.parse(texte) }; } catch { return { erreur: new Response("bad json", { status: 400 }) }; }
+  let b; try { b = JSON.parse(texte); } catch { return { erreur: new Response("bad json", { status: 400 }) }; }
+  // v20.12 : un corps qui n'est pas un objet (null, nombre, tableau…) ferait planter la route ; 400 ici
+  if (!b || typeof b !== "object" || Array.isArray(b)) return { erreur: new Response("bad json", { status: 400 }) };
+  return { b };
 };
 const refus = (statut, erreur, extra) => new Response(JSON.stringify({ erreur, ...(extra || {}) }), { status: statut, headers: JSON_ENTETES });
 // Appel à l'API Anthropic (v20.5). Le schéma de sortie structurée doit rester dans le sous-ensemble
@@ -127,6 +131,13 @@ const appelIA = async (env, corps) => {
 // /profil, jamais d'état publié) n'a droit à aucun appel ; 10 appels par code et par jour ; et un
 // budget pour toute l'app, par jour — c'est lui qui borne la facture, quoi qu'il arrive.
 const BUDGET_JOUR = { idees: 150, interp: 100 };
+// v20.12 : et par adresse, tous appels IA confondus — un attaquant qui enchaîne les codes neufs ne vide plus le
+// budget du jour depuis une seule adresse. L'adresse n'est pas stockée : empreinte SHA-256 salée par la date, TTL un jour.
+const QUOTA_IP_JOUR = 25;
+const empreinteIP = async (req) => {
+  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode((req.headers.get("cf-connecting-ip") || "inconnue") + "|" + today()));
+  return [...new Uint8Array(h).slice(0, 12)].map(x => x.toString(16).padStart(2, "0")).join("");
+};
 // ---------- idées de récompenses (v20.8) : modèle, prompt, vérification minimale ----------
 const MODELE_IDEES = "claude-sonnet-5";
 // v20.10 : formulations NOMINALES, sans pronom de locuteur — « Un café dans ton endroit préféré, offert par
@@ -203,7 +214,7 @@ const TAILLE_IA = 2048;
 // mémoire, par isolat, est le filet disponible partout. Il n'écrit rien en KV. Un isolat peut
 // être recyclé et un réseau anycast en avoir plusieurs : c'est un frein, pas un mur — le budget
 // journalier reste le vrai plafond. Fenêtre glissante d'une minute.
-const DEBIT = { api: 120, ia: 6 };
+const DEBIT = { api: 120, ia: 6, lecture: 600, push: 3 };
 const compteursIP = new Map();
 const tropVite = (req, cle, max) => {
   const ip = req.headers.get("cf-connecting-ip") || "inconnue";
@@ -453,11 +464,13 @@ export default {
 async function traiterApi(req, env, url, m) {
     {
       if (!env.NEGOS) return new Response("KV manquant : lier un namespace sous le nom NEGOS", { status: 500 });
-      const code = decodeURIComponent(m[1]).toLowerCase();
+      let code; try { code = decodeURIComponent(m[1]).toLowerCase(); } catch { return new Response("code duo invalide", { status: 400 }); }
       if (!CODE_RE.test(code)) return new Response("code duo invalide", { status: 400 });
       const route = m[2];
       const K = (k) => code + ":" + k;
       if (req.method !== "GET" && tropVite(req, "api", DEBIT.api)) return refus(429, "trop_vite");
+      // v20.12 : les lectures aussi (balayage de codes, aspiration de photos) — large, l'app en fait quelques dizaines par écran
+      if (req.method === "GET" && tropVite(req, "lecture", DEBIT.lecture)) return refus(429, "trop_vite");
       if ((route === "/idees" || route === "/interpreter" || route === "/profil") && req.method === "POST" && tropVite(req, "ia", DEBIT.ia)) return refus(429, "trop_vite");
 
       // ---------- négociations ----------
@@ -476,7 +489,7 @@ async function traiterApi(req, env, url, m) {
             list.unshift({
               id: idOk(b.id) || crypto.randomUUID(),
               label: String(b.label).slice(0, 140),
-              ...(kif ? { type: "kiff" } : { niveau: Math.max(1, Math.min(40, parseInt(b.niveau))) }),
+              ...(kif ? { type: "kiff" } : { niveau: Math.max(1, Math.min(40, parseInt(b.niveau) || 1)) }),
               mot: String(b.mot || "").slice(0, 200),
               date: today(), statut: "proposee"
             });
@@ -492,7 +505,7 @@ async function traiterApi(req, env, url, m) {
               if (b.action === "contrer" && g.statut === "proposee" && (g.type !== "kiff" || b.label)) {
                 g.statut = "contre";
                 if (g.type === "kiff") g.contreLabel = String(b.label).slice(0, 140);
-                else g.contreNiveau = Math.max(1, Math.min(40, parseInt(b.niveau)));
+                else g.contreNiveau = Math.max(1, Math.min(40, parseInt(b.niveau) || 1));
                 g.contreMot = String(b.mot || "").slice(0, 200);
                 g.dateContre = today();
               }
@@ -550,6 +563,11 @@ async function traiterApi(req, env, url, m) {
         // que cette forme — data URL JPEG en base64 — et rien d'autre
         const data = String(b.data || "");
         if (!idOk(b.id) || data.length > 300000 || !PHOTO_RE.test(data)) return new Response("photo invalide", { status: 400 });
+        // v20.12 : au plus PHOTOS_MAX photos vivantes par code (l'app en garde 30 séances × quelques-unes) — pas de remplissage du KV
+        if (!(await env.NEGOS.get(K("photo:" + idOk(b.id))))) {
+          const l = await env.NEGOS.list({ prefix: K("photo:"), limit: PHOTOS_MAX });
+          if (l.keys.length >= PHOTOS_MAX) return refus(429, "photos_max");
+        }
         await env.NEGOS.put(K("photo:" + idOk(b.id)), data, { expirationTtl: 60 * 60 * 24 * 90 });
         return json_({ ok: true });
       }
@@ -577,14 +595,17 @@ async function traiterApi(req, env, url, m) {
       const quotaIA = async (nom) => {
         const q = parseInt((await env.NEGOS.get(K(nom + ":" + today()))) || "0");
         if (q >= 10) return refus(429, "quota");
+        const a = parseInt((await env.NEGOS.get("quota:ip:" + (await empreinteIP(req)))) || "0");
+        if (a >= QUOTA_IP_JOUR) return refus(429, "quota");
         const g = parseInt((await env.NEGOS.get("quota:" + nom + ":" + today())) || "0");
         if (g >= BUDGET_JOUR[nom]) return refus(429, "budget");
         return null;
       };
       const compterIA = async (nom) => {
-        const qk = K(nom + ":" + today()), gk = "quota:" + nom + ":" + today();
+        const qk = K(nom + ":" + today()), gk = "quota:" + nom + ":" + today(), ak = "quota:ip:" + (await empreinteIP(req));
         await env.NEGOS.put(qk, String(parseInt((await env.NEGOS.get(qk)) || "0") + 1), { expirationTtl: 86400 });
         await env.NEGOS.put(gk, String(parseInt((await env.NEGOS.get(gk)) || "0") + 1), { expirationTtl: 86400 });
+        await env.NEGOS.put(ak, String(parseInt((await env.NEGOS.get(ak)) || "0") + 1), { expirationTtl: 86400 });
       };
 
       // ---------- idées de récompenses par style (nécessite ANTHROPIC_API_KEY) ----------
@@ -892,6 +913,7 @@ async function traiterApi(req, env, url, m) {
       }
       if (route === "/testpush" && req.method === "POST") {
         if (!pushConfigure(env)) return nonConfigure();
+        if (tropVite(req, "push", DEBIT.push)) return refus(429, "trop_vite");   // v20.12 : pas de spam de notifications
         const n = await pousserPourCode(env, code);
         return json_({ envoyes: n });
       }
