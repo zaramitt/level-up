@@ -59,8 +59,10 @@ traités. Ce qui reste :
 - Vérifier en salle réelle le mode focus, le ressenti et « Remplacer » sur
   iOS Safari (tap franc) — le harnais le vérifie en Chromium seulement.
 - Supersets, dernier cran de la compression : non fait.
-- Ajustement : les compléments sont choisis par le moteur ; laisser choisir
-  parmi plusieurs candidats (« plutôt du cardio ») reste à faire.
+- Ajustement : les compléments sont choisis par le moteur. Le cardio se
+  choisit depuis la v20.11 (option « ajouter 15 min de cardio ? » avec
+  l'appareil) ; laisser choisir les autres compléments (« plutôt une
+  isolation ») reste à faire.
 - **PRIORITÉ BASSE — En-tête global trop serré à 390 px** : sur l'écran
   coachée, « LEVEL UP ! » et la ligne d'XP passent sur plusieurs lignes, coincés
   entre l'orbe de niveau et le bloc « 7 DERNIERS JOURS ». Antérieur à la v19.16
@@ -105,6 +107,9 @@ est branché en v20.0, étape 3 passe 1. Ce qui reste :
   ensemble avec Léo avant toute implémentation.
 
 ## Onglet Progrès
+
+- Cardio (v20.11) : la courbe montre durée et distance. Reste : vitesse et
+  inclinaison, et un total hebdomadaire de minutes de cardio.
 
 - Graphique de charge par exercice : fait en v20.2 (remplace le carnet).
   Reste : afficher aussi les reps sur le graphique — elles sont notées par

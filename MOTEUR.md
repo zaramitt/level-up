@@ -251,6 +251,13 @@ Vérification des règles : aucune violation.
 
 **Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 15 / 16.5 · fessiers 6 / 16.5 · ischio-jambiers 12 / 12 · pectoraux 6 / 9 · dos 12 / 19.5 · épaules 12 / 15 — bornes du niveau 2 : 8-16.
 
+**Avertissements du moteur** :
+- Séance A : le cardio de fin de séance ne tenait pas dans 60 min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.
+- Séance B : le cardio de fin de séance ne tenait pas dans 60 min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.
+- Séance C : le cardio de fin de séance ne tenait pas dans 60 min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.
+- Séance D : le cardio de fin de séance ne tenait pas dans 60 min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.
+- Cardio intégré (objectif « Me sentir mieux ») : pas de finisher, faute de temps — tes sorties font le reste. Les XP du cardio dépendent de la durée.
+
 Vérification des règles : aucune violation.
 
 ## À la maison sans rien, 3 séances de 47 minutes (« me sentir mieux »)
@@ -295,10 +302,14 @@ Vérification des règles : aucune violation.
 **Volume par semaine** (séries directes / total avec secondaires ½) : quadriceps 12 / 12 · fessiers 9 / 18 · ischio-jambiers 6 / 9 · pectoraux 6 / 6 · dos 6 / 6 · épaules 3 / 6 — bornes du niveau 2 : 8-16.
 
 **Avertissements du moteur** :
+- Séance A : le cardio de fin de séance ne tenait pas dans 47 min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.
 - Sans barre de traction ni élastique, pas de tirage vertical : le dos reste sous-travaillé.
+- Séance B : le cardio de fin de séance ne tenait pas dans 47 min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.
+- Séance C : le cardio de fin de séance ne tenait pas dans 47 min — ajoute-le avec « Ajuster ma séance » quand tu as le temps.
 - Volume pectoraux : 6 séries/semaine (secondaires comptés ½), sous le minimum 8 du niveau 2 (règle 3).
 - Volume dos : 6 séries/semaine (secondaires comptés ½), sous le minimum 8 du niveau 2 (règle 3).
 - Volume épaules : 6 séries/semaine (secondaires comptés ½), sous le minimum 8 du niveau 2 (règle 3).
+- Cardio intégré (objectif « Me sentir mieux ») : pas de finisher, faute de temps — une séance cardio dédiée viendrait à partir de 4 séances par semaine. Les XP du cardio dépendent de la durée.
 
 Vérification des règles : aucune violation.
 

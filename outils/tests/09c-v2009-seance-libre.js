@@ -151,9 +151,10 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     await ouvrirFocus(p, 'Squat barre');
     await p.locator('.focus-exercice button', { hasText: /^✓$/ }).tap(); await p.waitForTimeout(700);
     await ouvrirFocus(p, 'Rameur');
-    await p.locator('.focus-exercice button', { hasText: /^✓$/ }).tap(); await p.waitForTimeout(700);
+    // v20.11 : un cardio se termine par « Terminer le cardio » (XP selon la durée : 15 min → 10)
+    await p.locator('.focus-exercice .terminer-cardio').tap(); await p.waitForTimeout(700);
     let st = await etat(p);
-    check('XP : ceux des exercices faits (squat barre difficulté 2 sans photo : 10 ; rameur : 10), pas de bonus', st.xp === 320, st.xp);
+    check('XP : ceux des exercices faits (squat barre difficulté 2 sans photo : 10 ; rameur 15 min : 10), pas de bonus', st.xp === 320, st.xp);
     const barre = p.locator('button', { hasText: 'Terminer la séance' });
     check('la barre dit « Terminer la séance · 2/2 » (jamais « Valider +40 »)', (await barre.count()) === 1 && /2\/2 exercices faits/.test(await barre.innerText()));
     await barre.tap(); await p.waitForTimeout(900);

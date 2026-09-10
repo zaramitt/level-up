@@ -45,7 +45,7 @@ test("1× = 1 full body ; 2× = A-B ; 3× = A-B-C, toutes full body", () => {
   }
 });
 test("4× = haut / bas × 2 ; 5× = haut / bas × 2 + focus", () => {
-  const p4 = genererProgramme({ frequence: 4, objectif: "mieux", materiel: "salle", niveau: 2 }, banque);
+  const p4 = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "salle", niveau: 2 }, banque);
   assert.deepStrictEqual(seances(p4).map(s => s.focus), ["haut", "bas", "haut", "bas"]);
   const p5 = genererProgramme({ frequence: 5, objectif: "tonifier", materiel: "salle", niveau: 2 }, banque);
   const f5 = seances(p5).map(s => s.focus);
@@ -154,8 +154,8 @@ test("règle 9 — débutant : versions simples ; avancé : versions avancées q
   assert.ok(nAv >= 3, `avancé : seulement ${nAv} versions avancées`);
 });
 test("règles 10-11 — sport et objectif colorent les cases, pas la structure", () => {
-  const a = genererProgramme({ frequence: 4, objectif: "mieux", materiel: "salle", niveau: 2 }, banque);
-  const b = genererProgramme({ frequence: 4, objectif: "mieux", sport: "escalade", intention: "sport", materiel: "salle", niveau: 2 }, banque);
+  const a = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "salle", niveau: 2 }, banque);
+  const b = genererProgramme({ frequence: 4, objectif: "muscler", sport: "escalade", intention: "sport", materiel: "salle", niveau: 2 }, banque);
   assert.deepStrictEqual(seances(a).map(s => s.focus), seances(b).map(s => s.focus), "même squelette avec ou sans sport");
   assert.notDeepStrictEqual(ids(a), ids(b), "les exercices changent avec le sport");
   assert.ok(seances(b).some(s => s.exercices.some(e => e.compartiment === "tirage_v" || e.compartiment === "tirage_h")), "escalade : du tirage");
@@ -547,7 +547,7 @@ test("v20.6 — noms de séances : les muscles en grand, le geste en petit ; poi
   const S = Object.values(ppl.seances);
   assert.deepStrictEqual(S.map(s => s.nom), ["Pecs · épaules · triceps", "Dos · biceps", "Jambes · fessiers", "Pecs · épaules · triceps", "Dos · biceps", "Jambes · fessiers"]);
   assert.deepStrictEqual(S.map(s => s.geste), ["Push (poussée)", "Pull (tirage)", "Legs (jambes)", "Push (poussée)", "Pull (tirage)", "Legs (jambes)"]);
-  const hb = M.programmePourApp({ frequence: 4, objectif: "mieux", muscu: "mois", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  const hb = M.programmePourApp({ frequence: 4, objectif: "muscler", muscu: "mois", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
   assert.deepStrictEqual(Object.values(hb.seances).map(s => s.nom).slice(0, 2), ["Pecs · dos · épaules · bras", "Jambes · fessiers"]);
   const maison = M.programmePourApp({ frequence: 3, objectif: "mieux", muscu: "mois", technique: "oui", materiel: "pdc", tempsMin: 60 }, banque);
   const exos = Object.values(maison.seances).flatMap(s => s.exos);
@@ -655,6 +655,68 @@ test("v20.9 — catalogue du panneau : similaires du focus (phare en premier par
   assert.ok(c.tous.every(x => typeof x.dose === "string" && x.dose.length && Array.isArray(x.tags)), "chaque entrée porte sa dose et ses tags de matériel");
 });
 
+test("v20.11 — cardio intégré : perdre du poids / se sentir mieux → finisher de 10-15 min dans chaque séance de force, séance cardio dédiée dès 4× ; sport d'endurance → finishers seulement ; sinon rien d'imposé", () => {
+  const poids3 = genererProgramme({ frequence: 3, objectif: "poids", materiel: "salle", niveau: 2, tempsMin: 60 }, banque);
+  assert.strictEqual(poids3.squelette.nom, "fullbody-ABC", "3× : pas de séance dédiée");
+  for (const s of seances(poids3)) { const fin = s.exercices.filter(e => e.role === "cardio"); assert.strictEqual(fin.length, 1, `séance ${s.lettre} : un finisher`); assert.ok(fin[0].duree_s >= 600 && fin[0].duree_s <= 900 && fin[0].type === "cardio", "10 à 15 min de cardio"); assert.strictEqual(s.exercices[s.exercices.length - 1].role, "cardio", "en fin de séance"); }
+  assert.ok(poids3.avertissements.some(a => /^Cardio intégré \(objectif « Perdre du poids »\)/.test(a) && /séance cardio dédiée viendrait à partir de 4/.test(a)), "dit dans « À savoir »");
+  assert.deepStrictEqual(verifierRegles(poids3, banque), []);
+  const mieux4 = genererProgramme({ frequence: 4, objectif: "mieux", materiel: "salle", niveau: 2, tempsMin: 60 }, banque);
+  assert.strictEqual(mieux4.squelette.nom, "fullbody-ABC-cardio");
+  const dediee = seances(mieux4).find(s => s.focus === "cardio");
+  assert.ok(dediee && dediee.exercices.every(e => e.compartiment === "cardio_mobilite") && dediee.exercices[0].type === "cardio" && dediee.exercices[0].duree_s === 1800 && dediee.dureeMin <= 60, "séance dédiée : 30 min d'appareil + mobilité");
+  assert.ok(mieux4.avertissements.some(a => /séance cardio dédiée \(D/.test(a)));
+  assert.deepStrictEqual(verifierRegles(mieux4, banque), []);
+  assert.strictEqual(genererProgramme({ frequence: 5, objectif: "poids", materiel: "salle", niveau: 1, tempsMin: 45 }, banque).squelette.nom, "haut-bas-x2-cardio");
+  assert.strictEqual(genererProgramme({ frequence: 6, objectif: "mieux", materiel: "salle", niveau: 3, tempsMin: 75 }, banque).squelette.nom, "ppl-haut-bas-cardio");
+  const p7 = genererProgramme({ frequence: 7, objectif: "poids", materiel: "salle", niveau: 2, tempsMin: 60 }, banque);
+  assert.strictEqual(p7.squelette.nom, "push-pull-legs-x2-recup", "7× garde son jour de récupération active");
+  assert.deepStrictEqual(verifierRegles(p7, banque), []);
+  // sport d'endurance avec intention de progresser : finishers, pas de séance dédiée (les sorties font le reste)
+  const coureur = genererProgramme({ frequence: 4, objectif: "muscler", sport: "course", intention: "sport", materiel: "salle", niveau: 2, tempsMin: 70 }, banque);
+  assert.strictEqual(coureur.squelette.nom, "haut-bas-x2");
+  assert.ok(seances(coureur).every(s => s.exercices.some(e => e.role === "cardio")), "un finisher par séance à 70 min");
+  assert.ok(coureur.avertissements.some(a => /^Cardio intégré \(pour progresser à la course à pied\)/.test(a) && /tes sorties font le reste/.test(a)));
+  assert.deepStrictEqual(verifierRegles(coureur, banque), []);
+  // sport + objectif cardio : le sport l'emporte sur la structure (jamais de séance dédiée en plus des jours de sport)
+  assert.strictEqual(genererProgramme({ frequence: 4, objectif: "mieux", sport: "course", intention: "sport", materiel: "salle", niveau: 2 }, banque).squelette.nom, "haut-bas-x2");
+  // sans objectif ni sport cardio : rien d'imposé, et le vérificateur le tient
+  const muscler = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "salle", niveau: 2, tempsMin: 60 }, banque);
+  assert.ok(!seances(muscler).some(s => s.exercices.some(e => e.compartiment === "cardio_mobilite")), "pas de cardio d'office en « me muscler »");
+  assert.deepStrictEqual(verifierRegles(muscler, banque), []);
+  const truque = JSON.parse(JSON.stringify(muscler)); seances(truque)[0].exercices.push({ ...seances(poids3)[0].exercices.slice(-1)[0] });
+  assert.ok(verifierRegles(truque, banque).some(v => v.regle === "cardio" && /sans que l'objectif ou le sport/.test(v.message)), "un finisher imposé hors objectif est une violation");
+  const sans = JSON.parse(JSON.stringify(poids3)); seances(sans)[0].exercices = seances(sans)[0].exercices.filter(e => e.role !== "cardio");
+  assert.ok(verifierRegles(sans, banque).some(v => v.regle === "cardio" && /pas de finisher/.test(v.message)), "un finisher manquant est une violation");
+  assert.strictEqual(M.cardioIntegre({ objectif: "poids" }), "objectif"); assert.strictEqual(M.cardioIntegre({ objectif: "muscler", sport: "natation", intention: "sport" }), "sport"); assert.strictEqual(M.cardioIntegre({ objectif: "muscler", sport: "football", intention: "sport" }), false);
+});
+test("v20.11 — temps court : le finisher passe à 10 min avant que les isolations ne sautent (objectif), ou saute en premier (sport) ; et c'est dit", () => {
+  const court = genererProgramme({ frequence: 3, objectif: "poids", materiel: "salle", niveau: 3, tempsMin: 40 }, banque);
+  for (const s of seances(court)) { const fin = s.exercices.find(e => e.role === "cardio"); assert.ok((fin && fin.duree_s === 600) || court.avertissements.some(a => a.startsWith(`Séance ${s.lettre} : le cardio de fin`)), `séance ${s.lettre} : finisher à 10 min ou retrait annoncé`); }
+  assert.deepStrictEqual(verifierRegles(court, banque), []);
+  const foot = genererProgramme({ frequence: 3, objectif: "mieux", sport: "football", intention: "sport", materiel: "salle", niveau: 1, tempsMin: 60 }, banque);
+  for (const s of seances(foot)) assert.ok(s.exercices.filter(e => e.role === "sport").length >= 2, `séance ${s.lettre} : le sport garde ses exercices, le finisher a sauté d'abord`);
+  assert.deepStrictEqual(verifierRegles(foot, banque), []);
+});
+test("v20.11 — « Ajuster ma séance » : le cardio vient en premier parmi les compléments quand l'objectif le réclame ; sinon une option explicite avec le choix de l'appareil, honorée quand on la demande", () => {
+  const poids = M.programmePourApp({ frequence: 3, objectif: "poids", muscu: "mois", technique: "oui", materiel: "salle", tempsMin: 45 }, banque);
+  const A = poids.seances.A;
+  const sansFin = { ...A, exos: A.exos.filter(e => e.type !== "cardio") };
+  const d1 = M.adapterSeance(sansFin, { tempsMin: 75, energie: "normal", banque, entrees: poids.moteur.entrees });
+  assert.ok(d1.adaptee.ajouts.length && d1.adaptee.ajouts[0].pourquoi === "cardio (objectif)", JSON.stringify(d1.adaptee.ajouts));
+  assert.ok(d1.exos.some(e => e.type === "cardio" && e.role === "complement"), "le cardio est dans la séance ajustée");
+  const muscler = M.programmePourApp({ frequence: 4, objectif: "muscler", muscu: "an", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
+  const B = muscler.seances.A;
+  const d2 = M.adapterSeance(B, { tempsMin: 90, energie: "normal", banque, entrees: muscler.moteur.entrees });
+  assert.ok(!d2.adaptee.ajouts.some(a => /cardio/.test(a.pourquoi)), "pas de cardio d'office");
+  assert.ok(d2.adaptee.optionCardio && d2.adaptee.optionCardio.duree >= 600 && d2.adaptee.optionCardio.candidats.length >= 3 && d2.adaptee.optionCardio.candidats.every(c => c.id && c.nom), JSON.stringify(d2.adaptee.optionCardio));
+  const d3 = M.adapterSeance(B, { tempsMin: 90, energie: "normal", banque, entrees: muscler.moteur.entrees, cardio: { id: "rameur", duree: 15 } });
+  const ram = d3.exos.find(e => e.id === "rameur");
+  assert.ok(ram && ram.type === "cardio" && ram.dose === "15 min" && d3.adaptee.ajouts[0].pourquoi === "cardio demandé" && d3.dureeMin <= 90, JSON.stringify([d3.adaptee.ajouts, ram && ram.dose, d3.dureeMin]));
+  assert.ok(!d3.adaptee.optionCardio, "une fois demandé, plus d'option à proposer");
+  const trop = M.adapterSeance(B, { tempsMin: 56, energie: "normal", banque, entrees: muscler.moteur.entrees });
+  assert.ok(!trop.adaptee.optionCardio, "pas d'option sans temps en plus");
+});
 console.log("\n=== cas demandés ===");
 test("débutant à 6× : PPL, difficulté 1 seulement, 4-5 exercices par séance", () => {
   const p = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau: 1 }, banque);

@@ -7,10 +7,10 @@ Web app fitness gamifiée en duo **coach / coaché**. Le coaché prouve ses séa
 le coach. Créée à l'origine pour un usage à deux, en cours d'ouverture vers un
 produit plus général.
 
-Version actuelle : **v20.10**
+Version actuelle : **v20.11**
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.10"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.11"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -50,8 +50,10 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   ajout depuis chaque onglet du panneau, retrait, réordonnancement, reps
   réelles, journal, programme inchangé, proposition après 3 retraits), v20.10
   (`09d` : champs à 16 px, négos harmonisées, « Déplacer » et appui long,
-  gainage remplaçable, carte des premiers XP, idées avec progression) et les
-  non-régressions v19.10 → v19.21.
+  gainage remplaçable, carte des premiers XP, idées avec progression), v20.11
+  (`09e` : le cardio — notation, chrono, XP par durée, jour Cardio, Progrès,
+  cardio dans le programme, option d'« Ajuster ») et les non-régressions
+  v19.10 → v19.21.
 - `outils/worker.test.js` — le worker importé dans Node avec un faux KV et un
   faux `fetch` : secrets hors du code, en-têtes, validation, quotas, photos,
   limitation de débit. `node outils/worker.test.js`, à chaque modification
@@ -312,6 +314,55 @@ ce qu'on change pour un jour ne touche le programme.
   renvoie `x-duree-ms` et `x-appels` (1, ou 2 si relecture) et l'app le dit
   en toast (« 8 idées en 14 s »). La relecture ne part que sur détection d'un
   problème (hors format, moins de 4 idées propres, plus d'un tiers écartées).
+
+### Le cardio, citoyen de première classe (v20.11)
+
+Principe (DECISIONS, Chantier Programmes) : le cardio fait partie du programme
+quand l'objectif ou le sport le réclame, jamais un simple bouton à côté ;
+notation propre, XP selon la durée.
+
+- **Moteur** : `cardioIntegre(entrees)` → `"objectif"` (« Perdre du poids »,
+  « Me sentir mieux » sans sport à progresser : finisher de 10-15 min en fin de
+  chaque séance de force, `role: "cardio"`, et une **séance cardio dédiée**
+  dès 4× — `SQUELETTES_CARDIO` : `fullbody-ABC-cardio`, `haut-bas-x2-cardio`,
+  `ppl-haut-bas-cardio`, focus `cardio` = 30 min d'appareil + une mobilité ;
+  le 7× garde sa récupération active), `"sport"` (sport d'endurance avec
+  intention de progresser — `endurance: true` sur course, cyclisme, natation —
+  ou objectif cardio avec un sport à progresser : finishers seulement, les
+  sorties font le reste), ou `false` (rien d'imposé). `squeletteDe(f, cardio)`.
+  Compression : le finisher passe de 15 à 10 min d'abord ; en mode sport il
+  saute ensuite en premier, en mode objectif il saute après les isolations
+  sans rôle et avant celles du sport ; le retrait est dit dans « À savoir »
+  (« ajoute-le avec Ajuster »). Le finisher préfère un appareil (tag
+  `tapis / machine cardio`). `verifierRegles` a une règle `cardio` : finisher
+  présent (sauf retrait annoncé), séance dédiée dès 4× en mode objectif,
+  jamais de cardio imposé sinon, jamais de force dans une séance cardio.
+  Les exercices `cardio_mobilite` portent `type` (`cardio` / `mobilite`)
+  jusqu'à l'app (`presenterPourApp`, `exerciceLibrePourApp`, `versApp`).
+- **« Ajuster ma séance »** : `adapterSeance` ajoute le cardio en premier parmi
+  les compléments quand `cardioIntegre` (« cardio (objectif) ») ; sinon il
+  renvoie `adaptee.optionCardio = {duree, candidats}` et honore
+  `opts.cardio = {id, duree}` (« cardio demandé »). Le panneau
+  (`AdapterPanneau`) montre `.option-cardio` (« Ajouter 15 min de cardio ? »,
+  `.bascule-cardio`, `.appareils-cardio`).
+- **App** : `estCardio(ex)`, `xpCardioMin(min)` = 5 / 10 / 15 / 20 (moins de
+  10 min / 10-19 / 20-29 / 30 et plus), `xpExo` d'un cardio = par sa durée
+  prévue, `xpExoSansPhoto` = idem (la durée est la preuve, pas de malus sans
+  photo). La carte focus d'un cardio montre `CardioInputs` (`.chrono-cardio`,
+  `.duree-cardio`, `.champ-cardio[data-champ]` selon `CARDIO_CHAMPS[ex.id]` :
+  distance, vitesse, inclinaison, résistance) et valide par
+  `.terminer-cardio` (photo en option, `aria-label="Ajouter une photo
+  (facultatif)"`). La notation vit dans `st.charges[exId]` comme une charge :
+  entrée du jour `{date, series: [], cardio: {duree_s, distance, vitesse,
+  inclinaison, resistance, chronoDebut}}` (`noterCardio`), `fmtCharge` la
+  lit (`fmtCardio`), le journal la porte (`exos[].cardio`), Progrès dessine
+  `GrapheCardio` (durée pleine, distance en pointillé). Le **jour « Cardio »
+  (K)** joue comme une séance libre ouverte sur le cardio
+  (`SEANCE_CARDIO`, `cardioSeul`) : la carte `.choix-cardio` renvoie aux
+  exercices de la banque (`CARDIO_IDS`), la barre « Terminer la séance » le
+  clôt (historique `type: "K"`, `cardio: true`, libellé « Cardio — Rameur
+  25 min · 4,2 km »), `J.cardioFait` est posé à la validation. `XP.cardio`
+  (30) ne sert plus qu'aux anciens chemins.
 
 ## Structure de l'interface
 

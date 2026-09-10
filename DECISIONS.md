@@ -95,6 +95,47 @@ montées de genoux en cardio ; « Développé haltères » des templates gardé 
 poussée verticale assis — à corriger en une ligne si un programme prouve le
 contraire.
 
+### Cardio (v20.11)
+
+**Cardio : partie intégrante du programme quand l'objectif ou le sport le
+réclame, jamais un simple bouton à côté. Notation propre (durée, distance,
+vitesse, inclinaison), XP selon la durée.**
+
+- **Qui réclame du cardio** (règles 10 et 11) : « Perdre du poids » et « Me
+  sentir mieux » → finisher de 10-15 min d'appareil en fin de chaque séance de
+  force, et une séance cardio dédiée dès 4 séances par semaine (3 full body +
+  cardio à 4×, haut/bas ×2 + cardio à 5×, push/pull/legs + haut/bas + cardio
+  à 6× ; le 7× garde sa récupération active). Un sport d'endurance pratiqué
+  pour progresser (course, vélo, natation) → finishers seulement : les
+  sorties font le reste, et une séance dédiée viendrait s'ajouter aux jours
+  de sport. → Un programme « perdre du poids » sans cardio n'était pas
+  crédible ; un coureur n'a pas besoin d'un tapis de plus.
+- **Quand un sport est pratiqué pour progresser, il l'emporte sur la
+  structure** : même avec « Me sentir mieux », pas de séance dédiée (les
+  jours de sport sont déjà là), et le finisher saute avant les exercices
+  que le sport a marqués. → Le sport est le modificateur le plus concret.
+- **Autres objectifs → le cardio est une option explicite** d'« Ajuster ma
+  séance » (« ajouter 15 min de cardio ? » avec le choix de l'appareil),
+  jamais imposé. Écarté : l'ancien finisher cardio ajouté d'office dès qu'il
+  restait du temps (v20.6) — il surprenait. Le vérificateur le tient : pas
+  de finisher hors objectif, un finisher dans chaque séance quand l'objectif
+  le réclame (sauf retrait annoncé, faute de temps).
+- **Compression** : le finisher passe de 15 à 10 min avant que quoi que ce
+  soit ne saute ; ensuite, objectif cardio → les isolations sans rôle
+  sautent avant lui ; sport → il saute en premier. Retiré, c'est dit dans
+  « À savoir ».
+- **Notation du cardio, sans appareil photo par défaut** : durée au chrono
+  (qui survit à la fermeture de la carte) ou saisie, et selon l'appareil
+  distance, vitesse, inclinaison, résistance ; la photo reste possible,
+  facultative, sans malus sans photo — la durée est la preuve. → Une photo de
+  machine ne prouvait rien de plus et coupait l'élan.
+- **XP selon la durée**, cohérents avec 10 / 15 / 20 par exercice : moins de
+  10 min → 5, 10-19 → 10, 20-29 → 15, 30 min et plus → 20. Le jour « Cardio »
+  n'a plus de forfait de 30 XP : il joue comme une séance (choix de
+  l'appareil, carte, « Terminer la séance »), ses XP viennent de la durée.
+- **Progrès** trace le cardio comme une charge (durée, distance) ; le
+  journal porte la notation.
+
 ### Étape 4 — la séance libre (v20.9)
 
 - **Ajouter, retirer, réordonner, remplacer pour un jour ne touche jamais le
@@ -257,6 +298,17 @@ réduites : la séance existe au lieu d'être sautée.
 Course à pied, cyclisme, natation, football, tennis & padel, rugby, basket &
 handball, escalade, sports de frappe (boxe, kick, muay-thaï), sports de
 préhension (judo, lutte, JJB), MMA, équitation, danse, yoga & pilates.
+
+## v20.11 — septembre 2026
+
+Retour terrain de Léo sur la v20.9, second commit : le cardio, citoyen de
+première classe. Décisions dans « Chantier Programmes — Cardio » ci-dessus.
+En bref : notation propre du cardio (chrono ou saisie, distance, vitesse,
+inclinaison, résistance), XP selon la durée (5 / 10 / 15 / 20), photo
+facultative, jour « Cardio » joué comme une séance, courbe dans Progrès ;
+cardio intégré au programme quand l'objectif ou le sport le réclame (finisher
+10-15 min, séance dédiée dès 4×), vérifié par les règles ; sinon option
+explicite d'« Ajuster ma séance » avec le choix de l'appareil.
 
 ## v20.10 — septembre 2026
 
