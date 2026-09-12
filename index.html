@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0B0E14">
 <meta name="vapid-pub" content="__VAPID_PUB__">
 <meta name="contact" content="__CONTACT__">
+<meta name="environnement" content="__ENVIRONNEMENT__">
 <title>Level Up !</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230B0E14'/%3E%3Cpath d='M30 30v40M70 30v40M30 50h40' stroke='%233D5AFE' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -3303,6 +3304,8 @@ const yt = nom => "https://www.youtube.com/results?search_query=" + encodeURICom
 const metaContenu = nom => { const m = document.querySelector('meta[name="' + nom + '"]'); const v = m ? m.getAttribute("content") || "" : ""; return /^__/.test(v) ? "" : v; };
 const VAPID_PUB = metaContenu("vapid-pub");
 const CONTACT = metaContenu("contact");
+// v20.13 : « test » sur le Worker level-up-test (bandeau permanent), « production » ou vide sinon
+const ENVIRONNEMENT = metaContenu("environnement");
 const b64uVersU8 = s => {
   const pad = "=".repeat((4 - s.length % 4) % 4);
   const b = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
@@ -11117,7 +11120,7 @@ function Onboarding({
       textAlign: "center",
       marginTop: 10
     }
-  }, "v20.12"));
+  }, "v20.13"));
 
   /* ---- écran 2 : le mode ---- */
   if (etape === "mode") return /*#__PURE__*/React.createElement(Cadre, {
@@ -14180,7 +14183,28 @@ function Carrousel({
     onScroll: anim
   }, children);
 }
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+// v20.13 : bandeau « VERSION DE TEST » au-dessus de tous les écrans (onboarding compris) sur le Worker de test
+const BandeauTest = () => ENVIRONNEMENT === "test" ? /*#__PURE__*/React.createElement("div", {
+    className: "bandeau-test",
+    "aria-label": "Version de test",
+    style: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 9999,
+      paddingTop: "env(safe-area-inset-top)",
+      lineHeight: "16px",
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: ".2em",
+      textAlign: "center",
+      color: "#0B0E14",
+      background: "#F5B82E",
+      pointerEvents: "none"
+    }
+  }, "VERSION DE TEST") : null;
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(React.Fragment, null, React.createElement(BandeauTest), React.createElement(App)));
 </script>
 </body>
 </html>

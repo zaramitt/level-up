@@ -2,10 +2,10 @@
 
 Déplacée de `CLAUDE.md` (règles de travail) vers ce fichier : architecture, routes, configuration Cloudflare, moteur, tests, règles de livraison, conventions de design. À tenir à jour à chaque livraison (version comprise).
 
-Version actuelle : **v20.12** (à mettre à jour ici et dans `index.html` à chaque livraison)
+Version actuelle : **v20.13** (à mettre à jour ici et dans `index.html` à chaque livraison)
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.12"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.13"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
@@ -64,8 +64,13 @@ Déploiement : **Cloudflare Worker** (pas Pages).
   avec les actions qui restent côté dashboard. `CONFIDENTIALITE.md` — le texte
   de la page « Confidentialité et mentions légales » des Réglages.
 - `wrangler.jsonc` — configuration de déploiement (Workers Builds) : nom, point
-  d'entrée, liaison KV et crons ; **aucun secret** dans ce fichier ni dans le
-  code : tout vit dans le dashboard Cloudflare (tableau ci-dessous)
+  d'entrée, liaisons KV et R2, crons, variable `ENVIRONNEMENT`, et
+  l'environnement `test` (v20.13, Worker `level-up-test`, voir ci-dessous) ;
+  **aucun secret** dans ce fichier ni dans le code : tout vit dans le
+  dashboard Cloudflare (tableau ci-dessous)
+- `outils/amorcer-test.js` — amorce le KV de test depuis une sauvegarde R2 de
+  production, en écartant abonnements push, planifications, quotas et photos,
+  et en anonymisant les prénoms passés en option (voir `SECURITE.md`)
 
 Configuration Cloudflare :
 
@@ -82,6 +87,19 @@ Configuration Cloudflare :
 | Cron notifications de séance (v20.8) | `* * * * *` — pousse les notifications planifiées par l'app (fin de repos, « Tu as fini ? ») |
 | Cron sauvegarde (v20.12) | `0 3 * * *` — export de tout le namespace KV vers R2 (`sauvegarde-AAAA-MM-JJ.json`), purge au-delà de 30 jours |
 | Liaison R2 `SAUVEGARDES` (v20.12) | bucket `level-up-sauvegardes` (créé dans le dashboard, déclaré dans `wrangler.jsonc`) ; repli sans R2 : liaison KV `SAUVEGARDES_KV` (second namespace, entrées datées à TTL 30 jours) |
+| Variable `ENVIRONNEMENT` (v20.13) | `production` par défaut (`vars` de `wrangler.jsonc`), `test` dans `env.test` : le worker l'injecte dans `<meta name="environnement">` (bandeau « VERSION DE TEST ») et préfixe `[TEST]` les titres du service worker |
+
+Environnement de test (v20.13) — second Worker **`level-up-test`**, même code,
+déployé par Workers Builds depuis la branche `staging` avec
+`npx wrangler deploy --env test` :
+
+| Élément | Valeur |
+|---|---|
+| Namespace KV `NEGOS` | id `ebf63ec8477041a9bc4d4adaa45a9b06` |
+| Liaison R2 `SAUVEGARDES` | bucket `level-up-test` |
+| Crons | les mêmes quatre que la production |
+| Secrets à poser sur `level-up-test` | `ANTHROPIC_API_KEY`, `VAPID_PRIV`, `VAPID_PUB` (nouvelle paire : `node outils/vapid.js`), `CONTACT`, `ADMIN_TOKEN` |
+| Données | amorcées par `node outils/amorcer-test.js` depuis une sauvegarde de production |
 | Secret `ADMIN_TOKEN` (v20.12) | lecture du journal des actions critiques par `/admin/journal` (en-tête `x-admin-token`) ; sans lui, la route n'existe pas (404) |
 
 Routes `/idees` et `/interpreter` : appels à l'API Anthropic (modèles épinglés
@@ -202,8 +220,8 @@ partage.
   toujours un bug.
 - En session, toute modification est vérifiée sur un worker mock local
   (Playwright : `node outils/tests/lancer.js`, et `node outils/worker.test.js`
-  dès que `worker.js` change) ; c'est Léo qui la valide sur l'URL Worker
-  après déploiement.
+  dès que `worker.js` change) ; c'est Léo qui la valide sur l'URL de test
+  (`level-up-test`, déployée depuis `staging`) avant la PR `staging` → `main`.
 - **Aucun secret dans le code** : clés et contact vivent dans le dashboard
   Cloudflare (`ANTHROPIC_API_KEY`, `VAPID_PRIV`, `VAPID_PUB`, `CONTACT`). Le
   test du worker échoue si une clé revient dans `worker.js`.

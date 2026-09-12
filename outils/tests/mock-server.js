@@ -190,7 +190,7 @@ chargerWorker.then(() => http.createServer((req, res) => {
   const f = path.join(DIR, u.pathname === '/' ? 'app.html' : u.pathname.slice(1));
   if (!fs.existsSync(f)) { res.writeHead(404); res.end('nf'); return; }
   if (f.endsWith('.html')) {
-    const { corps, entetes } = preparerPage(fs.readFileSync(f, 'utf8'), { VAPID_PUB: VAPID_MOCK, CONTACT: CONTACT_MOCK });
+    const { corps, entetes } = preparerPage(fs.readFileSync(f, 'utf8'), { VAPID_PUB: VAPID_MOCK, CONTACT: CONTACT_MOCK, ENVIRONNEMENT: process.env.MOCK_ENV || 'production' });
     res.writeHead(200, entetes); return res.end(corps);
   }
   res.writeHead(200, { 'content-type': 'application/javascript' });

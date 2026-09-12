@@ -22,6 +22,18 @@
 - Conserver le style, le nommage et l'architecture existants.
 - Tests ou vérification manuelle décrite avant de déclarer terminé.
 
+## Flux git (staging)
+
+- `main` = production (Worker `level-up`), `staging` = test (Worker `level-up-test`,
+  bandeau « VERSION DE TEST », pushs préfixés `[TEST]`). Les deux se déploient
+  automatiquement (Workers Builds) au push sur leur branche.
+- Toute PR part d'une branche de travail **vers `staging`**. Léo valide sur l'URL de
+  test, puis PR `staging` → `main`.
+- Correctif urgent : PR directe vers `main`, puis PR `main` → `staging` pour que les
+  deux branches ne divergent pas.
+- Fin de chantier : le message se termine par « PR vers staging, en attente de
+  validation » (jamais de PR vers `main` sans feu vert explicite).
+
 ## Règles de livraison
 
 - `worker.js` et `index.html` sont **toujours livrés en paire**, via
@@ -30,11 +42,12 @@
   toujours un bug.
 - En session, toute modification est vérifiée sur un worker mock local
   (Playwright : `node outils/tests/lancer.js`, et `node outils/worker.test.js`
-  dès que `worker.js` change) ; c'est Léo qui la valide sur l'URL Worker
-  après déploiement.
+  dès que `worker.js` change) ; c'est Léo qui la valide sur l'URL de test
+  (`level-up-test`, après merge dans `staging`) avant que ça parte en production.
 - **Aucun secret dans le code** : clés et contact vivent dans le dashboard
-  Cloudflare (`ANTHROPIC_API_KEY`, `VAPID_PRIV`, `VAPID_PUB`, `CONTACT`). Le
-  test du worker échoue si une clé revient dans `worker.js`.
+  Cloudflare (`ANTHROPIC_API_KEY`, `VAPID_PRIV`, `VAPID_PUB`, `CONTACT`,
+  `ADMIN_TOKEN`), posés sur **chacun** des deux Workers. Le test du worker
+  échoue si une clé revient dans `worker.js`.
   Une modification n'est « faite » qu'après cette seconde vérification.
 - **La version affichée dans `index.html` et celle d'`ARCHITECTURE.md` doivent être
   mises à jour à chaque livraison, dans le même commit que le chantier.
