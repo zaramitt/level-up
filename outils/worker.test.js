@@ -537,6 +537,38 @@ const deB64u = s => Buffer.from(s, "base64url");
     check("8. /admin/journal : jeton en query → 401, POST → 405, 11e essai de la même IP → 429", (await appel(env, "/admin/journal?token=s3cret-de-test-tres-long")).status === 401 && (await appel(env, "/admin/journal", { method: "POST", headers: { "x-admin-token": "s3cret-de-test-tres-long" } })).status === 405);
     { let dernier; for (let i = 0; i < 11; i++) dernier = await W.fetch(new Request("https://levelup.test/admin/journal", { headers: { "x-admin-token": "faux", "cf-connecting-ip": "203.0.113.4" } }), env);
       check("8. force brute sur le jeton : 429 après 10 essais par adresse et par minute, comparaison en temps constant", dernier.status === 429 && /memeSecret/.test(logique)); } }
+
+  console.log("\n=== v20.13 — environnement de test : meta injectée, bandeau, préfixe [TEST] des pushs, amorçage anonymisé ===");
+  { const { preparerPage } = await import(pathToFileURL(fichier).href);
+    const html = '<meta name="environnement" content="__ENVIRONNEMENT__"><script>1</script>';
+    check("ENVIRONNEMENT=test → <meta name=\"environnement\" content=\"test\">", preparerPage(html, { ENVIRONNEMENT: "test" }).corps.includes('content="test"'));
+    check("ENVIRONNEMENT=production → « production »", preparerPage(html, { ENVIRONNEMENT: "production" }).corps.includes('content="production"'));
+    check("variable absente (worker actuel) → « production », jamais l'espace réservé", preparerPage(html, {}).corps.includes('content="production"') && !preparerPage(html, {}).corps.includes("__ENVIRONNEMENT__"));
+    const index = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+    check("index.html porte la meta et le bandeau « VERSION DE TEST » conditionné à la meta", /name="environnement" content="__ENVIRONNEMENT__"/.test(index) && /ENVIRONNEMENT === "test" ? /.test(index) && index.includes("VERSION DE TEST"));
+    const swTest = await (await appel({ NEGOS: new KV(), ENVIRONNEMENT: "test" }, "/sw.js")).text();
+    const swProd = await (await appel(envNu(), "/sw.js")).text();
+    check("service worker en test : préfixe « [TEST] » devant chaque titre de notification", swTest.includes('const PREFIXE = "[TEST] ";') && swTest.includes("PREFIXE + (m && m.titre") && !swTest.includes("__PREFIXE__"));
+    check("service worker en production : préfixe vide, même code sinon", swProd.includes('const PREFIXE = "";') && swProd.replace('const PREFIXE = "";', "") === swTest.replace('const PREFIXE = "[TEST] ";', ""));
+    try { new Function(swTest); check("service worker : JavaScript valide après injection", true); } catch (e) { check("service worker : JavaScript valide après injection", false, e.message); }
+    const { preparer, anonymiserTexte, motifs } = require("./amorcer-test.js");
+    const ms = motifs(["Léo", "Zara"]);
+    check("anonymisation : prénom avec ou sans accent, majuscule ou non, en début, milieu ou fin → pseudonyme fixe", anonymiserTexte("Léo offre à Zara un café ; merci leo, LÉO !", ms) === "Alex offre à Sam un café ; merci Alex, Alex !");
+    check("anonymisation : un mot qui contient le prénom n'est pas touché (Léonie, Zaratan)", anonymiserTexte("Léonie et Zaratan", ms) === "Léonie et Zaratan");
+    const donnees = {
+      "duo-amorceabc:negos": JSON.stringify([{ id: "n1", label: "Un café avec Léo", mot: "promis par zara", statut: "proposee" }]),
+      "duo-amorceabc:etat": JSON.stringify({ xp: 120, histo: [{ date: "2026-09-10", type: "muscu", nomS: "Haut du corps" }] }),
+      "duo-amorceabc:subs": JSON.stringify([{ endpoint: "https://fcm.googleapis.com/x", keys: {} }]),
+      "duo-amorceabc:photo:p1": "data:image/jpeg;base64,AAAA",
+      "planif:index": "{}", "quota:idees:2026-09-10": "3", "idx:codes": JSON.stringify(["duo-amorceabc"]), "journal:2026-09": "[]"
+    };
+    const { donnees: d, bilan } = preparer(donnees, { prenoms: ["Léo", "Zara"] });
+    check("amorçage : abonnements, planifications, quotas et photos écartés ; negos, etat, index, journal gardés", bilan.ecartees === 4 && Object.keys(d).sort().join() === ["duo-amorceabc:etat", "duo-amorceabc:negos", "idx:codes", "journal:2026-09"].join(), Object.keys(d).join());
+    check("amorçage : les prénoms sont remplacés dans les textes libres, le reste est identique octet pour octet", JSON.parse(d["duo-amorceabc:negos"])[0].label === "Un café avec Alex" && JSON.parse(d["duo-amorceabc:negos"])[0].mot === "promis par Sam" && d["duo-amorceabc:etat"] === donnees["duo-amorceabc:etat"] && d["idx:codes"] === donnees["idx:codes"] && bilan.modifiees === 1);
+    check("amorçage --photos : les photos sont gardées telles quelles", preparer(donnees, { prenoms: ["Léo"], photos: true }).donnees["duo-amorceabc:photo:p1"] === "data:image/jpeg;base64,AAAA");
+    const wr = fs.readFileSync(path.join(__dirname, "..", "wrangler.jsonc"), "utf8");
+    check("wrangler.jsonc : environnement « test » (level-up-test, KV ebf63ec8…, R2 level-up-test, ENVIRONNEMENT=test) et « production » par défaut", (() => { const t = wr.slice(wr.indexOf('"env"')); return t.includes('"name": "level-up-test"') && t.includes('"id": "ebf63ec8477041a9bc4d4adaa45a9b06"') && t.includes('"bucket_name": "level-up-test"') && t.includes('"ENVIRONNEMENT": "test"') && wr.slice(0, wr.indexOf('"env"')).includes('"ENVIRONNEMENT": "production"'); })());
+    check("wrangler.jsonc : la production garde son namespace et son bucket", wr.includes("b01ca4e9f02549828073664575d5eaf8") && wr.includes('"level-up-sauvegardes"')); }
   console.log(`\n${ok}/${ok + ko} vérifications passent` + (ko ? ` — ${ko} en échec` : ""));
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

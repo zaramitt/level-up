@@ -2,6 +2,10 @@
   "name": "level-up",
   "main": "worker.js",
   "compatibility_date": "2026-08-01",
+  // les variables posées dans le dashboard (VAPID_PUB, CONTACT) survivent au déploiement
+  "keep_vars": true,
+  // ENVIRONNEMENT : « production » ici, « test » dans l'environnement test ci-dessous (bandeau, préfixe [TEST] des pushs)
+  "vars": { "ENVIRONNEMENT": "production" },
   "kv_namespaces": [
     {
       "binding": "NEGOS",
@@ -18,5 +22,29 @@
   "triggers": {
     // 18 h rappel du soir · 6 h compléments du matin · chaque minute notifications de séance · 3 h sauvegarde
     "crons": ["0 18 * * *", "0 6 * * *", "* * * * *", "0 3 * * *"]
+  },
+  // environnement de test (v20.13) : second Worker « level-up-test », déployé par Workers Builds depuis la branche
+  // `staging` avec `npx wrangler deploy --env test`. Un environnement n'hérite ni des liaisons, ni des crons, ni des
+  // variables : tout est redit ici. Secrets à poser sur level-up-test : ANTHROPIC_API_KEY, VAPID_PRIV, VAPID_PUB, CONTACT, ADMIN_TOKEN.
+  "env": {
+    "test": {
+      "name": "level-up-test",
+      "vars": { "ENVIRONNEMENT": "test" },
+      "kv_namespaces": [
+        {
+          "binding": "NEGOS",
+          "id": "ebf63ec8477041a9bc4d4adaa45a9b06"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SAUVEGARDES",
+          "bucket_name": "level-up-test"
+        }
+      ],
+      "triggers": {
+        "crons": ["0 18 * * *", "0 6 * * *", "* * * * *", "0 3 * * *"]
+      }
+    }
   }
 }

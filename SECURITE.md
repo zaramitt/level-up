@@ -685,9 +685,50 @@ enchaînement tourne sur faux KV et faux R2 dans `outils/worker.test.js`
 (purge à 31 jours, conservation à 29, repli KV, format bulk). Pour rejouer le
 test réel : `npm i --no-save miniflare@4 && node outils/sauvegarde.e2e.js`.
 Ce qui n'a pas pu être testé d'ici : le compte Cloudflare lui-même
-(liaison, quota R2) — d'où la liste de vérifications ci-dessus, et une
-restauration d'essai à faire une fois sur un code de test dès la première
-sauvegarde en place.
+(liaison, quota R2) — d'où la liste de vérifications ci-dessus. La
+restauration d'essai sur le compte est l'amorçage du KV de test, ci-dessous.
+
+### Restauration d'essai et amorçage du KV de test (v20.13)
+
+L'environnement de test (Worker `level-up-test`, namespace KV
+`ebf63ec8477041a9bc4d4adaa45a9b06`, bucket `level-up-test`) se remplit depuis
+une vraie sauvegarde de production : c'est la restauration d'essai du backlog —
+une vraie sauvegarde R2, un vrai namespace Cloudflare, et l'app elle-même
+comme vérification. À refaire à chaque fois qu'on veut des données de test
+fraîches, et au moins une fois par trimestre pour savoir que la chaîne
+sauvegarde → restauration tient.
+
+```
+npx wrangler r2 object get level-up-sauvegardes/sauvegarde-AAAA-MM-JJ.json --file sauvegarde.json
+node outils/amorcer-test.js sauvegarde.json --prenoms Léo,Zara --compte <ACCOUNT_ID> --namespace ebf63ec8477041a9bc4d4adaa45a9b06 --jeton <CF_API_TOKEN>
+```
+
+(ou `--bulk amorcage.json` puis
+`npx wrangler kv bulk put --namespace-id=ebf63ec8477041a9bc4d4adaa45a9b06 amorcage.json`.)
+
+Ce que le script fait, et pourquoi :
+
+- **écarte** les abonnements push (`<code>:subs`) — la paire VAPID de test est
+  une autre paire, et les téléphones de production ne doivent jamais recevoir
+  un push `[TEST]` ; les planifications en cours (`planif:index`) ; les
+  compteurs de quota (`quota:*`) ; les photos (`<code>:photo:*`), sauf
+  `--photos` — ce sont les données les plus personnelles et les plus lourdes ;
+- **anonymise** les prénoms passés à `--prenoms`, partout où ils apparaissent
+  dans une chaîne (libellés de récompense, mots de négo, motifs de pause,
+  notes de cagnotte, mises de pari), insensible à la casse et aux accents,
+  sans toucher aux mots qui les contiennent (« Léonie ») : le premier prénom
+  devient « Alex », le deuxième « Sam », etc. Les prénoms ne sont pas stockés
+  côté serveur (liste blanche de `/etat`) : c'est dans les textes libres
+  qu'ils peuvent traîner ;
+- **garde** les codes duo : on se connecte sur l'URL de test avec son code
+  habituel ; tout le reste est restauré octet pour octet ;
+- **refuse** d'écrire dans le namespace de production.
+
+Vérification : ouvrir l'URL de test avec son code, retrouver l'historique, la
+cagnotte, les négos (avec les pseudonymes), l'absence de photos ; et
+`curl -H "x-admin-token: …" https://level-up-test.<compte>.workers.dev/admin/journal`
+doit montrer le journal restauré. La première exécution réussie clôt l'item
+« Restauration d'essai sur Cloudflare » du backlog.
 
 ## Journal des actions critiques
 
