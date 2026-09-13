@@ -48,6 +48,11 @@ Les fondations sur lesquelles reposent plusieurs chantiers à la fois.
 
 ## UI / UX
 
+- **PRIORITÉ HAUTE — Simplification (audit dans `SIMPLIFICATION.md`)** : trois
+  chantiers d'abord — une seule invitation coach (six points d'entrée aujourd'hui),
+  les explications permanentes sortent des écrans (vers « ? » et « Les règles du
+  jeu »), une seule validation / un seul déplacement / un seul « Ajouter » ; puis
+  l'onglet Récompenses en deux sous-onglets et l'onglet Séance allégé.
 - **Onboarding « la photo fait foi » → « tes récompenses » : design à revoir.
   Onglet Récompenses : refonte. → chantier UI/UX.**
 

@@ -479,6 +479,24 @@ réduites : la séance existe au lieu d'être sautée.
 
 # Journal des décisions par version (ex-`DECISIONS.md`)
 
+## v20.14 — septembre 2026
+
+Retour terrain de Léo sur la v20.11 : bugs et banque. Glisser-déposer : toute
+ligne (validée ou non) est une zone de dépôt (`data-ligne`, les rectangles
+étaient pris sur les seules lignes à faire, d'où l'impossibilité de déposer
+juste après un exercice validé). Banque : 7 classiques de salle ajoutés (leg
+extension, presse horizontale, adduction, pec deck, poulie vis-à-vis, écarté
+haltères, curl pupitre — le leg curl assis, le tirage poulie basse, les
+élévations latérales machine, l'abduction et les mollets assis existaient),
+champ `alias` et marqueur `classique` sur les 125 exercices
+(`outils/banque-v2014.js`), `chercherExercices` dans le moteur (accents,
+casse, tirets, une faute), filtre muscle avec les secondaires, quadriceps et
+adducteurs admis en isolation du bas, pectoraux en isolation du haut. Jambes
+A / B (`dominanteJambes`, `CASES_JAMBES`, règle `jambesAB`). Provenance de la
+dose du remplaçant (`provenance: "original" | "banque"`). Difficulté libellée,
+« Retirer » en rouge, chrono flottant (`ChronoFlottant`, position dans
+`localStorage` sous `lvlup-chrono-pos`). Suite Playwright 09f.
+
 ## v20.11 — septembre 2026
 
 Retour terrain de Léo sur la v20.9, second commit : le cardio, citoyen de

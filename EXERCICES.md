@@ -1,5 +1,7 @@
 # Banque d'exercices — étape 1 du chantier Programmes
 
+> v20.14 : chaque exercice porte aussi `alias` (autres appellations) et `classique` (courant en salle) — voir `banque-exercices.json`, ajoutés par `outils/banque-v2014.js`.
+
 Document de relecture. La source est `banque-exercices.json` (un seul fichier, 118 exercices, 10 compartiments) ; ce document en est la vue lisible, régénérée à partir de la même source.
 
 Chaque exercice porte : compartiment, muscle principal et secondaires, matériel (une liste d'**alternatives** : n'importe laquelle suffit ; « a + b » est une combinaison obligatoire, comme barre + banc), difficulté (1 débutant / 2 intermédiaire / 3 avancé), place dans l'échelle (simple → **phare** → avancé, avec l'exercice vers lequel on « monte »), fourchette de reps et repos par défaut (règle 5), unilatéral ou non, une consigne et une erreur fréquente, et sa démo (recherche par nom, système existant).
@@ -15,6 +17,7 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 | Squat au poids du corps | quadriceps · fessiers, gainage | poids du corps | 1 | simple → Goblet squat | 12-15 reps · repos 90 s | Pieds largeur d'épaules, pointes légèrement ouvertes, descends comme pour t'asseoir en gardant la poitrine haute. | Genoux qui rentrent vers l'intérieur en remontant. |
 | Goblet squat | quadriceps · fessiers, gainage | haltères ou kettlebell | 1 | simple → Squat barre | 8-12 reps · repos 120 s | Haltère serré contre la poitrine, coudes qui passent entre les genoux en bas, talons au sol tout du long. | Arrondir le dos en bas pour aller chercher la profondeur. |
 | Presse à cuisses | quadriceps · fessiers | machine | 1 | simple → Squat barre | 8-12 reps · repos 120 s | Pieds au milieu du plateau, descends jusqu'à ce que les cuisses touchent le buste sans que le bassin décolle du dossier. | Verrouiller les genoux en haut ou laisser le bas du dos se décoller. |
+| Presse à cuisses horizontale (assise) | quadriceps · fessiers | machine | 1 | simple → Squat barre | 8-12 reps · repos 120 s | Assise, dos et bassin calés, pieds largeur d'épaules au milieu du plateau, pousse sans verrouiller les genoux et reviens jusqu'à 90°. | Descendre jusqu'à ce que le bassin bascule, ou verrouiller les genoux en haut. |
 | Hack squat | quadriceps · fessiers | machine | 2 | simple → Squat barre | 8-12 reps · repos 120 s | Dos entier contre le dossier, descends contrôlé jusqu'à 90° minimum, pousse dans le talon. | Pieds trop bas sur le plateau : les genoux passent loin devant et ça tire. |
 | Squat barre | quadriceps · fessiers, adducteurs, gainage | barre | 2 | **phare** → Squat avant (front squat) | 5-8 reps · repos 180 s | Barre sur les trapèzes, inspire et bloque, descends genoux dans l'axe des pieds jusqu'aux cuisses parallèles, remonte en poussant le sol. | Fesses qui remontent avant les épaules (good morning involontaire) : trop lourd. |
 | Squats sautés | quadriceps · fessiers, mollets | poids du corps | 2 | avance | 8-12 reps · repos 120 s | Descends à mi-hauteur, saute en extension complète, atterris en douceur genoux fléchis, enchaîne. | Atterrir jambes tendues ou genoux qui claquent vers l'intérieur. |
@@ -122,6 +125,12 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 ## 9. Isolations — phare : Hip thrust
 
 
+### Quadriceps (v20.14)
+
+| Exercice | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
+|---|---|---|---|---|---|---|
+| Leg extension (machine) | machine | 1 | simple | 12-15 reps · repos 90 s | Dos calé, coussin sur le bas des tibias, tends les jambes jusqu'à l'horizontale sans claquer les genoux, tiens une seconde et redescends en deux secondes. | Balancer le buste ou lâcher la charge en descendant : la montée doit être la seule chose qui bouge. |
+
 ### Fessiers
 
 | Exercice | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
@@ -140,6 +149,12 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 | Abduction à l'élastique (uni.) | élastique | 1 | simple → Abduction machine | 15-20 reps · repos 60 s | Élastique au-dessus des genoux, debout ou en pas latéraux, écarte contre la résistance sans bouger le buste. | Buste qui se penche pour aider. |
 | Clamshell (coquillage) (uni.) | poids du corps ou élastique | 1 | simple → Abduction machine | 15-20 reps · repos 60 s | Sur le côté genoux pliés pieds joints, ouvre le genou du dessus sans que le bassin bascule en arrière. | Bassin qui roule vers l'arrière pour ouvrir plus grand. |
 
+### Adducteurs (v20.14)
+
+| Exercice | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
+|---|---|---|---|---|---|---|
+| Adduction machine | machine | 1 | simple | 12-15 reps · repos 90 s | Assise, dos calé, serre les genoux contre les coussins en contrôlant le retour, sans à-coups. | Régler une amplitude trop grande dès le départ : l'aine tire, on ouvre progressivement. |
+
 ### Ischio-jambiers
 
 | Exercice | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
@@ -150,6 +165,14 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 | Leg curl assis **(lot 1)** | machine | 1 | simple → Leg curl allongé | 8-12 reps · repos 90 s | Dos calé, coussin au-dessus des chevilles, ramène les talons sous le siège en gardant les cuisses plaquées, remonte lentement. | Décoller les fesses du siège pour tirer plus lourd : la charge est trop haute. |
 | Glute-ham raise (GHD) **(lot 1)** | machine | 3 | avance | 6-10 reps · repos 90 s | Chevilles bloquées, genoux sur le coussin, corps droit des genoux à la tête, descends en contrôlant jusqu'à l'horizontale, remonte en tirant avec l'arrière des cuisses. | Casser les hanches pour remonter : le corps reste une planche, on plie seulement les genoux. |
 
+### Pectoraux (v20.14)
+
+| Exercice | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
+|---|---|---|---|---|---|---|
+| Pec deck (butterfly) | machine | 1 | simple | 12-15 reps · repos 90 s | Dos plaqué, coudes à hauteur des épaules et légèrement pliés, rapproche les bras devant toi en serrant les pecs une seconde, reviens lentement. | Ouvrir loin derrière le plan des épaules : c'est l'épaule qui encaisse. |
+| Écarté à la poulie vis-à-vis | poulie | 2 | simple | 12-15 reps · repos 90 s | Un pied devant, poignées hautes, bras presque tendus et coudes fixes, rapproche les mains devant le bas des pecs sans bouger le buste. | Plier les coudes et pousser au lieu d'écarter : ça devient un développé. |
+| Écarté haltères sur banc | haltères + banc | 2 | simple | 10-12 reps · repos 90 s | Allongée, haltères au-dessus de la poitrine, coudes légèrement pliés et fixes, descends en arc jusqu'à sentir l'étirement, remonte sans cogner les haltères. | Descendre très bas avec du lourd : l'épaule prend tout. |
+
 ### Biceps
 
 | Exercice | Matériel | Diff. | Échelle | Dose | Consigne | Erreur fréquente |
@@ -158,6 +181,7 @@ Chaque exercice porte : compartiment, muscle principal et secondaires, matériel
 | Curl barre | barre | 2 | avance | 8-12 reps · repos 90 s | Prise largeur d'épaules, coudes collés aux flancs, monte sans avancer les coudes, descends jusqu'aux bras tendus. | Coudes qui partent vers l'avant en haut du mouvement. |
 | Curl marteau | haltères | 1 | simple → Curl biceps haltères | 12-15 reps · repos 90 s | Paumes face à face tout le mouvement, coudes fixes, monte et descends contrôlé. | Tourner les poignets en haut. |
 | Curl à la poulie basse | poulie ou élastique | 1 | simple → Curl biceps haltères | 12-15 reps · repos 90 s | Face à la poulie, coudes fixes, tension constante, contracte en haut une seconde. | Reculer les coudes en montant. |
+| Curl pupitre (Larry Scott) | machine ou barre + banc ou haltères + banc | 1 | simple → Curl barre | 10-12 reps · repos 90 s | Bras posés sur le pupitre, aisselles calées, monte la charge sans décoller les coudes, descends lentement sans tendre complètement. | Tendre les bras à fond en bas, d'un coup : le tendon du biceps encaisse. |
 
 ### Triceps
 

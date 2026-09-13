@@ -1,11 +1,13 @@
 {
   "version": 1,
-  "genere": "programmes étape 1 (marqueurs étape 2 : accessoire, regression, coordination ; convention du matériel : alternatives, « a + b » = combinaison)",
+  "genere": "programmes étape 1 (marqueurs étape 2 : accessoire, regression, coordination ; v20.14 : alias, classique ; convention du matériel : alternatives, « a + b » = combinaison)",
   "regles": {
     "materiel": "liste d'alternatives : n'importe laquelle suffit ; « a + b » = combinaison obligatoire (barre + banc)",
     "repos": "≤6 reps → 180 s ; 8-12 → 120 s ; 12+ et isolation → 60-90 s (règle 5)",
     "echelle": "simple → phare → avancé ; monte_vers = exercice proposé après plusieurs semaines stables (règle 9)",
-    "demo": "champ demo = requête du système de démos existant (recherche YouTube « <demo> exercice technique »)"
+    "demo": "champ demo = requête du système de démos existant (recherche YouTube « <demo> exercice technique »)",
+    "alias": "autres appellations (français et anglais) : la recherche du panneau matche nom ET alias, insensible aux accents, à la casse et aux tirets, tolérante à une faute",
+    "classique": "exercice courant en salle, connu de tous : le moteur le préfère à égalité, et ne pioche dans les moins courants que pour varier ou sur demande"
   },
   "compartiments": [
     {
@@ -91,7 +93,12 @@
       "duree_s": 40,
       "existant": "chaise",
       "accessoire": true,
-      "demo": "Chaise contre le mur"
+      "demo": "Chaise contre le mur",
+      "alias": [
+        "wall sit",
+        "chaise murale"
+      ],
+      "classique": false
     },
     {
       "id": "squat_pdc",
@@ -117,7 +124,13 @@
       "erreur": "Genoux qui rentrent vers l'intérieur en remontant.",
       "existant": "squat_pdc",
       "repos_s": 90,
-      "demo": "Squat au poids du corps"
+      "demo": "Squat au poids du corps",
+      "alias": [
+        "air squat",
+        "squat sans charge",
+        "bodyweight squat"
+      ],
+      "classique": true
     },
     {
       "id": "goblet",
@@ -144,7 +157,13 @@
       "erreur": "Arrondir le dos en bas pour aller chercher la profondeur.",
       "existant": "goblet",
       "repos_s": 120,
-      "demo": "Goblet squat"
+      "demo": "Goblet squat",
+      "alias": [
+        "goblet squat haltère",
+        "squat gobelet",
+        "kettlebell squat"
+      ],
+      "classique": true
     },
     {
       "id": "presse",
@@ -169,7 +188,14 @@
       "erreur": "Verrouiller les genoux en haut ou laisser le bas du dos se décoller.",
       "existant": "presse",
       "repos_s": 120,
-      "demo": "Presse à cuisses"
+      "demo": "Presse à cuisses",
+      "alias": [
+        "leg press",
+        "presse inclinée",
+        "presse 45",
+        "presse à jambes"
+      ],
+      "classique": true
     },
     {
       "id": "hack_squat",
@@ -193,7 +219,12 @@
       "consigne": "Dos entier contre le dossier, descends contrôlé jusqu'à 90° minimum, pousse dans le talon.",
       "erreur": "Pieds trop bas sur le plateau : les genoux passent loin devant et ça tire.",
       "repos_s": 120,
-      "demo": "Hack squat"
+      "demo": "Hack squat",
+      "alias": [
+        "hack squat machine",
+        "squat hack"
+      ],
+      "classique": true
     },
     {
       "id": "squat",
@@ -220,7 +251,13 @@
       "erreur": "Fesses qui remontent avant les épaules (good morning involontaire) : trop lourd.",
       "existant": "squat",
       "repos_s": 180,
-      "demo": "Squat barre"
+      "demo": "Squat barre",
+      "alias": [
+        "back squat",
+        "squat arrière",
+        "squat barre nuque"
+      ],
+      "classique": true
     },
     {
       "id": "squat_saut",
@@ -246,7 +283,12 @@
       "erreur": "Atterrir jambes tendues ou genoux qui claquent vers l'intérieur.",
       "existant": "squat_saut",
       "repos_s": 120,
-      "demo": "Squats sautés"
+      "demo": "Squats sautés",
+      "alias": [
+        "jump squat",
+        "squat jump"
+      ],
+      "classique": false
     },
     {
       "id": "squat_avant",
@@ -272,7 +314,12 @@
       "consigne": "Barre posée sur les épaules devant, coudes hauts tout le mouvement, buste vertical, descends profond.",
       "erreur": "Coudes qui tombent : la barre roule vers l'avant et le dos s'arrondit.",
       "repos_s": 180,
-      "demo": "Squat avant (front squat)"
+      "demo": "Squat avant (front squat)",
+      "alias": [
+        "front squat",
+        "squat avant barre"
+      ],
+      "classique": false
     },
     {
       "id": "superman",
@@ -300,7 +347,12 @@
       "accessoire": true,
       "approximatif": "chaîne postérieure au sol : geste de hinge sans charge",
       "repos_s": 120,
-      "demo": "Superman au sol"
+      "demo": "Superman au sol",
+      "alias": [
+        "superman",
+        "extension lombaire au sol"
+      ],
+      "classique": false
     },
     {
       "id": "lombaire",
@@ -328,7 +380,14 @@
       "existant": "lombaire",
       "accessoire": true,
       "repos_s": 90,
-      "demo": "Extension lombaire 45°"
+      "demo": "Extension lombaire 45°",
+      "alias": [
+        "hyperextension",
+        "extension lombaire banc",
+        "banc à lombaires",
+        "back extension"
+      ],
+      "classique": true
     },
     {
       "id": "rdl_halteres",
@@ -353,7 +412,13 @@
       "consigne": "Haltères le long des cuisses, pousse les fesses vers l'arrière genoux à peine fléchis, descends jusqu'à sentir l'étirement derrière les cuisses.",
       "erreur": "Plier les genoux pour descendre plus bas : c'est la hanche qui recule, pas un squat.",
       "repos_s": 120,
-      "demo": "Soulevé de terre roumain haltères"
+      "demo": "Soulevé de terre roumain haltères",
+      "alias": [
+        "romanian deadlift haltères",
+        "rdl haltères",
+        "soulevé roumain haltères"
+      ],
+      "classique": true
     },
     {
       "id": "rdl",
@@ -380,7 +445,14 @@
       "erreur": "Barre qui s'éloigne des jambes : le dos prend tout.",
       "existant": "rdl",
       "repos_s": 120,
-      "demo": "Soulevé de terre roumain"
+      "demo": "Soulevé de terre roumain",
+      "alias": [
+        "romanian deadlift",
+        "rdl",
+        "soulevé de terre jambes tendues",
+        "stiff leg deadlift"
+      ],
+      "classique": true
     },
     {
       "id": "swing",
@@ -406,7 +478,13 @@
       "erreur": "Soulever avec les bras ou faire un squat : c'est un mouvement de hanche.",
       "existant": "swing",
       "repos_s": 60,
-      "demo": "Kettlebell swing"
+      "demo": "Kettlebell swing",
+      "alias": [
+        "kb swing",
+        "swing kettlebell",
+        "russian swing"
+      ],
+      "classique": true
     },
     {
       "id": "good_morning",
@@ -431,7 +509,12 @@
       "consigne": "Barre légère sur les trapèzes, penche le buste en reculant les hanches jusqu'à sentir l'arrière des cuisses, dos plat.",
       "erreur": "Charger trop vite : c'est un exercice de technique, pas de force.",
       "repos_s": 120,
-      "demo": "Good morning"
+      "demo": "Good morning",
+      "alias": [
+        "good morning barre",
+        "bonjour barre"
+      ],
+      "classique": true
     },
     {
       "id": "rdl_une_jambe",
@@ -461,7 +544,13 @@
       "lot": 1,
       "trou": "charnière unilatérale, niveau 2 (remplaçant du RDL haltères)",
       "repos_s": 120,
-      "demo": "Soulevé de terre roumain une jambe"
+      "demo": "Soulevé de terre roumain une jambe",
+      "alias": [
+        "single leg deadlift",
+        "rdl une jambe",
+        "soulevé de terre unilatéral"
+      ],
+      "classique": false
     },
     {
       "id": "trap_bar",
@@ -490,7 +579,13 @@
       "lot": 1,
       "trou": "charnière lourde de niveau 2, marche vers le soulevé de terre",
       "repos_s": 180,
-      "demo": "Soulevé de terre trap bar"
+      "demo": "Soulevé de terre trap bar",
+      "alias": [
+        "trap bar deadlift",
+        "hex bar",
+        "soulevé barre hexagonale"
+      ],
+      "classique": false
     },
     {
       "id": "souleve_sumo",
@@ -519,7 +614,12 @@
       "lot": 1,
       "trou": "charnière niveau 3 (remplaçant du soulevé de terre)",
       "repos_s": 180,
-      "demo": "Soulevé de terre sumo"
+      "demo": "Soulevé de terre sumo",
+      "alias": [
+        "sumo deadlift",
+        "deadlift sumo"
+      ],
+      "classique": true
     },
     {
       "id": "rack_pull",
@@ -548,7 +648,12 @@
       "lot": 1,
       "trou": "charnière niveau 3 (remplaçant du soulevé de terre)",
       "repos_s": 180,
-      "demo": "Rack pull (soulevé partiel depuis le rack)"
+      "demo": "Rack pull (soulevé partiel depuis le rack)",
+      "alias": [
+        "rack pull",
+        "soulevé partiel"
+      ],
+      "classique": false
     },
     {
       "id": "souleve_terre",
@@ -576,7 +681,13 @@
       "consigne": "Barre au-dessus du milieu du pied, dos plat, pousse le sol avec les jambes puis ouvre les hanches — la barre reste collée aux tibias.",
       "erreur": "Tirer avec le dos en premier : hanches et épaules doivent monter ensemble.",
       "repos_s": 180,
-      "demo": "Soulevé de terre"
+      "demo": "Soulevé de terre",
+      "alias": [
+        "deadlift",
+        "soulevé de terre conventionnel",
+        "dead lift"
+      ],
+      "classique": true
     },
     {
       "id": "hip_hinge_elastique",
@@ -602,7 +713,13 @@
       "erreur": "Se redresser avec le dos au lieu de pousser les hanches vers l'avant.",
       "accessoire": true,
       "repos_s": 90,
-      "demo": "Pull-through à l'élastique"
+      "demo": "Pull-through à l'élastique",
+      "alias": [
+        "pull through",
+        "pull-through poulie",
+        "cable pull through"
+      ],
+      "classique": false
     },
     {
       "id": "pompes_mur",
@@ -630,7 +747,13 @@
       "existant": "pompes_mur",
       "regression": true,
       "repos_s": 120,
-      "demo": "Pompes au mur / sur banc"
+      "demo": "Pompes au mur / sur banc",
+      "alias": [
+        "pompes inclinées",
+        "push up mur",
+        "incline push up"
+      ],
+      "classique": false
     },
     {
       "id": "pompes_genoux",
@@ -656,7 +779,12 @@
       "erreur": "Casser à la hanche en montant : les fesses restent dans l'alignement.",
       "regression": true,
       "repos_s": 120,
-      "demo": "Pompes sur les genoux"
+      "demo": "Pompes sur les genoux",
+      "alias": [
+        "knee push up",
+        "pompes à genoux"
+      ],
+      "classique": true
     },
     {
       "id": "pompes",
@@ -683,7 +811,14 @@
       "erreur": "Tête qui plonge en premier et bassin qui reste en l'air.",
       "existant": "pompes",
       "repos_s": 120,
-      "demo": "Pompes"
+      "demo": "Pompes",
+      "alias": [
+        "push up",
+        "push-ups",
+        "pushup",
+        "pompe"
+      ],
+      "classique": true
     },
     {
       "id": "chest_press",
@@ -708,7 +843,14 @@
       "consigne": "Poignées à hauteur de poitrine, omoplates serrées contre le dossier, pousse sans verrouiller les coudes.",
       "erreur": "Épaules qui remontent vers les oreilles pendant la poussée.",
       "repos_s": 120,
-      "demo": "Chest press machine"
+      "demo": "Chest press machine",
+      "alias": [
+        "développé machine",
+        "machine pectoraux",
+        "press pectoraux machine",
+        "chest press"
+      ],
+      "classique": true
     },
     {
       "id": "dc_halteres",
@@ -733,7 +875,13 @@
       "consigne": "Allongé, haltères au-dessus de la poitrine, descends coudes à 45° jusqu'à la hauteur du buste, remonte sans cogner les haltères.",
       "erreur": "Descendre coudes écartés à 90° : les épaules encaissent.",
       "repos_s": 120,
-      "demo": "Développé couché haltères"
+      "demo": "Développé couché haltères",
+      "alias": [
+        "dumbbell bench press",
+        "développé haltères couché",
+        "dc haltères"
+      ],
+      "classique": true
     },
     {
       "id": "developpe_couche",
@@ -758,7 +906,14 @@
       "consigne": "Omoplates serrées, pieds ancrés, barre qui descend sur le bas des pectoraux, coudes à 45°, pousse vers le haut et légèrement l'arrière.",
       "erreur": "Rebondir la barre sur la poitrine ou décoller les fesses du banc.",
       "repos_s": 180,
-      "demo": "Développé couché"
+      "demo": "Développé couché",
+      "alias": [
+        "bench press",
+        "bench",
+        "développé couché barre",
+        "dc barre"
+      ],
+      "classique": true
     },
     {
       "id": "dc_incline",
@@ -783,7 +938,13 @@
       "consigne": "Banc à 30°, haltères qui descendent à hauteur du haut de la poitrine, poussée légèrement convergente.",
       "erreur": "Banc trop redressé : ça devient un exercice d'épaules.",
       "repos_s": 120,
-      "demo": "Développé incliné haltères"
+      "demo": "Développé incliné haltères",
+      "alias": [
+        "incline bench press",
+        "développé incliné",
+        "incline dumbbell press"
+      ],
+      "classique": true
     },
     {
       "id": "dips",
@@ -808,7 +969,13 @@
       "consigne": "Buste légèrement penché en avant, descends jusqu'à ce que les épaules soient au niveau des coudes, remonte sans balancer.",
       "erreur": "Descendre trop bas épaules en avant : douleur à l'avant de l'épaule.",
       "repos_s": 180,
-      "demo": "Dips aux barres parallèles"
+      "demo": "Dips aux barres parallèles",
+      "alias": [
+        "dips",
+        "dips barres parallèles",
+        "dips pectoraux"
+      ],
+      "classique": true
     },
     {
       "id": "dips_machine",
@@ -835,7 +1002,13 @@
       "lot": 2,
       "trou": "version machine des dips (charge en kg) : remplaçant direct quand les barres manquent",
       "repos_s": 120,
-      "demo": "Dips à la machine assise"
+      "demo": "Dips à la machine assise",
+      "alias": [
+        "machine à dips",
+        "dips assis",
+        "dip machine"
+      ],
+      "classique": true
     },
     {
       "id": "pike",
@@ -861,7 +1034,12 @@
       "erreur": "Casser le V et retomber en pompe classique.",
       "existant": "pike",
       "repos_s": 120,
-      "demo": "Pompes piquées (épaules)"
+      "demo": "Pompes piquées (épaules)",
+      "alias": [
+        "pike push up",
+        "pompes en pique"
+      ],
+      "classique": false
     },
     {
       "id": "shoulder_press_machine",
@@ -885,7 +1063,13 @@
       "consigne": "Poignées à hauteur des oreilles, dos contre le dossier, pousse en haut sans verrouiller.",
       "erreur": "Cambrer le bas du dos pour aider la poussée.",
       "repos_s": 120,
-      "demo": "Développé épaules machine"
+      "demo": "Développé épaules machine",
+      "alias": [
+        "shoulder press",
+        "presse épaules",
+        "développé épaules assis machine"
+      ],
+      "classique": true
     },
     {
       "id": "dev",
@@ -912,7 +1096,13 @@
       "existant": "dev",
       "ambigu": "« Développé haltères » des templates : rangé en poussée verticale (épaules). Si c'était un développé couché haltères, le déplacer vers dc_halteres.",
       "repos_s": 120,
-      "demo": "Développé haltères assis"
+      "demo": "Développé haltères assis",
+      "alias": [
+        "dumbbell shoulder press",
+        "développé épaules haltères",
+        "overhead press haltères"
+      ],
+      "classique": true
     },
     {
       "id": "arnold",
@@ -938,7 +1128,12 @@
       "erreur": "Faire la rotation en bas seulement : elle se fait pendant la montée.",
       "hypertrophie": true,
       "repos_s": 120,
-      "demo": "Arnold press"
+      "demo": "Arnold press",
+      "alias": [
+        "arnold press haltères",
+        "développé arnold"
+      ],
+      "classique": true
     },
     {
       "id": "militaire",
@@ -965,7 +1160,15 @@
       "erreur": "Cambrer le bas du dos et pousser la barre devant le visage au lieu de dans l'axe.",
       "existant": "militaire",
       "repos_s": 180,
-      "demo": "Développé militaire"
+      "demo": "Développé militaire",
+      "alias": [
+        "overhead press",
+        "ohp",
+        "développé debout",
+        "press militaire",
+        "military press"
+      ],
+      "classique": true
     },
     {
       "id": "push_press",
@@ -991,7 +1194,12 @@
       "consigne": "Petite flexion de genoux puis extension explosive des jambes pour lancer la barre, termine la poussée avec les bras.",
       "erreur": "Plier trop les genoux : c'est un ressort court, pas un squat.",
       "repos_s": 180,
-      "demo": "Push press"
+      "demo": "Push press",
+      "alias": [
+        "push press barre",
+        "développé poussé"
+      ],
+      "classique": false
     },
     {
       "id": "rowing_inverse",
@@ -1018,7 +1226,14 @@
       "consigne": "Suspendu sous une barre basse (ou une table solide) corps droit comme une planche, tire la poitrine vers la barre en serrant les omoplates.",
       "erreur": "Bassin qui tombe : serre les fesses, plus la position est verticale, plus c'est facile.",
       "repos_s": 120,
-      "demo": "Rowing inversé"
+      "demo": "Rowing inversé",
+      "alias": [
+        "inverted row",
+        "rowing australien",
+        "tirage inversé",
+        "australian pull up"
+      ],
+      "classique": false
     },
     {
       "id": "rowing_elastique",
@@ -1043,7 +1258,13 @@
       "consigne": "Assis ou debout, tire les coudes vers l'arrière le long du corps, omoplates qui se rapprochent en fin de mouvement.",
       "erreur": "Tirer avec les bras seulement : les coudes passent derrière le buste grâce aux omoplates.",
       "repos_s": 90,
-      "demo": "Rowing à l'élastique"
+      "demo": "Rowing à l'élastique",
+      "alias": [
+        "tirage élastique",
+        "band row",
+        "rowing bande"
+      ],
+      "classique": false
     },
     {
       "id": "rowing",
@@ -1074,7 +1295,16 @@
         "rowing2"
       ],
       "repos_s": 120,
-      "demo": "Tirage horizontal (poulie / machine)"
+      "demo": "Tirage horizontal (poulie / machine)",
+      "alias": [
+        "tirage poulie basse",
+        "seated row",
+        "rowing assis",
+        "tirage bas",
+        "rowing poulie",
+        "tirage horizontal"
+      ],
+      "classique": true
     },
     {
       "id": "rowing_halteres",
@@ -1099,7 +1329,14 @@
       "consigne": "Main et genou sur le banc, dos plat, tire l'haltère vers la hanche coude près du corps, redescends jusqu'à l'étirement.",
       "erreur": "Tourner le buste pour monter l'haltère plus haut.",
       "repos_s": 120,
-      "demo": "Rowing haltère un bras"
+      "demo": "Rowing haltère un bras",
+      "alias": [
+        "one arm row",
+        "rowing un bras",
+        "rowing haltère",
+        "dumbbell row"
+      ],
+      "classique": true
     },
     {
       "id": "rowing_barre",
@@ -1126,7 +1363,14 @@
       "consigne": "Buste penché à 45°, dos plat, tire la barre vers le bas du ventre coudes vers l'arrière, redescends bras tendus.",
       "erreur": "Se redresser à chaque répétition pour tricher : le buste reste fixe.",
       "repos_s": 120,
-      "demo": "Rowing barre"
+      "demo": "Rowing barre",
+      "alias": [
+        "barbell row",
+        "rowing buste penché",
+        "bent over row",
+        "rowing barre penché"
+      ],
+      "classique": true
     },
     {
       "id": "rowing_pendlay",
@@ -1152,7 +1396,12 @@
       "consigne": "Buste à l'horizontale, barre repose au sol entre chaque répétition, tire explosif vers le bas de la poitrine.",
       "erreur": "Laisser le buste remonter au fil des répétitions.",
       "repos_s": 180,
-      "demo": "Rowing Pendlay"
+      "demo": "Rowing Pendlay",
+      "alias": [
+        "pendlay row",
+        "rowing pendlay barre"
+      ],
+      "classique": false
     },
     {
       "id": "tirage_elastique_v",
@@ -1177,7 +1426,12 @@
       "consigne": "Élastique ancré haut, tire les coudes vers les hanches en gardant le buste droit.",
       "erreur": "Hausser les épaules au départ : elles restent basses.",
       "repos_s": 90,
-      "demo": "Tirage vertical à l'élastique"
+      "demo": "Tirage vertical à l'élastique",
+      "alias": [
+        "lat pulldown élastique",
+        "tirage vertical bande"
+      ],
+      "classique": false
     },
     {
       "id": "tirage_v",
@@ -1204,7 +1458,15 @@
       "erreur": "Tirer derrière la nuque ou se pencher fort en arrière.",
       "existant": "tirage_v",
       "repos_s": 120,
-      "demo": "Tirage vertical poulie"
+      "demo": "Tirage vertical poulie",
+      "alias": [
+        "lat pulldown",
+        "tirage poitrine",
+        "tirage vertical",
+        "pulldown",
+        "tirage devant"
+      ],
+      "classique": true
     },
     {
       "id": "traction_assistee",
@@ -1231,7 +1493,14 @@
       "consigne": "Choisis une assistance qui te laisse 8 à 12 répétitions propres, menton au-dessus de la barre, descente contrôlée.",
       "erreur": "Assistance trop forte : on ne progresse plus. Réduis-la dès que 12 passent.",
       "repos_s": 120,
-      "demo": "Traction assistée (machine ou élastique)"
+      "demo": "Traction assistée (machine ou élastique)",
+      "alias": [
+        "assisted pull up",
+        "traction machine",
+        "tractions assistées",
+        "traction élastique"
+      ],
+      "classique": true
     },
     {
       "id": "traction_negative",
@@ -1258,7 +1527,12 @@
       "erreur": "Se laisser tomber sur la fin : contrôle jusqu'en bas.",
       "regression": true,
       "repos_s": 180,
-      "demo": "Traction négative"
+      "demo": "Traction négative",
+      "alias": [
+        "negative pull up",
+        "traction excentrique"
+      ],
+      "classique": false
     },
     {
       "id": "traction",
@@ -1284,7 +1558,15 @@
       "consigne": "Départ bras tendus épaules basses, tire les coudes vers les hanches jusqu'au menton au-dessus de la barre, redescends complètement.",
       "erreur": "Répétitions à moitié (bras jamais tendus) ou balancement des jambes.",
       "repos_s": 180,
-      "demo": "Traction"
+      "demo": "Traction",
+      "alias": [
+        "pull up",
+        "pull-up",
+        "tractions",
+        "chin up",
+        "traction pronation"
+      ],
+      "classique": true
     },
     {
       "id": "traction_lestee",
@@ -1310,7 +1592,13 @@
       "consigne": "Ceinture de lest ou haltère entre les pieds, même geste strict que la traction, amplitude complète.",
       "erreur": "Ajouter du lest avant 10 tractions strictes.",
       "repos_s": 180,
-      "demo": "Traction lestée"
+      "demo": "Traction lestée",
+      "alias": [
+        "weighted pull up",
+        "traction avec lest",
+        "tractions lestées"
+      ],
+      "classique": true
     },
     {
       "id": "split_squat",
@@ -1336,7 +1624,13 @@
       "consigne": "Un pied devant l'autre écartés d'un grand pas, descends le genou arrière vers le sol, buste droit, remonte sur place.",
       "erreur": "Pas trop court : le genou avant dépasse loin la pointe du pied.",
       "repos_s": 120,
-      "demo": "Split squat statique"
+      "demo": "Split squat statique",
+      "alias": [
+        "split squat",
+        "fente statique",
+        "fente sur place"
+      ],
+      "classique": true
     },
     {
       "id": "fente_arr",
@@ -1363,7 +1657,13 @@
       "erreur": "Se pencher en avant et tirer sur le genou arrière.",
       "existant": "fente_arr",
       "repos_s": 120,
-      "demo": "Fentes arrière"
+      "demo": "Fentes arrière",
+      "alias": [
+        "reverse lunge",
+        "fentes arrières",
+        "fente arrière"
+      ],
+      "classique": true
     },
     {
       "id": "stepup",
@@ -1390,7 +1690,14 @@
       "erreur": "Prendre l'élan avec la jambe du sol.",
       "existant": "stepup",
       "repos_s": 120,
-      "demo": "Step-up sur banc"
+      "demo": "Step-up sur banc",
+      "alias": [
+        "step up",
+        "montée sur banc",
+        "step-up",
+        "montée de banc"
+      ],
+      "classique": true
     },
     {
       "id": "fente",
@@ -1418,7 +1725,15 @@
       "erreur": "Pas trop court : le genou avant dépasse la pointe du pied et le talon décolle.",
       "existant": "fente",
       "repos_s": 120,
-      "demo": "Fentes marchées"
+      "demo": "Fentes marchées",
+      "alias": [
+        "walking lunge",
+        "fentes",
+        "fente avant",
+        "lunges",
+        "fentes marchées haltères"
+      ],
+      "classique": true
     },
     {
       "id": "fente_laterale",
@@ -1444,7 +1759,13 @@
       "consigne": "Grand pas sur le côté, assieds-toi sur la jambe qui s'est déplacée, l'autre tendue, pointes vers l'avant.",
       "erreur": "Genou qui part vers l'intérieur : il suit la pointe du pied.",
       "repos_s": 120,
-      "demo": "Fente latérale"
+      "demo": "Fente latérale",
+      "alias": [
+        "side lunge",
+        "lateral lunge",
+        "fentes latérales"
+      ],
+      "classique": false
     },
     {
       "id": "bulgare",
@@ -1472,7 +1793,14 @@
       "erreur": "Banc trop loin : ça devient une fente vers l'avant et le genou souffre.",
       "existant": "bulgare",
       "repos_s": 120,
-      "demo": "Fentes bulgares"
+      "demo": "Fentes bulgares",
+      "alias": [
+        "bulgarian split squat",
+        "fente bulgare",
+        "split squat bulgare",
+        "bulgares"
+      ],
+      "classique": true
     },
     {
       "id": "pistol_assiste",
@@ -1500,7 +1828,13 @@
       "erreur": "Genou qui part vers l'intérieur ou talon qui décolle.",
       "regression": true,
       "repos_s": 180,
-      "demo": "Pistol squat assisté"
+      "demo": "Pistol squat assisté",
+      "alias": [
+        "assisted pistol squat",
+        "pistol assisté",
+        "squat une jambe assisté"
+      ],
+      "classique": false
     },
     {
       "id": "stepup_leste",
@@ -1528,7 +1862,12 @@
       "lot": 1,
       "trou": "unilatéral niveau 2",
       "repos_s": 120,
-      "demo": "Step-up lesté"
+      "demo": "Step-up lesté",
+      "alias": [
+        "weighted step up",
+        "step up haltères"
+      ],
+      "classique": false
     },
     {
       "id": "curtsy",
@@ -1557,7 +1896,13 @@
       "lot": 1,
       "trou": "unilatéral niveau 2, second muscle principal du compartiment",
       "repos_s": 120,
-      "demo": "Fentes curtsy (révérence)"
+      "demo": "Fentes curtsy (révérence)",
+      "alias": [
+        "curtsy lunge",
+        "fente croisée",
+        "fente révérence"
+      ],
+      "classique": false
     },
     {
       "id": "bulgare_lestee",
@@ -1586,7 +1931,13 @@
       "lot": 1,
       "trou": "unilatéral niveau 3",
       "repos_s": 180,
-      "demo": "Fentes bulgares lestées"
+      "demo": "Fentes bulgares lestées",
+      "alias": [
+        "bulgarian split squat haltères",
+        "fentes bulgares haltères",
+        "bulgares lestées"
+      ],
+      "classique": true
     },
     {
       "id": "fente_barre",
@@ -1614,7 +1965,12 @@
       "lot": 1,
       "trou": "unilatéral niveau 3",
       "repos_s": 180,
-      "demo": "Fentes barre"
+      "demo": "Fentes barre",
+      "alias": [
+        "barbell lunge",
+        "fentes avec barre"
+      ],
+      "classique": false
     },
     {
       "id": "pistol",
@@ -1642,7 +1998,13 @@
       "lot": 1,
       "trou": "unilatéral niveau 3, suite du pistol assisté",
       "repos_s": 180,
-      "demo": "Pistol squat"
+      "demo": "Pistol squat",
+      "alias": [
+        "pistol squat",
+        "squat une jambe",
+        "squat pistol"
+      ],
+      "classique": false
     },
     {
       "id": "planche_genoux",
@@ -1666,7 +2028,13 @@
       "duree_s": 30,
       "regression": true,
       "repos_s": 45,
-      "demo": "Planche sur les genoux"
+      "demo": "Planche sur les genoux",
+      "alias": [
+        "knee plank",
+        "planche genoux",
+        "gainage genoux"
+      ],
+      "classique": true
     },
     {
       "id": "deadbug",
@@ -1692,7 +2060,13 @@
       "existant": "deadbug",
       "coordination": true,
       "repos_s": 120,
-      "demo": "Dead bug"
+      "demo": "Dead bug",
+      "alias": [
+        "dead bug",
+        "insecte mort",
+        "gainage dead bug"
+      ],
+      "classique": false
     },
     {
       "id": "bird_dog",
@@ -1717,7 +2091,13 @@
       "consigne": "À quatre pattes, allonge un bras et la jambe opposée jusqu'à l'horizontale, bassin immobile, tiens une seconde, reviens.",
       "erreur": "Le bassin qui tourne ou le dos qui se creuse : le buste reste une table.",
       "repos_s": 120,
-      "demo": "Bird-dog"
+      "demo": "Bird-dog",
+      "alias": [
+        "bird dog",
+        "chien oiseau",
+        "gainage bird dog"
+      ],
+      "classique": false
     },
     {
       "id": "planche",
@@ -1742,7 +2122,14 @@
       "duree_s": 40,
       "existant": "planche",
       "repos_s": 45,
-      "demo": "Planche"
+      "demo": "Planche",
+      "alias": [
+        "plank",
+        "gainage planche",
+        "gainage ventral",
+        "planche ventrale"
+      ],
+      "classique": true
     },
     {
       "id": "planche_laterale",
@@ -1765,7 +2152,13 @@
       "erreur": "Hanche qui tombe vers le sol.",
       "duree_s": 30,
       "repos_s": 45,
-      "demo": "Planche latérale"
+      "demo": "Planche latérale",
+      "alias": [
+        "side plank",
+        "gainage latéral",
+        "planche côté"
+      ],
+      "classique": true
     },
     {
       "id": "hollow",
@@ -1788,7 +2181,13 @@
       "duree_s": 20,
       "existant": "hollow",
       "repos_s": 45,
-      "demo": "Hollow hold"
+      "demo": "Hollow hold",
+      "alias": [
+        "hollow body",
+        "hollow hold",
+        "gainage hollow"
+      ],
+      "classique": false
     },
     {
       "id": "releves",
@@ -1813,7 +2212,13 @@
       "erreur": "Cambrer le dos sur la descente : arrête-toi avant.",
       "existant": "releves",
       "repos_s": 120,
-      "demo": "Relevés de jambes"
+      "demo": "Relevés de jambes",
+      "alias": [
+        "leg raises",
+        "relevé de jambes au sol",
+        "lying leg raise"
+      ],
+      "classique": true
     },
     {
       "id": "pallof",
@@ -1838,7 +2243,13 @@
       "consigne": "De profil à la poulie, poignée au sternum, tends les bras devant toi sans laisser le buste tourner, tiens 2 s.",
       "erreur": "Tourner les épaules vers la poulie.",
       "repos_s": 90,
-      "demo": "Pallof press"
+      "demo": "Pallof press",
+      "alias": [
+        "pallof press",
+        "anti-rotation poulie",
+        "gainage pallof"
+      ],
+      "classique": false
     },
     {
       "id": "roulette",
@@ -1863,7 +2274,14 @@
       "consigne": "À genoux, roule vers l'avant en gardant le bas du dos rond et le ventre serré, reviens sans cambrer.",
       "erreur": "Cambrer le dos en bout de course : réduis l'amplitude.",
       "repos_s": 180,
-      "demo": "Roulette abdominale (ab wheel)"
+      "demo": "Roulette abdominale (ab wheel)",
+      "alias": [
+        "ab wheel",
+        "ab roller",
+        "roue abdominale",
+        "rollout"
+      ],
+      "classique": true
     },
     {
       "id": "releve_genoux_suspendu",
@@ -1891,7 +2309,13 @@
       "lot": 1,
       "trou": "gainage niveau 2",
       "repos_s": 120,
-      "demo": "Relevé de genoux suspendu"
+      "demo": "Relevé de genoux suspendu",
+      "alias": [
+        "hanging knee raise",
+        "relevé de genoux barre",
+        "knee raise suspendu"
+      ],
+      "classique": true
     },
     {
       "id": "farmer_walk",
@@ -1919,7 +2343,14 @@
       "lot": 1,
       "trou": "gainage avec charge, tous niveaux",
       "repos_s": 45,
-      "demo": "Farmer walk (marche du fermier)"
+      "demo": "Farmer walk (marche du fermier)",
+      "alias": [
+        "farmer walk",
+        "marche du fermier",
+        "farmer carry",
+        "farmers walk"
+      ],
+      "classique": true
     },
     {
       "id": "pallof_rotation",
@@ -1947,7 +2378,12 @@
       "lot": 1,
       "trou": "gainage anti-rotation niveau 3",
       "repos_s": 90,
-      "demo": "Pallof press avec rotation lente"
+      "demo": "Pallof press avec rotation lente",
+      "alias": [
+        "pallof rotation",
+        "pallof press rotation"
+      ],
+      "classique": false
     },
     {
       "id": "pallof_demi_genou",
@@ -1975,7 +2411,12 @@
       "lot": 1,
       "trou": "gainage anti-rotation niveau 2, position d'apprentissage du Pallof (remplaçant de la planche latérale)",
       "repos_s": 120,
-      "demo": "Pallof press à demi-genou"
+      "demo": "Pallof press à demi-genou",
+      "alias": [
+        "half kneeling pallof",
+        "pallof à genou"
+      ],
+      "classique": false
     },
     {
       "id": "pont_sol",
@@ -2001,7 +2442,14 @@
       "isolation": true,
       "existant": "pont_sol",
       "repos_s": 90,
-      "demo": "Pont fessier au sol"
+      "demo": "Pont fessier au sol",
+      "alias": [
+        "glute bridge",
+        "pont fessier",
+        "pont au sol",
+        "hip bridge"
+      ],
+      "classique": true
     },
     {
       "id": "pont",
@@ -2028,7 +2476,13 @@
       "isolation": true,
       "existant": "pont",
       "repos_s": 90,
-      "demo": "Pont fessier unilatéral"
+      "demo": "Pont fessier unilatéral",
+      "alias": [
+        "single leg glute bridge",
+        "pont une jambe",
+        "pont fessier une jambe"
+      ],
+      "classique": false
     },
     {
       "id": "hipthrust_machine",
@@ -2053,7 +2507,13 @@
       "erreur": "Aller trop haut en cambrant : on s'arrête aligné.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Hip thrust machine"
+      "demo": "Hip thrust machine",
+      "alias": [
+        "hip thrust machine",
+        "machine hip thrust",
+        "poussée de hanches machine"
+      ],
+      "classique": true
     },
     {
       "id": "hipthrust",
@@ -2080,7 +2540,14 @@
       "isolation": true,
       "existant": "hipthrust",
       "repos_s": 90,
-      "demo": "Hip thrust"
+      "demo": "Hip thrust",
+      "alias": [
+        "hip thrust",
+        "hip thrust barre",
+        "poussée de hanche",
+        "hip trust"
+      ],
+      "classique": true
     },
     {
       "id": "kickback",
@@ -2104,7 +2571,14 @@
       "erreur": "Cambrer le dos pour monter la jambe plus haut.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Kickback à la poulie"
+      "demo": "Kickback à la poulie",
+      "alias": [
+        "cable kickback",
+        "glute kickback",
+        "kickback fessier",
+        "extension de hanche poulie"
+      ],
+      "classique": true
     },
     {
       "id": "abduction",
@@ -2130,7 +2604,14 @@
       "isolation": true,
       "existant": "abduction",
       "repos_s": 90,
-      "demo": "Abduction machine"
+      "demo": "Abduction machine",
+      "alias": [
+        "abducteurs machine",
+        "machine à abducteurs",
+        "hip abduction",
+        "écarter les cuisses"
+      ],
+      "classique": true
     },
     {
       "id": "abduction_elastique",
@@ -2155,7 +2636,13 @@
       "erreur": "Buste qui se penche pour aider.",
       "isolation": true,
       "repos_s": 60,
-      "demo": "Abduction à l'élastique"
+      "demo": "Abduction à l'élastique",
+      "alias": [
+        "band abduction",
+        "abduction bande",
+        "abducteurs élastique"
+      ],
+      "classique": false
     },
     {
       "id": "clamshell",
@@ -2181,7 +2668,13 @@
       "erreur": "Bassin qui roule vers l'arrière pour ouvrir plus grand.",
       "isolation": true,
       "repos_s": 60,
-      "demo": "Clamshell (coquillage)"
+      "demo": "Clamshell (coquillage)",
+      "alias": [
+        "clamshell",
+        "coquillage",
+        "clam shell"
+      ],
+      "classique": false
     },
     {
       "id": "legcurl",
@@ -2208,7 +2701,15 @@
       "existant": "legcurl",
       "approximatif": "sous-muscle « ischio-jambiers » ajouté à la liste des isolations",
       "repos_s": 90,
-      "demo": "Leg curl allongé"
+      "demo": "Leg curl allongé",
+      "alias": [
+        "leg curl",
+        "leg curl couché",
+        "lying leg curl",
+        "curl ischios",
+        "ischio machine"
+      ],
+      "classique": true
     },
     {
       "id": "legcurl_ballon",
@@ -2234,7 +2735,13 @@
       "erreur": "Hanches qui redescendent pendant le mouvement.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Leg curl au ballon"
+      "demo": "Leg curl au ballon",
+      "alias": [
+        "swiss ball leg curl",
+        "leg curl ballon",
+        "curl ischios ballon"
+      ],
+      "classique": false
     },
     {
       "id": "nordic",
@@ -2259,7 +2766,13 @@
       "erreur": "Casser les hanches pour ralentir : le corps reste d'une pièce.",
       "isolation": true,
       "repos_s": 180,
-      "demo": "Nordic curl"
+      "demo": "Nordic curl",
+      "alias": [
+        "nordic hamstring curl",
+        "nordic curl",
+        "nordics"
+      ],
+      "classique": false
     },
     {
       "id": "legcurl_assis",
@@ -2286,7 +2799,14 @@
       "lot": 1,
       "trou": "ischio-jambiers en salle, niveaux 1-2",
       "repos_s": 90,
-      "demo": "Leg curl assis"
+      "demo": "Leg curl assis",
+      "alias": [
+        "seated leg curl",
+        "leg curl assis machine",
+        "curl ischios assis",
+        "leg curl machine assis"
+      ],
+      "classique": true
     },
     {
       "id": "glute_ham_raise",
@@ -2314,7 +2834,13 @@
       "lot": 1,
       "trou": "ischio-jambiers niveau 3 (remplaçant du nordic curl)",
       "repos_s": 90,
-      "demo": "Glute-ham raise (GHD)"
+      "demo": "Glute-ham raise (GHD)",
+      "alias": [
+        "ghd",
+        "glute ham raise",
+        "ghr"
+      ],
+      "classique": false
     },
     {
       "id": "curl",
@@ -2340,7 +2866,14 @@
       "isolation": true,
       "existant": "curl",
       "repos_s": 90,
-      "demo": "Curl biceps haltères"
+      "demo": "Curl biceps haltères",
+      "alias": [
+        "dumbbell curl",
+        "curl haltères",
+        "biceps curl",
+        "curl biceps"
+      ],
+      "classique": true
     },
     {
       "id": "curl_barre",
@@ -2365,7 +2898,14 @@
       "erreur": "Coudes qui partent vers l'avant en haut du mouvement.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Curl barre"
+      "demo": "Curl barre",
+      "alias": [
+        "barbell curl",
+        "curl barre droite",
+        "curl ez",
+        "curl barre ez"
+      ],
+      "classique": true
     },
     {
       "id": "curl_marteau",
@@ -2391,7 +2931,13 @@
       "erreur": "Tourner les poignets en haut.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Curl marteau"
+      "demo": "Curl marteau",
+      "alias": [
+        "hammer curl",
+        "curl marteau haltères",
+        "curl neutre"
+      ],
+      "classique": true
     },
     {
       "id": "curl_poulie",
@@ -2417,7 +2963,13 @@
       "erreur": "Reculer les coudes en montant.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Curl à la poulie basse"
+      "demo": "Curl à la poulie basse",
+      "alias": [
+        "cable curl",
+        "curl poulie",
+        "curl câble"
+      ],
+      "classique": true
     },
     {
       "id": "triceps",
@@ -2442,7 +2994,15 @@
       "isolation": true,
       "existant": "triceps",
       "repos_s": 90,
-      "demo": "Extension triceps à la poulie"
+      "demo": "Extension triceps à la poulie",
+      "alias": [
+        "triceps pushdown",
+        "pushdown",
+        "extension triceps poulie haute",
+        "triceps corde",
+        "triceps poulie"
+      ],
+      "classique": true
     },
     {
       "id": "dips_banc",
@@ -2470,7 +3030,13 @@
       "isolation": true,
       "existant": "dips_banc",
       "repos_s": 90,
-      "demo": "Dips sur banc"
+      "demo": "Dips sur banc",
+      "alias": [
+        "bench dips",
+        "dips entre bancs",
+        "dips triceps banc"
+      ],
+      "classique": true
     },
     {
       "id": "extension_nuque",
@@ -2493,7 +3059,14 @@
       "erreur": "Coudes qui s'ouvrent sur les côtés.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Extension triceps au-dessus de la tête"
+      "demo": "Extension triceps au-dessus de la tête",
+      "alias": [
+        "overhead triceps extension",
+        "extension triceps nuque",
+        "triceps nuque",
+        "french press haltère"
+      ],
+      "classique": true
     },
     {
       "id": "barre_front",
@@ -2517,7 +3090,15 @@
       "erreur": "Bouger les épaules : seuls les coudes travaillent.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Barre au front"
+      "demo": "Barre au front",
+      "alias": [
+        "skull crusher",
+        "skullcrusher",
+        "barre au front",
+        "triceps barre au front",
+        "french press"
+      ],
+      "classique": true
     },
     {
       "id": "lateral",
@@ -2543,7 +3124,14 @@
       "isolation": true,
       "existant": "lateral",
       "repos_s": 90,
-      "demo": "Élévations latérales"
+      "demo": "Élévations latérales",
+      "alias": [
+        "lateral raise",
+        "élévations latérales haltères",
+        "élévation latérale",
+        "side raise"
+      ],
+      "classique": true
     },
     {
       "id": "lateral_poulie",
@@ -2567,7 +3155,13 @@
       "erreur": "Monter au-dessus de l'horizontale.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Élévation latérale à la poulie"
+      "demo": "Élévation latérale à la poulie",
+      "alias": [
+        "cable lateral raise",
+        "élévation latérale câble",
+        "latérales poulie"
+      ],
+      "classique": true
     },
     {
       "id": "lateral_machine",
@@ -2590,7 +3184,14 @@
       "erreur": "Charge trop lourde et amplitude qui rétrécit.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Élévation latérale machine"
+      "demo": "Élévation latérale machine",
+      "alias": [
+        "lateral raise machine",
+        "élévations latérales machine",
+        "machine élévations latérales",
+        "machine épaules latérales"
+      ],
+      "classique": true
     },
     {
       "id": "oiseau",
@@ -2615,7 +3216,14 @@
       "erreur": "Se redresser en montant les bras.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Oiseau (élévations arrière)"
+      "demo": "Oiseau (élévations arrière)",
+      "alias": [
+        "rear delt fly",
+        "oiseau haltères",
+        "élévations arrière",
+        "reverse fly"
+      ],
+      "classique": true
     },
     {
       "id": "tirage_ela",
@@ -2644,7 +3252,14 @@
       "existant": "tirage_ela",
       "approximatif": "sous-muscle « arrière d'épaule » ajouté à la liste des isolations",
       "repos_s": 90,
-      "demo": "Face pull (poulie / élastique)"
+      "demo": "Face pull (poulie / élastique)",
+      "alias": [
+        "face pull",
+        "face-pull",
+        "tirage visage",
+        "tirage au visage"
+      ],
+      "classique": true
     },
     {
       "id": "reverse_pec_deck",
@@ -2672,7 +3287,14 @@
       "lot": 1,
       "trou": "arrière d'épaule en salle",
       "repos_s": 90,
-      "demo": "Reverse pec deck (oiseau machine)"
+      "demo": "Reverse pec deck (oiseau machine)",
+      "alias": [
+        "reverse pec deck",
+        "reverse fly machine",
+        "oiseau machine",
+        "rear delt machine"
+      ],
+      "classique": true
     },
     {
       "id": "mollets",
@@ -2696,7 +3318,14 @@
       "isolation": true,
       "existant": "mollets",
       "repos_s": 90,
-      "demo": "Mollets debout (machine)"
+      "demo": "Mollets debout (machine)",
+      "alias": [
+        "standing calf raise",
+        "mollets debout",
+        "calf raise",
+        "extension mollets debout"
+      ],
+      "classique": true
     },
     {
       "id": "mollets_marche",
@@ -2720,7 +3349,13 @@
       "isolation": true,
       "existant": "mollets_marche",
       "repos_s": 60,
-      "demo": "Mollets sur une marche"
+      "demo": "Mollets sur une marche",
+      "alias": [
+        "calf raise marche",
+        "mollets escalier",
+        "mollets sur marche"
+      ],
+      "classique": false
     },
     {
       "id": "mollets_assis",
@@ -2743,7 +3378,14 @@
       "erreur": "Rebondir en bas.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Mollets assis (machine)"
+      "demo": "Mollets assis (machine)",
+      "alias": [
+        "seated calf raise",
+        "mollets assis",
+        "mollets machine assis",
+        "calf assis"
+      ],
+      "classique": true
     },
     {
       "id": "mollets_presse",
@@ -2766,7 +3408,13 @@
       "erreur": "Plier les genoux pour aider.",
       "isolation": true,
       "repos_s": 90,
-      "demo": "Mollets à la presse"
+      "demo": "Mollets à la presse",
+      "alias": [
+        "calf press",
+        "mollets presse",
+        "mollets à la presse à cuisses"
+      ],
+      "classique": true
     },
     {
       "id": "marche_inclinee",
@@ -2787,7 +3435,14 @@
       "erreur": "Se tenir aux barres : l'inclinaison ne sert plus à rien.",
       "existant": "Marche inclinée",
       "demo": "Marche inclinée",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "incline walk",
+        "marche tapis incliné",
+        "marche en côte",
+        "tapis incliné"
+      ],
+      "classique": true
     },
     {
       "id": "escaliers",
@@ -2808,7 +3463,14 @@
       "erreur": "Se pencher sur la console.",
       "existant": "Escaliers / stairmaster",
       "demo": "Escaliers / stairmaster",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "stairmaster",
+        "stepper",
+        "escalier machine",
+        "stair climber"
+      ],
+      "classique": true
     },
     {
       "id": "rameur",
@@ -2829,7 +3491,14 @@
       "erreur": "Tirer avec les bras avant d'avoir poussé les jambes.",
       "existant": "Rameur",
       "demo": "Rameur",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "rowing machine",
+        "rameur concept",
+        "rowing cardio",
+        "rower"
+      ],
+      "classique": true
     },
     {
       "id": "velo",
@@ -2850,7 +3519,15 @@
       "erreur": "Selle trop basse : les genoux souffrent.",
       "existant": "Vélo",
       "demo": "Vélo",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "vélo d'appartement",
+        "bike",
+        "spinning",
+        "vélo cardio",
+        "cycling"
+      ],
+      "classique": true
     },
     {
       "id": "corde",
@@ -2871,7 +3548,13 @@
       "erreur": "Sauter trop haut et atterrir à plat.",
       "existant": "Corde à sauter",
       "demo": "Corde à sauter",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "jump rope",
+        "corde à sauter",
+        "skipping"
+      ],
+      "classique": true
     },
     {
       "id": "elliptique",
@@ -2891,7 +3574,13 @@
       "consigne": "Buste droit, pousse et tire avec les bras, allure où tu peux parler.",
       "erreur": "S'affaler sur les poignées.",
       "demo": "Elliptique",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "elliptical",
+        "vélo elliptique",
+        "cross trainer"
+      ],
+      "classique": true
     },
     {
       "id": "course_douce",
@@ -2912,7 +3601,14 @@
       "consigne": "Allure de conversation, foulée courte, atterrissage sous le bassin.",
       "erreur": "Partir trop vite et finir en marchant.",
       "demo": "Course douce",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "footing",
+        "jogging",
+        "course lente",
+        "tapis de course"
+      ],
+      "classique": true
     },
     {
       "id": "burpees",
@@ -2934,7 +3630,11 @@
       "existant": "burpees",
       "approximatif": "conditionnement au poids du corps : rangé en cardio",
       "demo": "Burpees",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "burpee"
+      ],
+      "classique": true
     },
     {
       "id": "montees",
@@ -2956,7 +3656,13 @@
       "existant": "montees",
       "approximatif": "conditionnement au poids du corps : rangé en cardio",
       "demo": "Montées de genoux",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "high knees",
+        "montées de genoux",
+        "genoux hauts"
+      ],
+      "classique": true
     },
     {
       "id": "mobilite_hanches",
@@ -2976,7 +3682,14 @@
       "consigne": "Assis, une jambe à 90° devant, l'autre à 90° sur le côté, bascule d'un côté à l'autre en gardant le buste droit.",
       "erreur": "Forcer avec les mains : on va où les hanches vont.",
       "demo": "Mobilité hanches (90/90)",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "90/90",
+        "mobilité de hanche",
+        "hip mobility",
+        "90 90"
+      ],
+      "classique": false
     },
     {
       "id": "flechisseurs",
@@ -2996,7 +3709,14 @@
       "consigne": "Genou arrière au sol, avance les hanches en serrant la fesse arrière, buste droit, 45 s par côté.",
       "erreur": "Cambrer le dos au lieu d'avancer la hanche.",
       "demo": "Étirement fléchisseurs de hanche (fente basse)",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "hip flexor stretch",
+        "étirement psoas",
+        "fente basse",
+        "étirement fléchisseurs"
+      ],
+      "classique": false
     },
     {
       "id": "ischios_etirement",
@@ -3016,7 +3736,13 @@
       "consigne": "Talon sur un support bas, jambe tendue, penche-toi depuis les hanches dos plat jusqu'à la tension, respire.",
       "erreur": "Arrondir le dos pour toucher le pied.",
       "demo": "Étirement ischio-jambiers",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "hamstring stretch",
+        "étirement ischios",
+        "étirement arrière cuisse"
+      ],
+      "classique": false
     },
     {
       "id": "ouverture_epaules",
@@ -3037,7 +3763,14 @@
       "consigne": "Bâton ou élastique tenu large, passe-le devant-derrière bras tendus, lentement.",
       "erreur": "Prise trop étroite : élargis.",
       "demo": "Ouverture d'épaules (bâton ou élastique)",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "shoulder dislocates",
+        "dislocations épaules",
+        "passage de bâton",
+        "ouverture épaules bâton"
+      ],
+      "classique": false
     },
     {
       "id": "thoracique",
@@ -3057,7 +3790,14 @@
       "consigne": "Rouleau sous le haut du dos, mains derrière la tête, laisse le haut du dos s'étendre par-dessus, change de hauteur.",
       "erreur": "Cambrer les lombaires : le bassin reste au sol.",
       "demo": "Extension thoracique au rouleau",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "thoracic extension",
+        "extension thoracique",
+        "foam roller dos",
+        "rouleau dos"
+      ],
+      "classique": false
     },
     {
       "id": "chat_vache",
@@ -3077,7 +3817,247 @@
       "consigne": "À quatre pattes, arrondis le dos en expirant puis creuse-le en inspirant, lentement.",
       "erreur": "Aller vite : c'est le souffle qui donne le rythme.",
       "demo": "Chat-vache",
-      "reps": null
+      "reps": null,
+      "alias": [
+        "cat cow",
+        "cat-cow",
+        "chat vache",
+        "mobilité colonne"
+      ],
+      "classique": false
+    },
+    {
+      "id": "leg_extension",
+      "nom": "Leg extension (machine)",
+      "compartiment": "isolation",
+      "muscle": "quadriceps",
+      "secondaires": [],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Dos calé, coussin sur le bas des tibias, tends les jambes jusqu'à l'horizontale sans claquer les genoux, tiens une seconde et redescends en deux secondes.",
+      "erreur": "Balancer le buste ou lâcher la charge en descendant : la montée doit être la seule chose qui bouge.",
+      "isolation": true,
+      "lot": 3,
+      "trou": "isolation quadriceps de base, absente",
+      "repos_s": 90,
+      "demo": "Leg extension",
+      "alias": [
+        "extension de jambes",
+        "extension quadriceps",
+        "extension des jambes",
+        "leg extension machine",
+        "extension de jambe"
+      ],
+      "classique": true
+    },
+    {
+      "id": "presse_horizontale",
+      "nom": "Presse à cuisses horizontale (assise)",
+      "compartiment": "squat",
+      "muscle": "quadriceps",
+      "secondaires": [
+        "fessiers"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "squat",
+      "reps": [
+        8,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Assise, dos et bassin calés, pieds largeur d'épaules au milieu du plateau, pousse sans verrouiller les genoux et reviens jusqu'à 90°.",
+      "erreur": "Descendre jusqu'à ce que le bassin bascule, ou verrouiller les genoux en haut.",
+      "lot": 3,
+      "repos_s": 120,
+      "demo": "Presse à cuisses horizontale",
+      "alias": [
+        "presse assise",
+        "leg press horizontal",
+        "seated leg press",
+        "presse horizontale"
+      ],
+      "classique": true
+    },
+    {
+      "id": "adduction",
+      "nom": "Adduction machine",
+      "compartiment": "isolation",
+      "muscle": "adducteurs",
+      "secondaires": [],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Assise, dos calé, serre les genoux contre les coussins en contrôlant le retour, sans à-coups.",
+      "erreur": "Régler une amplitude trop grande dès le départ : l'aine tire, on ouvre progressivement.",
+      "isolation": true,
+      "lot": 3,
+      "trou": "adducteurs en salle",
+      "repos_s": 90,
+      "demo": "Adduction machine",
+      "alias": [
+        "adducteurs machine",
+        "machine à adducteurs",
+        "hip adduction",
+        "serrer les cuisses"
+      ],
+      "classique": true
+    },
+    {
+      "id": "pec_deck",
+      "nom": "Pec deck (butterfly)",
+      "compartiment": "isolation",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "épaules"
+      ],
+      "materiel": [
+        "machine"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Dos plaqué, coudes à hauteur des épaules et légèrement pliés, rapproche les bras devant toi en serrant les pecs une seconde, reviens lentement.",
+      "erreur": "Ouvrir loin derrière le plan des épaules : c'est l'épaule qui encaisse.",
+      "isolation": true,
+      "lot": 3,
+      "trou": "isolation pectoraux en salle",
+      "repos_s": 90,
+      "demo": "Pec deck",
+      "alias": [
+        "butterfly",
+        "machine pec deck",
+        "écarté machine",
+        "pec-deck"
+      ],
+      "classique": true
+    },
+    {
+      "id": "poulie_vis_a_vis",
+      "nom": "Écarté à la poulie vis-à-vis",
+      "compartiment": "isolation",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "épaules"
+      ],
+      "materiel": [
+        "poulie"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": null,
+      "reps": [
+        12,
+        15
+      ],
+      "unilateral": false,
+      "consigne": "Un pied devant, poignées hautes, bras presque tendus et coudes fixes, rapproche les mains devant le bas des pecs sans bouger le buste.",
+      "erreur": "Plier les coudes et pousser au lieu d'écarter : ça devient un développé.",
+      "isolation": true,
+      "lot": 3,
+      "repos_s": 90,
+      "demo": "Écarté poulie vis-à-vis",
+      "alias": [
+        "cable crossover",
+        "crossover",
+        "cable fly",
+        "écarté poulie",
+        "vis à vis"
+      ],
+      "classique": true
+    },
+    {
+      "id": "ecarte_halteres",
+      "nom": "Écarté haltères sur banc",
+      "compartiment": "isolation",
+      "muscle": "pectoraux",
+      "secondaires": [
+        "épaules"
+      ],
+      "materiel": [
+        "haltères + banc"
+      ],
+      "difficulte": 2,
+      "echelle": "simple",
+      "monte_vers": null,
+      "reps": [
+        10,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Allongée, haltères au-dessus de la poitrine, coudes légèrement pliés et fixes, descends en arc jusqu'à sentir l'étirement, remonte sans cogner les haltères.",
+      "erreur": "Descendre très bas avec du lourd : l'épaule prend tout.",
+      "isolation": true,
+      "lot": 3,
+      "repos_s": 90,
+      "demo": "Écarté haltères",
+      "alias": [
+        "dumbbell fly",
+        "fly haltères",
+        "écartés couché",
+        "écarté couché"
+      ],
+      "classique": true
+    },
+    {
+      "id": "curl_pupitre",
+      "nom": "Curl pupitre (Larry Scott)",
+      "compartiment": "isolation",
+      "muscle": "biceps",
+      "secondaires": [
+        "avant-bras"
+      ],
+      "materiel": [
+        "machine",
+        "barre + banc",
+        "haltères + banc"
+      ],
+      "difficulte": 1,
+      "echelle": "simple",
+      "monte_vers": "curl_barre",
+      "reps": [
+        10,
+        12
+      ],
+      "unilateral": false,
+      "consigne": "Bras posés sur le pupitre, aisselles calées, monte la charge sans décoller les coudes, descends lentement sans tendre complètement.",
+      "erreur": "Tendre les bras à fond en bas, d'un coup : le tendon du biceps encaisse.",
+      "isolation": true,
+      "lot": 3,
+      "repos_s": 90,
+      "demo": "Curl pupitre",
+      "alias": [
+        "preacher curl",
+        "larry scott",
+        "curl au pupitre",
+        "curl machine"
+      ],
+      "classique": true
     }
   ]
 }

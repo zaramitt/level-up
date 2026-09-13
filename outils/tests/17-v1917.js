@@ -54,6 +54,7 @@ const init = () => {
   console.log('=== A1 — chrono sur horodatage (arrière-plan simulé) ===');
   await p.locator('button', { hasText: 'Fin de série' }).first().tap();
   await p.waitForTimeout(600);
+  await p.locator('.chrono-flottant.pilule').tap(); await p.waitForTimeout(300); // v20.14 : la pilule s'agrandit au tap (chrono en grand, bouton OK)
   let o = await overlay();
   console.log('  repos lancé, affiche', o && o.txt, '(attendu 2:00 ou 1:59)');
   await avancer(65);

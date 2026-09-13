@@ -35,7 +35,7 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
   console.log('=== 14. Noms de séances : les muscles en grand, le geste en petit ===');
   { const { ctx, p } = await ouvrir({ rep: ppl });
     const cartes = await p.locator('.carte-seance').evaluateAll(l => l.map(c => c.innerText));
-    check('carrousel : « Pecs · épaules · triceps » en grand, « Push (poussée) » en petit', /Pecs · épaules · triceps/.test(cartes[0]) && /Push \(poussée\)/.test(cartes[0]) && /Dos · biceps/.test(cartes[1]) && /Jambes · fessiers/.test(cartes[2]), cartes.slice(0, 3).map(c => c.split('\n')[0]).join(' | '));
+    check('carrousel : « Pecs · épaules · triceps » en grand, « Push (poussée) » en petit', /Pecs · épaules · triceps/.test(cartes[0]) && /Push \(poussée\)/.test(cartes[0]) && /Dos · biceps/.test(cartes[1]) && /Jambes A · quadriceps/.test(cartes[2]), cartes.slice(0, 3).map(c => c.split('\n')[0]).join(' | '));
     await p.locator('.carte-seance').first().tap(); await p.waitForTimeout(800);
     check('en-tête de séance : muscles puis geste entre parenthèses', /Pecs · épaules · triceps \(Push \(poussée\)\)/.test(await texte(p)));
     await ctx.close(); }
@@ -59,7 +59,7 @@ const check = (nom, cond, detail) => { if (cond) ok++; else ko++; console.log(` 
     check('un tap à l\'extérieur ferme aussi', (await p.locator('.focus-exercice').count()) === 0);
     await p.locator('button[aria-expanded]', { hasText: exo.nom }).first().tap(); await p.waitForTimeout(500);
     await p.locator('.focus-exercice .bouton-repos').tap(); await p.waitForTimeout(500);
-    check('le chrono de repos s\'affiche au-dessus du focus', await p.evaluate(() => { const c = [...document.querySelectorAll('div')].find(d => getComputedStyle(d).position === 'fixed' && !d.closest('.focus-exercice-fond') && d.style.bottom && /Repos/i.test(d.innerText)); const f = document.querySelector('.focus-exercice-fond'); return !!c && !!f && parseInt(getComputedStyle(c).zIndex) > parseInt(getComputedStyle(f).zIndex); }));
+    check('le chrono de repos s\'affiche au-dessus du focus (v20.14 : en pilule flottante)', await p.evaluate(() => { const c = document.querySelector('.chrono-flottant'); const f = document.querySelector('.focus-exercice-fond'); return !!c && !!f && getComputedStyle(c).position === 'fixed' && parseInt(getComputedStyle(c).zIndex) > parseInt(getComputedStyle(f).zIndex); }));
     await ctx.close(); }
 
   console.log('\n=== 17. Types de charge : poids du corps / lesté / assisté ===');
