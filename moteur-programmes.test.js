@@ -545,10 +545,10 @@ test("v20.6 — sport + progresser : l'effet est visible, une phrase par séance
 test("v20.6 — noms de séances : les muscles en grand, le geste en petit ; poids du corps signalé", () => {
   const ppl = M.programmePourApp({ frequence: 6, objectif: "muscler", muscu: "an", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
   const S = Object.values(ppl.seances);
-  assert.deepStrictEqual(S.map(s => s.nom), ["Pecs · épaules · triceps", "Dos · biceps", "Jambes · fessiers", "Pecs · épaules · triceps", "Dos · biceps", "Jambes · fessiers"]);
+  assert.deepStrictEqual(S.map(s => s.nom), ["Pecs · épaules · triceps", "Dos · biceps", "Jambes A · quadriceps", "Pecs · épaules · triceps", "Dos · biceps", "Jambes B · chaîne postérieure"]);
   assert.deepStrictEqual(S.map(s => s.geste), ["Push (poussée)", "Pull (tirage)", "Legs (jambes)", "Push (poussée)", "Pull (tirage)", "Legs (jambes)"]);
   const hb = M.programmePourApp({ frequence: 4, objectif: "muscler", muscu: "mois", technique: "oui", materiel: "salle", tempsMin: 60 }, banque);
-  assert.deepStrictEqual(Object.values(hb.seances).map(s => s.nom).slice(0, 2), ["Pecs · dos · épaules · bras", "Jambes · fessiers"]);
+  assert.deepStrictEqual(Object.values(hb.seances).map(s => s.nom).slice(0, 4), ["Pecs · dos · épaules · bras", "Jambes A · quadriceps", "Pecs · dos · épaules · bras", "Jambes B · chaîne postérieure"]);
   const maison = M.programmePourApp({ frequence: 3, objectif: "mieux", muscu: "mois", technique: "oui", materiel: "pdc", tempsMin: 60 }, banque);
   const exos = Object.values(maison.seances).flatMap(s => s.exos);
   assert.ok(exos.some(e => e.pdc), "des exercices au poids du corps signalés");
@@ -760,7 +760,7 @@ test("rien du tout (maison sans équipement) : ni barre de traction, ni dips, ni
   const pdc = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "pdc", niveau: 2 }, banque);
   assert.ok(seances(pdc).flatMap(s => s.exercices).some(e => e.id.startsWith("traction")), "pdc : tractions présentes");
   assert.ok(pdc.limites.every(l => l.compartiment === "isolation"), "poids du corps avec barre de traction et dips : les gros mouvements existent tous — " + JSON.stringify(pdc.limites));
-  assert.ok(pdc.limites.some(l => /^Sans élastique ni haltères, pas de travail isolé des biceps, épaules latérales, arrière d'épaule : ces muscles ne travaillent que dans les gros mouvements\.$/.test(l.message)), JSON.stringify(pdc.limites));
+  assert.ok(pdc.limites.some(l => /^Sans élastique ni haltères, pas de travail isolé des biceps, épaules latérales, arrière d'épaule, pectoraux : ces muscles ne travaillent que dans les gros mouvements\.$/.test(l.message)), JSON.stringify(pdc.limites));
 });
 test("convention du matériel : alternatives (n'importe laquelle suffit) et combinaisons « a + b »", () => {
   assert.ok(M.faisable(byId.pallof, ["élastique"]) && !M.faisable(byId.pallof, "halteres"), "Pallof : poulie OU élastique → faisable avec un élastique coché, pas avec le raccourci haltères");
@@ -870,6 +870,88 @@ test("accessoire en ouverture, pompes genoux chez un avancé, deux isolations du
   const h4 = seances(p4).find(s => s.focus === "haut");
   h4.exercices.push(M.exerciceProgramme(byId.curl_poulie, { series: 2, reps: [12, 15], repos_s: 90 }));
   assert.ok(!verifierRegles(p4, banque).some(x => x.regle === 11));
+});
+
+
+console.log("\n=== v20.14 — banque : classiques, alias, leg extension ; jambes A/B ; recherche ; provenance de la dose ===");
+test("banque : chaque exercice a des alias et un marqueur classique ; les classiques de salle demandés existent", () => {
+  for (const e of banque.exercices) { assert.ok(Array.isArray(e.alias) && e.alias.length >= 1, `${e.id} sans alias`); assert.strictEqual(typeof e.classique, "boolean", `${e.id} sans marqueur classique`); }
+  for (const id of ["leg_extension", "presse_horizontale", "adduction", "pec_deck", "poulie_vis_a_vis", "ecarte_halteres", "curl_pupitre", "legcurl_assis", "lateral_machine", "mollets_assis", "rowing", "abduction"]) assert.ok(byId[id], `${id} absent`);
+  assert.ok(byId.leg_extension.compartiment === "isolation" && byId.leg_extension.muscle === "quadriceps" && byId.leg_extension.difficulte === 1 && byId.leg_extension.materiel.includes("machine") && byId.leg_extension.consigne && byId.leg_extension.erreur && byId.leg_extension.classique);
+  assert.ok(byId.rowing.alias.some(a => /poulie basse/.test(a)), "le tirage poulie basse est le tirage horizontal existant, retrouvé par alias");
+  assert.ok(byId.squat.classique && !byId.pistol.classique && !byId.rack_pull.classique && byId.presse.classique, "classiques et moins courants");
+});
+test("classique : à égalité, le moteur préfère un classique ; une séance jambes en salle est faite de classiques", () => {
+  assert.strictEqual(M.POIDS.classique, 8);
+  for (const niveau of [1, 2, 3]) {
+    const p = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau }, banque);
+    for (const s of seances(p).filter(s => s.focus === "legs")) {
+      const force = exosForce(s);
+      const classiques = force.filter(e => byId[e.id].classique).length;
+      assert.ok(classiques >= force.length - 1, `niveau ${niveau}, séance ${s.lettre} : ${classiques}/${force.length} classiques — ${force.map(e => e.id).join(", ")}`);
+    }
+  }
+});
+test("jambes A / B : deux dominantes distinctes dès qu'il y a deux séances jambes (4, 5, 6, 7×), vérifiées par le vérificateur", () => {
+  for (const f of [4, 5, 6, 7]) for (const o of ["tonifier", "muscler", "libre"]) for (const n of [1, 2, 3]) {
+    const p = genererProgramme({ frequence: f, objectif: o, objectifLibre: o === "libre" ? "je veux être plus fort" : "", materiel: "salle", niveau: n }, banque);
+    const jambes = seances(p).filter(s => ["bas", "legs"].includes(s.focus));
+    assert.strictEqual(jambes.length, 2, `${f}× : ${jambes.length} séances jambes`);
+    const [A, B] = jambes;
+    assert.strictEqual(A.dominante, "quadriceps"); assert.strictEqual(B.dominante, "posterieure");
+    const poly = s => s.exercices.filter(e => ["squat", "hinge", "unilateral"].includes(e.compartiment) && !e.accessoire && e.role !== "sport");
+    assert.strictEqual(poly(A)[0].compartiment, "squat", `${f}× ${o} n${n} : A ouvre par ${poly(A)[0].id}`);
+    assert.strictEqual(poly(B)[0].compartiment, "hinge", `${f}× ${o} n${n} : B ouvre par ${poly(B)[0].id}`);
+    assert.ok(!B.exercices.some(e => e.compartiment === "squat"), `${f}× ${o} n${n} : un squat en jambes B`);
+    assert.ok(B.exercices.some(e => e.compartiment === "isolation" && ["ischio-jambiers", "fessiers"].includes(e.muscle)), `${f}× ${o} n${n} : B sans leg curl ni hip thrust`);
+    const communs = A.exercices.filter(e => ["squat", "hinge", "unilateral"].includes(e.compartiment) && B.exercices.some(x => x.id === e.id));
+    assert.ok(communs.length <= 1, `${f}× ${o} n${n} : gros mouvements communs à A et B — ${communs.map(e => e.id).join(", ")}`);
+    assert.deepStrictEqual(verifierRegles(p, banque).filter(v => v.regle === "jambesAB"), []);
+  }
+  // le vérificateur voit une inversion : jambes B qui ouvre par un squat
+  const p = genererProgramme({ frequence: 6, objectif: "muscler", materiel: "salle", niveau: 2 }, banque);
+  const B = seances(p).filter(s => s.focus === "legs")[1];
+  B.exercices.unshift(M.exerciceProgramme(byId.squat, { series: 3, reps: [8, 12], repos_s: 120 }));
+  assert.ok(verifierRegles(p, banque).some(v => v.regle === "jambesAB"));
+  // à 4× en salle niveau 2 : A = squat, presse ou extension, fentes ; B = roumain, leg curl, hip thrust
+  const p4 = genererProgramme({ frequence: 4, objectif: "muscler", materiel: "salle", niveau: 2 }, banque);
+  const [A4, B4] = seances(p4).filter(s => s.focus === "bas");
+  assert.ok(A4.exercices.some(e => e.muscle === "quadriceps" && e.compartiment === "isolation"), "A : une isolation quadriceps (leg extension) — " + A4.exercices.map(e => e.id).join(", "));
+  assert.ok(B4.exercices.some(e => e.muscle === "ischio-jambiers") && B4.exercices.some(e => e.muscle === "fessiers"), "B : ischios et fessiers — " + B4.exercices.map(e => e.id).join(", "));
+  const app = M.presenterPourApp(p4);
+  assert.deepStrictEqual(Object.values(app.seances).map(s => s.nom), ["Pecs · dos · épaules · bras", "Jambes A · quadriceps", "Pecs · dos · épaules · bras", "Jambes B · chaîne postérieure"]);
+  // en force, le soulevé de terre va en jambes B, pas en A
+  const pf = genererProgramme({ frequence: 6, objectif: "libre", objectifLibre: "je veux être plus fort", materiel: "salle", niveau: 3, tempsMin: 75 }, banque);
+  const [Af, Bf] = seances(pf).filter(s => s.focus === "legs");
+  assert.ok(!Af.exercices.some(e => e.id === "souleve_terre") && Bf.exercices.some(e => e.id === "souleve_terre"), "soulevé de terre en B : " + Bf.exercices.map(e => e.id).join(", "));
+});
+test("recherche : nom et alias, accents, casse, tirets, une faute tolérée, muscles secondaires", () => {
+  const cat = M.catalogue(banque, { materiel: "salle" });
+  const ids = q => M.chercherExercices(cat.tous, q).map(x => x.id);
+  assert.ok(ids("leg extension").includes("leg_extension") && ids("Extension de jambes").includes("leg_extension") && ids("extension quadriceps").includes("leg_extension"), "alias");
+  assert.ok(ids("leg extention").includes("leg_extension"), "une faute (extention)");
+  assert.ok(ids("LEG-EXTENSION").includes("leg_extension") && ids("legextension").includes("leg_extension"), "casse, tirets, collé");
+  assert.ok(ids("développe couché").includes("developpe_couche") && ids("bench press").includes("developpe_couche"), "accents et anglais");
+  assert.ok(ids("tirage poulie basse").includes("rowing") && ids("seated row").includes("rowing"), "tirage poulie basse → tirage horizontal");
+  assert.ok(ids("hip trust").includes("hipthrust"), "faute courante hip trust");
+  assert.ok(!ids("pistol").includes("squat") && ids("").length === cat.tous.length, "requête vide = tout ; pas de faux positif grossier");
+  assert.ok(ids("xyzzy").length === 0, "rien pour n'importe quoi");
+  const parMuscle = m => cat.tous.filter(x => x.muscle === m || x.secondaires.includes(m)).map(x => x.id);
+  assert.ok(parMuscle("fessiers").includes("squat") && parMuscle("fessiers").includes("hipthrust") && parMuscle("biceps").includes("rowing"), "un exercice apparaît dans le filtre de ses muscles secondaires aussi");
+  assert.ok(cat.tous.every(x => Array.isArray(x.alias) && Array.isArray(x.secondaires) && typeof x.classique === "boolean"));
+});
+test("remplacement : provenance de la dose dite (original : séries, reps, repos gardés ; banque : isométrie, fourchette courte, ajout libre)", () => {
+  const orig = { id: "developpe_couche", series: 4, reps: [6, 8], repos: 150, role: null };
+  const r = M.remplacantsPour(banque, orig, { materiel: "salle", niveau: 2 });
+  const dc = r.candidats.find(c => c.exo.id === "dc_incline");
+  assert.ok(dc && dc.exo.provenance === "original" && dc.exo.series === 4 && dc.exo.reps[0] === 6 && dc.exo.repos === 150, JSON.stringify(dc && dc.exo));
+  const neg = M.remplacantPourApp({ id: "traction", series: 3, reps: [5, 8], repos: 180 }, byId.traction_negative, "salle");
+  assert.ok(neg.provenance === "banque" && neg.reps[1] <= 6, "fourchette courte de la banque : " + JSON.stringify(neg.reps));
+  const iso = M.remplacantPourApp({ id: "planche", series: 3, reps: [10, 12], repos: 45 }, byId.planche_laterale, "salle");
+  assert.ok(iso.provenance === "banque" && iso.duree && !iso.reps, "isométrie de la banque");
+  const ancien = M.remplacantPourApp({ id: "developpe_couche", dose: "3 × 10", repos: 90 }, byId.dc_halteres, "salle");
+  assert.strictEqual(ancien.provenance, "banque", "ancien programme sans reps structurées : dose de la banque");
+  assert.strictEqual(M.exerciceLibrePourApp(banque, "leg_extension", { materiel: "salle" }).provenance, "banque");
 });
 
 console.log(`\n${nb - ko}/${nb} tests passent` + (ko ? ` — ${ko} en échec` : ""));

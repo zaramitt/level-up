@@ -91,8 +91,22 @@
   /* ------------------------------------------------------------------ */
   /* Focus (règle 1) : compartiments et muscles autorisés, cases à remplir */
   /* ------------------------------------------------------------------ */
-  const ISO_HAUT = ["biceps", "triceps", "épaules latérales", "arrière d'épaule"];
-  const ISO_BAS = ["fessiers", "ischio-jambiers", "abducteurs", "mollets"];
+  const ISO_HAUT = ["biceps", "triceps", "épaules latérales", "arrière d'épaule", "pectoraux"];
+  const ISO_BAS = ["fessiers", "ischio-jambiers", "abducteurs", "adducteurs", "mollets", "quadriceps"];
+  // v20.14 : deux séances jambes dans la semaine → deux dominantes distinctes. A = quadriceps (squat, presse,
+  // extension, fentes), B = chaîne postérieure (soulevé roumain, leg curl, hip thrust, fessiers). Les cases
+  // remplacent celles du focus ; les compartiments restent ceux du focus (règle 1).
+  const JAMBES = ["bas", "legs"];
+  const dominanteJambes = (focusList, i) => {
+    if (!JAMBES.includes(focusList[i]) || focusList.filter(f => JAMBES.includes(f)).length < 2) return null;
+    return focusList.slice(0, i).some(f => JAMBES.includes(f)) ? "posterieure" : "quadriceps";
+  };
+  const CASES_JAMBES = {
+    quadriceps: [{ c: "squat" }, { c: "hinge", m: ["fessiers"], secondaire: true }, { c: "unilateral" }, { c: "isolation", m: ["quadriceps"] }, { c: "isolation", m: ["abducteurs", "adducteurs", "mollets"] }, { c: "isolation" }, { c: "gainage" }],
+    posterieure: [{ c: "hinge" }, { c: "unilateral" }, { c: "isolation", m: ["ischio-jambiers"] }, { c: "isolation", m: ["fessiers"] }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }]
+  };
+  const DOMINANTE_NOM = { quadriceps: "Jambes A · quadriceps", posterieure: "Jambes B · chaîne postérieure" };
+  const MUSCLES_QUAD = ["quadriceps"], MUSCLES_POST = ["chaîne postérieure", "ischio-jambiers", "fessiers"];
   const FULL = [...COMPOSES, "isolation", "gainage"];
   // repli : quand une case d'isolation n'a plus de muscle libre dans la séance (jamais deux
   // isolations du même muscle), elle devient un polyarticulaire du focus
@@ -107,7 +121,7 @@
       cases: [{ c: "poussee_h" }, { c: "tirage_h" }, { c: "poussee_v" }, { c: "tirage_v" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
     bas: { muscles: "Jambes · fessiers", nom: "Bas du corps", comp: ["squat", "hinge", "unilateral", "isolation", "gainage"], iso: ISO_BAS, bas: true,
       cases: [{ c: "squat" }, { c: "hinge" }, { c: "unilateral" }, { c: "isolation" }, { c: "isolation" }, { c: "isolation" }, { c: "gainage" }] },
-    push: { muscles: "Pecs · épaules · triceps", nom: "Push (poussée)", comp: ["poussee_h", "poussee_v", "isolation", "gainage"], iso: ["triceps", "épaules latérales"], bas: false,
+    push: { muscles: "Pecs · épaules · triceps", nom: "Push (poussée)", comp: ["poussee_h", "poussee_v", "isolation", "gainage"], iso: ["triceps", "épaules latérales", "pectoraux"], bas: false,
       cases: [{ c: "poussee_h" }, { c: "poussee_v" }, { c: "poussee_h" }, { c: "isolation", m: ["triceps"] }, { c: "isolation", m: ["épaules latérales"] }, { c: "isolation", repli: "poussee_v" }, { c: "gainage" }] },
     pull: { muscles: "Dos · biceps", nom: "Pull (tirage)", comp: ["tirage_h", "tirage_v", "isolation", "gainage"], iso: ["biceps", "arrière d'épaule"], bas: false,
       cases: [{ c: "tirage_v" }, { c: "tirage_h" }, { c: "tirage_h" }, { c: "isolation", m: ["arrière d'épaule"] }, { c: "isolation", m: ["biceps"] }, { c: "isolation", repli: "tirage_v" }, { c: "gainage" }] },
@@ -242,7 +256,7 @@
   /* ------------------------------------------------------------------ */
   // gainage anti-rotation : les obliques, et le bird-dog (difficulté 1) qui résiste à la rotation du tronc
   const ANTI_ROTATION = ["planche_laterale", "pallof", "pallof_demi_genou", "pallof_rotation", "bird_dog"];
-  const POIDS = { prioritaire: 40, secondairePrioritaire: 12, favori: 30, unilateralSport: 15, accessoire: -30, dejaSemaine: -22, gainageRepete: -60, isolationRepetee: -40, muscleIsoleSemaine: -15 };
+  const POIDS = { prioritaire: 40, secondairePrioritaire: 12, favori: 30, unilateralSport: 15, accessoire: -30, dejaSemaine: -22, gainageRepete: -60, isolationRepetee: -40, muscleIsoleSemaine: -15, classique: 8 };
   const scoreExo = (e, ctx, cas) => {
     let s = 0;
     // règle 9 : la version qui correspond au niveau
@@ -255,6 +269,9 @@
     if (e.echelle === "simple") { const d = ctx.distancePhare(e.id); if (d > 0) s += Math.max(0, 8 - 2 * d); }
     // déjà éprouvé dans les programmes de l'app
     if (e.existant) s += 3;
+    // v20.14 : un classique de salle (connu de tous) passe devant un exercice moins courant à niveau égal ;
+    // le moins courant ne sort que pour varier (pénalité « déjà cette semaine ») ou à la demande (panneau)
+    if (e.classique) s += POIDS.classique;
     // un polyarticulaire en répétitions plutôt qu'en isométrie (la chaise n'est pas « le squat »)
     if (COMPOSES.includes(e.compartiment) && e.reps) s += 4;
     if (e.accessoire) s += POIDS.accessoire;
@@ -283,7 +300,7 @@
   // de terre), et jamais pour l'unilatéral (case de variété et de sport).
   const PHARE_OUVRE = new Set(["squat", "hinge", "poussee_h", "poussee_v", "tirage_h", "tirage_v"]);
   const phareDe = (banque, cas, focus, ctx) => {
-    if (!PHARE_OUVRE.has(cas.c) || cas.force) return null;
+    if (!PHARE_OUVRE.has(cas.c) || cas.force || cas.secondaire) return null;   // v20.14 : la charnière de jambes A est secondaire (fessiers), le roumain reste à jambes B
     if (banque.exercices.some(e => ctx.dejaSeance.has(e.id) && e.compartiment === cas.c)) return null;
     const ph = banque.exercices.find(e => e.compartiment === cas.c && ctx.phares.has(e.id));
     if (!ph || !admissible(ph, ctx, focus) || tropFacilePour(ph, ctx.niveau)) return null;
@@ -311,7 +328,7 @@
     if (COMPOSES.includes(cas.c)) { const p = cands.filter(e => !e.accessoire); if (p.length) cands = p; }
     if (cas.m) { const m = cands.filter(e => cas.m.includes(e.muscle) || (cas.ids && cas.ids.includes(e.id))); if (m.length) cands = m; }
     if (!cands.length) return cas.repli && ctx.obj.reps !== "force" ? choisir(banque, { ...cas, c: cas.repli, repli: null, m: null }, focus, ctx) : null;
-    cands.sort((a, b) => scoreExo(b, ctx, cas) - scoreExo(a, ctx, cas) || a.id.localeCompare(b.id));
+    cands.sort((a, b) => scoreExo(b, ctx, cas) - scoreExo(a, ctx, cas) || (b.classique ? 1 : 0) - (a.classique ? 1 : 0) || a.id.localeCompare(b.id));
     return cands[0];
   };
   // exercice obligatoire de l'objectif : lui-même s'il est admissible, sinon son remplaçant (règle 12)
@@ -544,7 +561,10 @@
       const f = FOCUS[focus];
       const ctx = { ...ctxBase, dejaSeance: new Set(), musclesSeance: new Set() };
       const exercices = [];
-      let cases = f.cases.map(c => ({ ...c }));
+      const dominante = dominanteJambes(focusList, i);
+      let cases = (dominante ? CASES_JAMBES[dominante] : f.cases).map(c => ({ ...c }));
+      // force : jambes B garde deux charnières (soulevé de terre + roumain), ses gros mouvements
+      if (dominante === "posterieure" && obj.reps === "force") cases.splice(1, 0, { c: "hinge" });
       // règle 7 : nombre d'exercices selon le niveau (les cases d'isolation en trop sautent)
       const nbExos = nbExosDe(niveau, objCle, focus);
       const nbMax = nbExos[1];
@@ -576,6 +596,7 @@
       // polyarticulaires obligatoires (soulevé de terre en force) : la première case du compartiment dans la semaine
       for (const id of composesAPlacer.slice()) {
         const e = byId[id]; if (!e) continue;
+        if (dominante === "quadriceps" && e.compartiment === "hinge") continue;   // le soulevé de terre attend jambes B
         const cas = cases.find(c => c.c === e.compartiment && !c.force);
         if (cas) { cas.force = [id]; cas.compose = true; composesAPlacer.splice(composesAPlacer.indexOf(id), 1); }
       }
@@ -617,7 +638,7 @@
       exercices.forEach((x, k) => { x._k = k; });
       exercices.sort((a, b) => rangOrdre(a) - rangOrdre(b) || a._k - b._k);
       exercices.forEach(x => { delete x._k; });
-      const s = { lettre: lettres[i], nom: f.nom, focus, exercices, dureeMin: 0 };
+      const s = { lettre: lettres[i], nom: f.nom, focus, exercices, dureeMin: 0, ...(dominante ? { dominante } : {}) };
       // règle 6 : tenir dans le temps
       if (!comprimer(s, tempsMin, nbExos[0], cardio)) avertissements.push(`Séance ${s.lettre} : ${dureeSeance(s)} min même compressée, au-delà des ${tempsMin} min demandées.`);
       if (s._objectifRetire) avertissements.push(`Séance ${s.lettre} : même l'exercice obligatoire de l'objectif ne tenait pas dans ${tempsMin} min, retiré en dernier recours.`);
@@ -778,7 +799,7 @@
       }));
       // v20.6 : les muscles en grand (nom), le geste en petit (geste), la phrase du sport (sport)
       const f = FOCUS[s.focus];
-      seances[s.lettre] = { nom: f && f.muscles ? f.muscles : s.nom, geste: s.nom, sport: noteSport(s, prog.entrees), couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
+      seances[s.lettre] = { nom: s.dominante ? DOMINANTE_NOM[s.dominante] : f && f.muscles ? f.muscles : s.nom, geste: s.nom, ...(s.dominante ? { dominante: s.dominante } : {}), sport: noteSport(s, prog.entrees), couleur: PALETTE_APP[i % PALETTE_APP.length], focus: s.focus, dureeMin: s.dureeMin, exos, gainage };
     });
     const obj = OBJECTIFS[prog.entrees.objectif] || OBJECTIFS.mieux;
     const f = prog.entrees.frequence;
@@ -849,10 +870,14 @@
   // si la banque impose la sienne (isométrie, fourchette courte comme les négatives)
   const remplacantPourApp = (orig, cand, materiel) => {
     const iso = !cand.reps && cand.duree_s;
-    const reps = iso ? null : cand.reps && cand.reps[1] <= 6 ? cand.reps : orig.reps || cand.reps || [8, 12];
+    // v20.14 : d'où vient la dose — de l'original (séries, reps, repos gardés pour continuer la progression),
+    // ou de la banque (isométrie, fourchette courte ≤ 6 reps, original sans dose structurée) ; l'écran le dit
+    const depuisOriginal = !iso && !(cand.reps && cand.reps[1] <= 6) && !!orig.reps;
+    const reps = iso ? null : depuisOriginal ? orig.reps : cand.reps || [8, 12];
     const x = { compartiment: cand.compartiment, series: orig.series || 3, reps, duree_s: iso ? cand.duree_s : null, unilateral: !!cand.unilateral };
     return {
       id: cand.id, nom: cand.nom, dose: doseDe(x), repos: orig.repos || reposDe(reps || [8, 12], cand.compartiment === "isolation"), charge: chargeDe(cand, materiel), pdc: pdcPossible(cand),
+      provenance: depuisOriginal ? "original" : "banque",
       series: x.series, reps, duree: x.duree_s, unilateral: x.unilateral, consigne: cand.consigne || "", erreur: cand.erreur || "",
       compartiment: cand.compartiment, muscle: cand.muscle, role: orig.role || null, remplace: orig.remplace || orig.id, difficulte: cand.difficulte
     };
@@ -892,10 +917,30 @@
     return {
       id: e.id, nom: e.nom, dose: doseDe(x), repos, charge: !cardio && chargeDe(e, materiel), pdc: !cardio && pdcPossible(e),
       series: x.series, reps: x.reps, duree: x.duree_s, unilateral: x.unilateral, consigne: e.consigne || "", erreur: e.erreur || "",
-      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true,
+      compartiment: e.compartiment, muscle: e.muscle, role: "ajout", difficulte: e.difficulte, ajoute: true, provenance: "banque",
       ...(cardio ? { type: e.type } : {})
     };
   };
+  // v20.14 : recherche dans la banque — nom ET alias, insensible aux accents, à la casse et aux tirets, chaque mot
+  // de la requête doit se retrouver (préfixe d'un mot, ou à une faute près dès 4 lettres, ou collé : « legextension »)
+  const normaliserTexte = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-_'’.,/()]/g, " ").replace(/\s+/g, " ").trim();
+  const distanceUn = (a, b) => {
+    if (a === b) return true;
+    const la = a.length, lb = b.length;
+    if (Math.abs(la - lb) > 1) return false;
+    let i = 0; while (i < la && i < lb && a[i] === b[i]) i++;
+    if (la === lb) return a.slice(i + 1) === b.slice(i + 1) || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+    return la > lb ? a.slice(i + 1) === b.slice(i) : b.slice(i + 1) === a.slice(i);
+  };
+  const motCorrespond = (q, mot) => mot.startsWith(q) || (q.length >= 4 && distanceUn(q, mot));
+  const correspond = (requete, textes) => {
+    const qs = normaliserTexte(requete).split(" ").filter(Boolean);
+    if (!qs.length) return true;
+    const mots = textes.flatMap(t => normaliserTexte(t).split(" ")).filter(Boolean);
+    const colle = mots.join("");
+    return qs.every(q => mots.some(m => motCorrespond(q, m)) || colle.includes(q));
+  };
+  const chercherExercices = (liste, requete) => liste.filter(x => correspond(requete, [x.nom, ...(x.alias || []), x.muscle || ""]));
   // le catalogue du panneau « Ajouter / Remplacer » : les similaires (muscle principal dans le focus de la
   // séance, règle 1), triés par compartiment, phare en premier, faisables avec le matériel d'abord ; toute
   // la banque ; cardio et mobilité. Jamais un exercice déjà dans la séance.
@@ -905,6 +950,7 @@
     const resume = e => ({
       id: e.id, nom: e.nom, compartiment: e.compartiment, muscle: e.muscle, materiel: e.materiel.join(" ou "),
       tags: [...new Set(e.materiel.flatMap(tagsDe))], difficulte: e.difficulte, phare: e.echelle === "phare", faisable: faisable(e, materiel), type: e.type || null,
+      alias: e.alias || [], secondaires: e.secondaires || [], classique: !!e.classique,
       dose: doseDe({ compartiment: e.compartiment, series: e.compartiment === "cardio_mobilite" ? 1 : 3, reps: e.reps || (e.duree_s ? null : [8, 12]), duree_s: e.reps ? null : e.duree_s || null, unilateral: !!e.unilateral })
     });
     const tri = (a, b) => (b.faisable - a.faisable) || (ORDRE_COMP[a.compartiment] - ORDRE_COMP[b.compartiment]) || (b.phare - a.phare) || (a.difficulte - b.difficulte) || a.nom.localeCompare(b.nom);
@@ -1070,6 +1116,25 @@
     if (seances.length !== focusAttendus.length) v.push({ regle: "squelette", message: `${seances.length} séances au lieu de ${focusAttendus.length}` });
     else seances.forEach((s, i) => { const a = focusAttendus[i]; if (a instanceof RegExp ? !a.test(s.focus) : s.focus !== a) v.push({ regle: "squelette", message: `séance ${s.lettre} : focus ${s.focus} au lieu de ${a}` }); });
     if (f === 7 && seances[6] && seances[6].exercices.some(e => e.compartiment !== "cardio_mobilite")) v.push({ regle: "7x", message: "de la force le 7e jour" });
+    // v20.14 : deux séances jambes → A ouvre par un squat et ses polyarticulaires sont surtout quadriceps,
+    // B ouvre par une charnière et ses polyarticulaires sont surtout chaîne postérieure
+    { const focusList = seances.map(s => s.focus);
+      seances.forEach((s, i) => {
+        const dom = dominanteJambes(focusList, i);
+        if (!dom) { if (s.dominante) v.push({ regle: "jambesAB", message: `séance ${s.lettre} : dominante sans seconde séance jambes` }); return; }
+        if (s.dominante !== dom) v.push({ regle: "jambesAB", message: `séance ${s.lettre} : dominante ${s.dominante || "absente"} au lieu de ${dom}` });
+        // A ouvre par un squat et n'a qu'une charnière ; B n'a aucun squat, ouvre par une charnière (dès qu'une
+        // charnière non accessoire y est) et isole ischios ou fessiers. Les cases du sport ne comptent pas.
+        const poly = s.exercices.filter(e => COMPOSES.includes(e.compartiment) && !e.accessoire && e.role !== "sport");
+        const premier = poly[0];
+        const nb = c => s.exercices.filter(e => e.compartiment === c && e.role !== "sport").length;
+        if (dom === "quadriceps" && (!premier || premier.compartiment !== "squat" || nb("hinge") > 1)) v.push({ regle: "jambesAB", message: `séance ${s.lettre} (jambes A) : ouvre par ${premier ? premier.compartiment : "rien"}, ${nb("hinge")} charnière(s)` });
+        if (dom === "posterieure") {
+          const charniere = poly.some(e => e.compartiment === "hinge");
+          if (nb("squat") || (charniere && premier.compartiment !== "hinge") || !s.exercices.some(e => e.compartiment === "isolation" && MUSCLES_POST.includes(e.muscle)))
+            v.push({ regle: "jambesAB", message: `séance ${s.lettre} (jambes B) : ${nb("squat")} squat, ouvre par ${premier ? premier.compartiment : "rien"}, isolations ${s.exercices.filter(e => e.compartiment === "isolation").map(e => e.muscle).join("/") || "aucune"}` });
+        }
+      }); }
     for (const s of seances) {
       for (const e of s.exercices) if (!appartientAuFocus(e, s.focus)) v.push({ regle: 1, message: `${e.nom} hors du focus ${s.focus} (séance ${s.lettre})` });
       const rangs = s.exercices.map(e => ORDRE_COMP[e.compartiment] >= 20 ? 2 : e.compartiment === "isolation" ? 1 : 0);
@@ -1108,5 +1173,5 @@
     return v;
   };
 
-  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS, cardioIntegre, squeletteDe };
+  return { genererProgramme, remplacerExercice, verifierRegles, auditerBanque, niveauDepuisQuestions, entreesDepuisReponses, presenterPourApp, programmePourApp, REPONSES_DEFAUT, suggererCharge, incrementDe, adaptesSport, exerciceLibrePourApp, catalogue, chercherExercices, correspond, normaliserTexte, recalerNiveau, remplacantsPour, remplacantPourApp, adapterSeance, pdcPossible, noteSport, chargeDeSerie, dureeSeance, dureeExercice, appartientAuFocus, faisable, okDe, nomMateriel, normaliserMateriel, grosGroupe, grosGroupeVolume, groupesDe, nbExosDe, exerciceProgramme, interpreterObjectifLibre, volumeSemaine, tropFacilePour, tropFacilePourAvance, GROS_GROUPES, SQUELETTES, FOCUS, OBJECTIFS, SPORTS, NIVEAU, MATERIEL_OK, MATERIEL_NOM, MATERIELS, TAGS_MATERIEL, POIDS, cardioIntegre, squeletteDe };
 });
