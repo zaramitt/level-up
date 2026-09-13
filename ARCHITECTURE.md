@@ -2,10 +2,10 @@
 
 Déplacée de `CLAUDE.md` (règles de travail) vers ce fichier : architecture, routes, configuration Cloudflare, moteur, tests, règles de livraison, conventions de design. À tenir à jour à chaque livraison (version comprise).
 
-Version actuelle : **v20.13** (à mettre à jour ici et dans `index.html` à chaque livraison)
+Version actuelle : **v20.14** (à mettre à jour ici et dans `index.html` à chaque livraison)
 
 Le numéro de version est écrit **en dur dans `index.html`, à un seul endroit** :
-le pied du premier écran d'onboarding (chaîne `"v20.13"` dans le composant
+le pied du premier écran d'onboarding (chaîne `"v20.14"` dans le composant
 `Onboarding`, écran « profils existants »). C'est la seule source : `worker.js`
 ne le contient qu'à travers la copie d'`index.html` qu'il embarque (ligne 5,
 régénérée à chaque livraison), et il n'y a pas de fichier de version dédié.
